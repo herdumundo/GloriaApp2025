@@ -1344,6 +1344,7 @@ class TomaManualViewModel(
                             _uiState.value = _uiState.value.copy(loadingMessage = "Ejecutando consulta Oracle...")
                             android.util.Log.d("TomaManualViewModel", "Ejecutando consulta Oracle en hilo de background...")
                             
+                            android.util.Log.d("TomaManualViewModel", "🔄 Llamando al repositorio...")
                             val resultado = articuloLoteRepository.getArticulosLotes(
                                 subgruposSeleccionados = subgruposSeleccionados,
                                 sucursal = sucursal,
@@ -1355,25 +1356,35 @@ class TomaManualViewModel(
                                 isFamiliaTodos = true
                             ).first()
                             
-                            android.util.Log.d("TomaManualViewModel", "Consulta Oracle completada exitosamente")
+                            android.util.Log.d("TomaManualViewModel", "✅ Consulta Oracle completada exitosamente")
+                            android.util.Log.d("TomaManualViewModel", "📊 Resultados recibidos: ${resultado.size} artículos")
                             resultado
                         } catch (e: Exception) {
-                            android.util.Log.e("TomaManualViewModel", "Error en consulta de todas las familias: ${e.message}", e)
+                            android.util.Log.e("TomaManualViewModel", "❌ Error en consulta de todas las familias: ${e.message}", e)
+                            android.util.Log.e("TomaManualViewModel", "❌ Stack trace completo:", e)
                             emptyList<ArticuloLote>()
                         }
                     }
                     
-                    android.util.Log.d("TomaManualViewModel", "Consulta completada. Artículos encontrados: ${articulosLotes.size}")
+                    android.util.Log.d("TomaManualViewModel", "🎯 RESULTADO FINAL:")
+                    android.util.Log.d("TomaManualViewModel", "   • Artículos recibidos del repositorio: ${articulosLotes.size}")
+                    android.util.Log.d("TomaManualViewModel", "   • Tipo de datos: ${articulosLote::class.simpleName}")
+                    
                     _uiState.value = _uiState.value.copy(loadingMessage = "Procesando ${articulosLotes.size} artículos...")
                     
+                    android.util.Log.d("TomaManualViewModel", "🔄 Actualizando UI State...")
                     _uiState.value = _uiState.value.copy(
                         articulosLotes = articulosLotes,
                         isLoading = false,
                         loadingMessage = null
                     )
-                    android.util.Log.d("TomaManualViewModel", "Loading completado: ${_uiState.value.isLoading}")
+                    android.util.Log.d("TomaManualViewModel", "✅ UI State actualizado:")
+                    android.util.Log.d("TomaManualViewModel", "   • isLoading: ${_uiState.value.isLoading}")
+                    android.util.Log.d("TomaManualViewModel", "   • articulosLotes.size: ${_uiState.value.articulosLotes.size}")
+                    android.util.Log.d("TomaManualViewModel", "   • loadingMessage: ${_uiState.value.loadingMessage}")
                     
                     // Mostrar el diálogo automáticamente
+                    android.util.Log.d("TomaManualViewModel", "🚀 Mostrando diálogo de artículos...")
                     showArticulosLotesDialog()
                     return@launch
                 }

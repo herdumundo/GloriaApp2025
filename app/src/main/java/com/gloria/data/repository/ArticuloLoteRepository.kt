@@ -164,7 +164,17 @@ class ArticuloLoteRepository {
             Log.d("ArticuloLoteRepository", "   • Artículos mapeados exitosamente: ${articulosLotes.size}")
             Log.d("ArticuloLoteRepository", "   • Límite configurado: $maxResultados")
             
-            emit(articulosLotes)
+            Log.d("ArticuloLoteRepository", "📤 Enviando ${articulosLotes.size} artículos al ViewModel...")
+            
+            // Enviar los resultados al ViewModel
+            try {
+                emit(articulosLotes)
+                Log.d("ArticuloLoteRepository", "✅ Artículos enviados exitosamente al ViewModel")
+            } catch (e: Exception) {
+                Log.e("ArticuloLoteRepository", "❌ Error al enviar artículos: ${e.message}", e)
+                // Re-emitir en caso de error para mantener la transparencia del Flow
+                emit(articulosLotes)
+            }
             
         } catch (e: Exception) {
             Log.e("ArticuloLoteRepository", "💥 ERROR CRÍTICO en consulta Oracle: ${e.message}", e)
