@@ -1,5 +1,8 @@
 package com.gloria.repository
 
+import android.util.Log
+import com.gloria.data.dao.LoggedUserDao
+import com.gloria.data.entity.LoggedUser
 import com.gloria.util.ConnectionOracle
 import com.gloria.util.Controles
 import com.gloria.util.Variables
@@ -10,25 +13,36 @@ import java.sql.ResultSet
 /**
  * Repositorio para manejar operaciones de autenticación con Oracle
  */
-class AuthRepository {
+class AuthRepository(
+    private val loggedUserDao: LoggedUserDao
+) {
     
     /**
      * Autentica un usuario usando la base de datos Oracle
      */
-    fun authenticateUser(username: String, password: String): AuthResult {
+    suspend fun authenticateUser(username: String, password: String): AuthResult {
         var connection: Connection? = null
         var statement: PreparedStatement? = null
         var resultSet: ResultSet? = null
+        
+        Log.d("AuthRepository", "=== INICIANDO authenticateUser ===")
+        Log.d("AuthRepository", "Username: $username")
+        Log.d("AuthRepository", "Password: ${password.take(3)}***")
         
         try {
             // Establecer las credenciales para la conexión
             Variables.userdb = username
             Variables.passdb = password
+            Log.d("AuthRepository", "Credenciales establecidas en Variables")
             
             // Obtener conexión
+            Log.d("AuthRepository", "Intentando obtener conexión Oracle...")
             connection = ConnectionOracle.getConnection()
             
-                        if (connection == null) {
+            if (connection == null) {
+                Log.e("AuthRepository", "❌ CONEXIÓN FALLIDA - connection es null")
+                Log.e("AuthRepository", "Controles.resBD: ${Controles.resBD}")
+                Log.e("AuthRepository", "Controles.mensajeLogin: ${Controles.mensajeLogin}")
                 return when (Controles.resBD) {
                     Controles.ERROR_RED -> AuthResult.NetworkError(Controles.mensajeLogin)
                     Controles.ERROR_CREDENCIALES -> AuthResult.InvalidCredentials(Controles.mensajeLogin)
@@ -36,10 +50,29 @@ class AuthRepository {
                 }
             }
             
+            Log.d("AuthRepository", "✅ CONEXIÓN EXITOSA - Usuario autenticado correctamente")
+            
+            // Guardar el usuario logueado en la base de datos local
+            try {
+                val loggedUser = LoggedUser(
+                    id = 1,
+                    username = username,
+                    password = password,
+                    loginTimestamp = System.currentTimeMillis()
+                )
+                Log.d("AuthRepository", "💾 Guardando usuario en base de datos local...")
+                loggedUserDao.insertLoggedUser(loggedUser)
+                Log.d("AuthRepository", "✅ Usuario guardado: $username")
+            } catch (e: Exception) {
+                Log.e("AuthRepository", "❌ Error al guardar usuario: ${e.message}")
+            }
+            
             // Si llegamos aquí, la conexión fue exitosa
             return AuthResult.Success(username)
             
         } catch (e: Exception) {
+            Log.e("AuthRepository", "❌ ERROR en authenticateUser: ${e.message}")
+            Log.e("AuthRepository", "Stack trace: ${e.stackTraceToString()}")
             return AuthResult.Error("Error durante la autenticación: ${e.message}")
         } finally {
             // Cerrar recursos
@@ -47,8 +80,9 @@ class AuthRepository {
                 resultSet?.close()
                 statement?.close()
                 connection?.close()
+                Log.d("AuthRepository", "🔒 Recursos cerrados correctamente")
             } catch (e: Exception) {
-                // Log del error al cerrar recursos
+                Log.e("AuthRepository", "Error al cerrar recursos: ${e.message}")
             }
         }
     }
@@ -121,6 +155,28 @@ class AuthRepository {
         } catch (e: Exception) {
             return AuthResult.Error("Error durante la prueba de conexión: ${e.message}")
         }
+    }
+    
+    /**
+     * Cierra la sesión del usuario
+     */
+    suspend fun logout() {
+        try {
+            Log.d("AuthRepository", "🚪 Cerrando sesión del usuario...")
+            loggedUserDao.clearLoggedUsers()
+            Log.d("AuthRepository", "✅ Sesión cerrada correctamente")
+        } catch (e: Exception) {
+            Log.e("AuthRepository", "❌ Error al cerrar sesión: ${e.message}")
+        }
+    }
+    
+    /**
+     * Obtiene el usuario logueado
+     */
+    suspend fun getLoggedUser(): com.gloria.data.entity.LoggedUser? {
+        // Esta implementación debería usar un DAO inyectado
+        // Por ahora retornamos null, se implementará en el módulo DI
+        return null
     }
     
     /**

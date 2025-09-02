@@ -1,11 +1,8 @@
 package com.gloria
 
 import android.app.Application
-import com.gloria.data.AppDatabase
+import dagger.hilt.android.HiltAndroidApp
 
-class InventarioApplication : Application() {
-    
-    val database by lazy { AppDatabase.getDatabase(this) }
-    
-}
+@HiltAndroidApp
+class InventarioApplication : Application()
 

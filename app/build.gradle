@@ -2,19 +2,21 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    id 'com.google.dagger.hilt.android'
     id 'kotlin-kapt'
+    id 'com.google.devtools.ksp'
 }
 
 android {
-    namespace 'com.gloria'
-    compileSdk 36
+    namespace = 'com.gloria'
+    compileSdk = 36
 
     defaultConfig {
         applicationId "com.gloria"
-        minSdk 29
-        targetSdk 36
-        versionCode 1
-        versionName "1.0"
+        minSdk = 29
+        targetSdk = 36
+        versionCode = 1
+        versionName = "1.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -33,7 +35,7 @@ android {
         jvmTarget = '11'
     }
     buildFeatures {
-        compose true
+        compose = true
     }
 }
 
@@ -54,7 +56,12 @@ dependencies {
     // Room Database
     implementation "androidx.room:room-runtime:2.6.1"
     implementation "androidx.room:room-ktx:2.6.1"
-    kapt "androidx.room:room-compiler:2.6.1"
+    ksp "androidx.room:room-compiler:2.6.1"
+    
+    // Dagger Hilt
+    implementation 'com.google.dagger:hilt-android:2.50'
+    kapt 'com.google.dagger:hilt-compiler:2.50'
+    implementation libs.hilt.navigation.compose
     
     // JDBC Oracle - Driver local ojdbc5.jar
     implementation files('libs/ojdbc5.jar')

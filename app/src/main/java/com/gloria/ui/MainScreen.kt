@@ -2,12 +2,12 @@ package com.gloria.ui
 
 import androidx.compose.runtime.*
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.gloria.ui.screens.LoginScreen
-import com.gloria.ui.screens.MainMenuScreen
+import com.gloria.ui.auth.screen.LoginScreen
+import com.gloria.ui.main.screen.MainMenuScreen
 import com.gloria.ui.components.SucursalSelectionDialog
-import com.gloria.viewmodel.AuthEvent
-import com.gloria.viewmodel.AuthState
-import com.gloria.viewmodel.AuthViewModel
+import com.gloria.ui.auth.viewmodel.AuthEvent
+import com.gloria.ui.auth.viewmodel.AuthState
+import com.gloria.ui.auth.viewmodel.AuthViewModel
 
 @Composable
 fun MainScreen(

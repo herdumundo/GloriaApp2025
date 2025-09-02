@@ -11,8 +11,10 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.gloria.ui.MainScreen
 import com.gloria.ui.theme.AppinventarioTheme
-import com.gloria.viewmodel.AuthViewModel
+import com.gloria.ui.auth.viewmodel.AuthViewModel
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -23,12 +25,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    val application = application as InventarioApplication
                     val authViewModel: AuthViewModel = viewModel()
-                    
-                    // Configurar el DAO en el ViewModel
-                    authViewModel.setLoggedUserDao(application.database.loggedUserDao())
-                    
                     MainScreen(authViewModel = authViewModel)
                 }
             }
