@@ -2,12 +2,16 @@ package com.gloria.ui.inventario.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.gloria.repository.SincronizacionCompletaRepository
-import com.gloria.data.repository.InventarioSincronizacionRepository
+import com.gloria.domain.usecase.sincronizacion.SincronizarDatosUseCase
+import com.gloria.domain.usecase.sincronizacion.GetEstadisticasSincronizacionUseCase
+import com.gloria.domain.usecase.sincronizacion.SincronizarInventariosUseCase
+import com.gloria.domain.usecase.sincronizacion.GetTotalInventariosLocalesUseCase
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 data class SincronizacionState(
     val isLoading: Boolean = false,
@@ -22,9 +26,12 @@ data class SincronizacionState(
     val inventariosProgressTotal: Int = 0
 )
 
-class SincronizacionViewModel(
-    private val sincronizacionRepository: SincronizacionCompletaRepository,
-    private val inventarioSincronizacionRepository: InventarioSincronizacionRepository
+@HiltViewModel
+class SincronizacionViewModel @Inject constructor(
+    private val sincronizarDatosUseCase: SincronizarDatosUseCase,
+    private val getEstadisticasSincronizacionUseCase: GetEstadisticasSincronizacionUseCase,
+    private val sincronizarInventariosUseCase: SincronizarInventariosUseCase,
+    private val getTotalInventariosLocalesUseCase: GetTotalInventariosLocalesUseCase
 ) : ViewModel() {
     
     private val _uiState = MutableStateFlow(SincronizacionState())
@@ -44,7 +51,7 @@ class SincronizacionViewModel(
             )
             
             try {
-                val result = sincronizacionRepository.sincronizarTodasLasTablas()
+                val result = sincronizarDatosUseCase()
                 
                 if (result.isSuccess) {
                     val syncResult = result.getOrNull()
@@ -83,7 +90,7 @@ class SincronizacionViewModel(
     private fun loadSyncInfo() {
         viewModelScope.launch {
             try {
-                val estadisticas = sincronizacionRepository.getEstadisticasSincronizacion()
+                val estadisticas = getEstadisticasSincronizacionUseCase()
                 val totalCount = estadisticas.areasCount + 
                                estadisticas.departamentosCount + 
                                estadisticas.seccionesCount + 
@@ -120,7 +127,7 @@ class SincronizacionViewModel(
             )
             
             try {
-                val result = inventarioSincronizacionRepository.sincronizarInventarios { message, current, total ->
+                val result = sincronizarInventariosUseCase { message, current, total ->
                     _uiState.value = _uiState.value.copy(
                         inventariosProgressMessage = message,
                         inventariosProgressCurrent = current,
@@ -160,7 +167,7 @@ class SincronizacionViewModel(
     private fun loadInventariosInfo() {
         viewModelScope.launch {
             try {
-                val totalInventarios = inventarioSincronizacionRepository.getTotalInventariosLocales()
+                val totalInventarios = getTotalInventariosLocalesUseCase()
                 _uiState.value = _uiState.value.copy(
                     inventariosCount = totalInventarios
                 )

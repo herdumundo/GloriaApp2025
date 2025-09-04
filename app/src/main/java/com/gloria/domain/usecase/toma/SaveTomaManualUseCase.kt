@@ -15,7 +15,7 @@ class SaveTomaManualUseCase @Inject constructor(
     private val sincronizacionRepository: SincronizacionCompletaRepository
 ) {
     
-    /**
+        /**
      * Guarda una toma manual de artículos
      * @param articulosSeleccionados Lista de artículos seleccionados
      * @param nroInventario Número del inventario (opcional, se crea uno nuevo si es null)
@@ -57,7 +57,7 @@ class SaveTomaManualUseCase @Inject constructor(
             Result.failure(e)
         }
     }
-    
+
     /**
      * Genera un número de inventario único
      */

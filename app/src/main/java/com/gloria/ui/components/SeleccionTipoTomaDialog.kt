@@ -7,6 +7,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -73,15 +75,16 @@ fun SeleccionTipoTomaDialog(
                 
                 Spacer(modifier = Modifier.height(24.dp))
                 
-                // Opciones
+                                // Opciones
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     // Opción 1: Por criterio de selección
                     Box(
                         modifier = Modifier
                             .weight(1f)
+                            .height(80.dp)
                             .clickable {
                                 onTipoSeleccionado(
                                     TipoToma(
@@ -91,29 +94,41 @@ fun SeleccionTipoTomaDialog(
                                     )
                                 )
                             }
-                            .padding(16.dp)
                             .background(
                                 color = Color(0xFF8B4513).copy(alpha = 0.1f),
-                                shape = RoundedCornerShape(8.dp)
+                                shape = RoundedCornerShape(12.dp)
                             )
-                            .padding(16.dp),
+                            .padding(12.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = "Por criterio de selección",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = Color(0xFF8B4513),
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                        )
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = "Criterio de selección",
+                                tint = Color(0xFF8B4513),
+                                modifier = Modifier.size(24.dp)
+                            )
+                            
+                            Spacer(modifier = Modifier.height(4.dp))
+                            
+                            Text(
+                                text = "Por criterio\nde selección",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Color(0xFF8B4513),
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+                        }
                     }
-                    
-                    Spacer(modifier = Modifier.width(16.dp))
                     
                     // Opción 2: Manual
                     Box(
                         modifier = Modifier
                             .weight(1f)
+                            .height(80.dp)
                             .clickable {
                                 onTipoSeleccionado(
                                     TipoToma(
@@ -123,21 +138,34 @@ fun SeleccionTipoTomaDialog(
                                     )
                                 )
                             }
-                            .padding(16.dp)
                             .background(
                                 color = Color(0xFF8B4513).copy(alpha = 0.1f),
-                                shape = RoundedCornerShape(8.dp)
+                                shape = RoundedCornerShape(12.dp)
                             )
-                            .padding(16.dp),
+                            .padding(12.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = "Manual",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = Color(0xFF8B4513),
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                        )
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = "Manual",
+                                tint = Color(0xFF8B4513),
+                                modifier = Modifier.size(24.dp)
+                            )
+                            
+                            Spacer(modifier = Modifier.height(4.dp))
+                            
+                            Text(
+                                text = "Manual",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Color(0xFF8B4513),
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+                        }
                     }
                 }
             }

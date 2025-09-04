@@ -2,13 +2,16 @@ package com.gloria.ui.inventario.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.gloria.data.dao.InventarioDetalleDao
-import com.gloria.data.dao.LoggedUserDao
+import com.gloria.domain.usecase.inventario.GetInventariosCardsUseCase
+import com.gloria.domain.usecase.auth.GetLoggedUserSyncUseCase
+import com.gloria.data.entity.LoggedUser
 import com.gloria.data.model.InventarioCard
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 /**
  * Estado de la UI para la pantalla de Registro de Inventario
@@ -24,9 +27,10 @@ data class RegistroInventarioState(
 /**
  * ViewModel para la pantalla de Registro de Inventario
  */
-class RegistroInventarioViewModel(
-    private val inventarioDetalleDao: InventarioDetalleDao,
-    private val loggedUserDao: LoggedUserDao
+@HiltViewModel
+class RegistroInventarioViewModel @Inject constructor(
+    private val getInventariosCardsUseCase: GetInventariosCardsUseCase,
+    private val getLoggedUserSyncUseCase: GetLoggedUserSyncUseCase
 ) : ViewModel() {
     
     private val _uiState = MutableStateFlow(RegistroInventarioState())
@@ -46,7 +50,7 @@ class RegistroInventarioViewModel(
             
             try {
                 // Obtener inventarios DISTINCT con el query corregido
-                inventarioDetalleDao.getInventariosCardsDistinct(
+                getInventariosCardsUseCase(
                     sucursal = uiState.value.sucursalLogueada
                 ).collect { inventariosCards ->
                     _uiState.value = _uiState.value.copy(
@@ -79,7 +83,7 @@ class RegistroInventarioViewModel(
     fun cargarUsuarioLogueado() {
         viewModelScope.launch {
             try {
-                loggedUserDao.getLoggedUserSync()?.let { loggedUser ->
+                getLoggedUserSyncUseCase()?.let { loggedUser ->
                     _uiState.value = _uiState.value.copy(
                         usuarioLogueado = loggedUser.username,
                         sucursalLogueada = 1 // Por defecto, se puede configurar después

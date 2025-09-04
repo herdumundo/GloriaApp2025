@@ -101,8 +101,8 @@ class AuthViewModel @Inject constructor(
                     )
                 }
 
-                is com.gloria.domain.model.AuthResult.Error -> TODO()
-                com.gloria.domain.model.AuthResult.Success -> TODO()
+              /*  is com.gloria.domain.model.AuthResult.Error -> TODO()
+                com.gloria.domain.model.AuthResult.Success -> TODO()*/
             }
         }
     }

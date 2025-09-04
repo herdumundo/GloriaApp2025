@@ -1,7 +1,7 @@
 package com.gloria.repository
 
-import com.gloria.data.dao.*
 import com.gloria.data.entity.*
+import com.gloria.data.repository.*
 import com.gloria.util.ConnectionOracle
 import com.gloria.util.Controles
 import kotlinx.coroutines.Dispatchers
@@ -9,13 +9,13 @@ import kotlinx.coroutines.withContext
 import java.sql.ResultSet
 
 class SincronizacionCompletaRepository(
-    private val areaDao: AreaDao,
-    private val departamentoDao: DepartamentoDao,
-    private val seccionDao: SeccionDao,
-    private val familiaDao: FamiliaDao,
-    private val grupoDao: GrupoDao,
-    private val subgrupoDao: SubgrupoDao,
-    private val sucursalDepartamentoDao: SucursalDepartamentoDao
+    private val areaRepository: AreaRepository,
+    private val departamentoRepository: DepartamentoRepository,
+    private val seccionRepository: SeccionRepository,
+    private val familiaRepository: FamiliaRepository,
+    private val grupoRepository: GrupoRepository,
+    private val subgrupoRepository: SubgrupoRepository,
+    private val sucursalDepartamentoRepository: SucursalDepartamentoRepository
 ) {
     
     suspend fun sincronizarTodasLasTablas(): Result<SincronizacionResult> = withContext(Dispatchers.IO) {
@@ -34,44 +34,44 @@ class SincronizacionCompletaRepository(
             try {
                 // 1. Sincronizar Áreas
                 val areas = sincronizarAreas(connection)
-                areaDao.deleteAllAreas()
-                areaDao.insertAllAreas(areas)
+                areaRepository.deleteAllAreas()
+                areaRepository.insertAllAreas(areas)
                 result.areasCount = areas.size
                 
                 // 2. Sincronizar Departamentos
                 val departamentos = sincronizarDepartamentos(connection)
-                departamentoDao.deleteAllDepartamentos()
-                departamentoDao.insertAllDepartamentos(departamentos)
+                departamentoRepository.deleteAllDepartamentos()
+                departamentoRepository.insertAllDepartamentos(departamentos)
                 result.departamentosCount = departamentos.size
                 
                 // 3. Sincronizar Secciones
                 val secciones = sincronizarSecciones(connection)
-                seccionDao.deleteAllSecciones()
-                seccionDao.insertAllSecciones(secciones)
+                seccionRepository.deleteAllSecciones()
+                seccionRepository.insertAllSecciones(secciones)
                 result.seccionesCount = secciones.size
                 
                 // 4. Sincronizar Familias
                 val familias = sincronizarFamilias(connection)
-                familiaDao.deleteAllFamilias()
-                familiaDao.insertAllFamilias(familias)
+                familiaRepository.deleteAllFamilias()
+                familiaRepository.insertAllFamilias(familias)
                 result.familiasCount = familias.size
                 
                 // 5. Sincronizar Grupos
                 val grupos = sincronizarGrupos(connection)
-                grupoDao.deleteAllGrupos()
-                grupoDao.insertAllGrupos(grupos)
+                grupoRepository.deleteAllGrupos()
+                grupoRepository.insertAllGrupos(grupos)
                 result.gruposCount = grupos.size
                 
                 // 6. Sincronizar Subgrupos
                 val subgrupos = sincronizarSubgrupos(connection)
-                subgrupoDao.deleteAllSubgrupos()
-                subgrupoDao.insertAllSubgrupos(subgrupos)
+                subgrupoRepository.deleteAllSubgrupos()
+                subgrupoRepository.insertAllSubgrupos(subgrupos)
                 result.subgruposCount = subgrupos.size
                 
                 // 7. Sincronizar Sucursal-Departamento
                 val sucursalDepartamentos = sincronizarSucursalDepartamentos(connection)
-                sucursalDepartamentoDao.deleteAllSucursalDepartamentos()
-                sucursalDepartamentoDao.insertAllSucursalDepartamentos(sucursalDepartamentos)
+                sucursalDepartamentoRepository.deleteAllSucursalDepartamentos()
+                sucursalDepartamentoRepository.insertAllSucursalDepartamentos(sucursalDepartamentos)
                 result.sucursalDepartamentosCount = sucursalDepartamentos.size
                 
                 connection.close()
@@ -256,13 +256,13 @@ class SincronizacionCompletaRepository(
     // Métodos para obtener estadísticas
     suspend fun getEstadisticasSincronizacion(): EstadisticasSincronizacion {
         return EstadisticasSincronizacion(
-            areasCount = areaDao.getCount(),
-            departamentosCount = departamentoDao.getCount(),
-            seccionesCount = seccionDao.getCount(),
-            familiasCount = familiaDao.getCount(),
-            gruposCount = grupoDao.getCount(),
-            subgruposCount = subgrupoDao.getCount(),
-            sucursalDepartamentosCount = sucursalDepartamentoDao.getCount()
+            areasCount = areaRepository.getCount(),
+            departamentosCount = departamentoRepository.getCount(),
+            seccionesCount = seccionRepository.getCount(),
+            familiasCount = familiaRepository.getCount(),
+            gruposCount = grupoRepository.getCount(),
+            subgruposCount = subgrupoRepository.getCount(),
+            sucursalDepartamentosCount = sucursalDepartamentoRepository.getCount()
         )
     }
 }

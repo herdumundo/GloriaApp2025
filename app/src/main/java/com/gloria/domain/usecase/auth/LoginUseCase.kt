@@ -1,5 +1,6 @@
 package com.gloria.domain.usecase.auth
 
+import com.gloria.data.repository.LoggedUserRepository
 import com.gloria.repository.AuthRepository
 import com.gloria.repository.AuthResult
 import javax.inject.Inject
@@ -8,7 +9,7 @@ import javax.inject.Inject
  * Caso de uso para autenticar un usuario
  */
 class LoginUseCase @Inject constructor(
-    private val authRepository: AuthRepository
+    private val loggedUserRepository: LoggedUserRepository
 ) {
     
     /**
@@ -19,6 +20,7 @@ class LoginUseCase @Inject constructor(
      */
     suspend operator fun invoke(username: String, password: String): AuthResult {
         return try {
+            val authRepository = AuthRepository(loggedUserRepository)
             authRepository.authenticateUser(username, password)
         } catch (e: Exception) {
             AuthResult.Error("Error durante el login: ${e.message}")

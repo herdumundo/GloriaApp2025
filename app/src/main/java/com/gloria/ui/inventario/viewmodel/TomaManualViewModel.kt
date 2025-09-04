@@ -8,16 +8,27 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
 import com.gloria.data.dao.*
 import com.gloria.data.entity.*
 import com.gloria.data.entity.Sucursal
 import com.gloria.data.model.ArticuloLote
-import com.gloria.data.repository.ArticuloLoteRepository
 import com.gloria.util.InventoryLogger
+import com.gloria.domain.usecase.toma.InsertarCabeceraInventarioUseCase
+import com.gloria.domain.usecase.toma.InsertarDetalleInventarioUseCase
+import com.gloria.domain.usecase.toma.InsertarCabeceraYDetalleInventarioUseCase
+import com.gloria.domain.usecase.toma.GetArticulosLotesUseCase
+import com.gloria.domain.usecase.toma.GetAreasUseCase
+import com.gloria.domain.usecase.toma.GetDepartamentosUseCase
+import com.gloria.domain.usecase.toma.GetSeccionesUseCase
+import com.gloria.domain.usecase.toma.GetFamiliasUseCase
+import com.gloria.domain.usecase.toma.GetGruposUseCase
+import com.gloria.domain.usecase.toma.GetSubgruposUseCase
+import com.gloria.domain.usecase.toma.GetLoggedUserUseCase
+import com.gloria.domain.usecase.toma.GetSucursalesUseCase
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 
 // Modelo especial para la opción "Todos"
 data class FamiliaTodos(
@@ -62,19 +73,26 @@ data class TomaManualUiState(
     val progressPercentage: Float = 0f,
     val currentProgress: Int = 0,
     val totalProgress: Int = 0,
-    val showConfirmarTomaDialog: Boolean = false
+    val loadingProgress: Float = 0f,
+    val successMessage: String? = null,
+    val showConfirmarTomaDialog: Boolean = false,
+    val inventarioVisible: Boolean = false
 )
 
-class TomaManualViewModel(
-    private val sucursalDepartamentoDao: SucursalDepartamentoDao,
-    private val areaDao: AreaDao,
-    private val departamentoDao: DepartamentoDao,
-    private val seccionDao: SeccionDao,
-    private val familiaDao: FamiliaDao,
-    private val grupoDao: GrupoDao,
-    private val subgrupoDao: SubgrupoDao,
-    private val loggedUserDao: LoggedUserDao,
-    private val articuloLoteRepository: ArticuloLoteRepository
+@HiltViewModel
+class TomaManualViewModel @Inject constructor(
+    private val getSucursalesTomaUseCase: GetSucursalesUseCase,
+    private val getAreasUseCase: GetAreasUseCase,
+    private val getDepartamentosUseCase: GetDepartamentosUseCase,
+    private val getSeccionesUseCase: GetSeccionesUseCase,
+    private val getFamiliasUseCase: GetFamiliasUseCase,
+    private val getGruposUseCase: GetGruposUseCase,
+    private val getSubgruposUseCase: GetSubgruposUseCase,
+    private val getLoggedUserUseCase: GetLoggedUserUseCase,
+    private val insertarCabeceraInventarioUseCase: InsertarCabeceraInventarioUseCase,
+    private val insertarDetalleInventarioUseCase: InsertarDetalleInventarioUseCase,
+    private val insertarCabeceraYDetalleInventarioUseCase: InsertarCabeceraYDetalleInventarioUseCase,
+    private val getArticulosLotesUseCase: GetArticulosLotesUseCase
 ) : ViewModel() {
     
     private val _uiState = MutableStateFlow(TomaManualUiState())
@@ -89,7 +107,7 @@ class TomaManualViewModel(
         viewModelScope.launch {
             try {
                 _uiState.value = _uiState.value.copy(isLoading = true)
-                val sucursales = sucursalDepartamentoDao.getSucursales()
+                val sucursales = getSucursalesTomaUseCase()
                 _uiState.value = _uiState.value.copy(
                     sucursales = sucursales,
                     isLoading = false
@@ -106,7 +124,7 @@ class TomaManualViewModel(
     private fun loadAreas() {
         viewModelScope.launch {
             try {
-                areaDao.getAllAreas().collect { areas ->
+                getAreasUseCase().collect { areas ->
                     _uiState.value = _uiState.value.copy(areas = areas)
                 }
             } catch (e: Exception) {
@@ -141,7 +159,7 @@ class TomaManualViewModel(
                 )
                 
                 // Cargar departamentos de la sucursal seleccionada
-                val departamentos = sucursalDepartamentoDao.getDepartamentosBySucursalSuspend(sucursal.sucCodigo)
+                val departamentos = getSucursalesTomaUseCase.getDepartamentosBySucursal(sucursal.sucCodigo)
                 _uiState.value = _uiState.value.copy(departamentos = departamentos)
                 
             } catch (e: Exception) {
@@ -194,7 +212,7 @@ class TomaManualViewModel(
                 )
                 
                 // Cargar departamentos del área seleccionada
-                departamentoDao.getDepartamentosByArea(area.areaCodigo).collect { dptos ->
+                getDepartamentosUseCase.getDepartamentosByArea(area.areaCodigo).collect { dptos ->
                     _uiState.value = _uiState.value.copy(dptos = dptos)
                 }
                 
@@ -226,7 +244,7 @@ class TomaManualViewModel(
                 )
                 
                 // Cargar secciones del departamento seleccionado
-                seccionDao.getSeccionesByDepartamento(dpto.dptoCodigo).collect { secciones ->
+                getSeccionesUseCase.getSeccionesByDepartamento(dpto.dptoCodigo).collect { secciones ->
                     _uiState.value = _uiState.value.copy(secciones = secciones)
                 }
                 
@@ -256,7 +274,7 @@ class TomaManualViewModel(
                 )
                 
                 // Cargar familias de la sección seleccionada
-                familiaDao.getFamiliasBySeccion(seccion.seccCodigo).collect { familias ->
+                getFamiliasUseCase.getFamiliasBySeccion(seccion.seccCodigo).collect { familias ->
                     _uiState.value = _uiState.value.copy(familias = familias)
                 }
                 
@@ -289,7 +307,7 @@ class TomaManualViewModel(
                 
                 // Cargar grupos de la familia seleccionada
                 InventoryLogger.logInfo("CARGAR_GRUPOS_FAMILIA", "Cargando grupos para familia: ${familia.fliaCodigo}")
-                grupoDao.getGruposByFamilia(familia.fliaCodigo).collect { grupos ->
+                getGruposUseCase.getGruposByFamilia(familia.fliaCodigo).collect { grupos ->
                     InventoryLogger.logInfo("GRUPOS_CARGADOS_FAMILIA", "Grupos cargados para familia ${familia.fliaCodigo}: ${grupos.size}")
                     grupos.forEach { grupo ->
                         InventoryLogger.logGrupo(grupo, "FAMILIA_${familia.fliaCodigo}")
@@ -317,7 +335,7 @@ class TomaManualViewModel(
                 if (seccion != null) {
                     InventoryLogger.logInfo("CARGAR_FAMILIAS_TODAS", "Cargando todas las familias de la sección: ${seccion.seccCodigo}")
                     
-                    val todasLasFamilias = familiaDao.getFamiliasBySeccion(seccion.seccCodigo).first()
+                    val todasLasFamilias = getFamiliasUseCase.getFamiliasBySeccion(seccion.seccCodigo).first()
                     InventoryLogger.logInfo("FAMILIAS_TODAS_COUNT", "Total de familias disponibles: ${todasLasFamilias.size}")
                     
                     // Seleccionar todas las familias - NO mostrar diálogo de grupo
@@ -518,7 +536,7 @@ class TomaManualViewModel(
                         InventoryLogger.logInfo("JOIN_COMPLETO_VERIFICACION", "Paso 1: Obteniendo todos los subgrupos...")
                         
                         // Verificar tabla subgrupo
-                        val todosSubgrupos = subgrupoDao.getAllSubgrupos().first()
+                        val todosSubgrupos = getSubgruposUseCase.getAllSubgrupos().first()
                         InventoryLogger.logInfo("JOIN_COMPLETO_VERIFICACION", "Total subgrupos en BD: ${todosSubgrupos.size}")
                         
                         InventoryLogger.logInfo("JOIN_COMPLETO_VERIFICACION", "Paso 2: Filtrando por área/dpto/sección...")
@@ -574,7 +592,7 @@ class TomaManualViewModel(
                         // PRIMERO: Probar consulta simple sin JOINs para verificar que los datos básicos funcionan
                         InventoryLogger.logInfo("TEST_QUERY_SIMPLE", "=== PROBANDO CONSULTA SIMPLE ===")
                         
-                        val subgruposSimple = subgrupoDao.testQuerySimple(
+                        val subgruposSimple = getSubgruposUseCase.testQuerySimple(
                             areaCodigo = areaCodigo,
                             dptoCodigo = dptoCodigo,
                             seccCodigo = seccCodigo,
@@ -594,13 +612,13 @@ class TomaManualViewModel(
                         // SEGUNDO: Intentar usar la consulta con JOIN completo para múltiples grupos
                         InventoryLogger.logInfo("JOIN_COMPLETO", "=== PROBANDO CONSULTA JOIN COMPLETO ===")
                         
-                        val subgruposWithGrupo = subgrupoDao.getSubgruposByMultipleGruposWithCompleteJoin(
-                            grupCodigos = selectedGrupos.map { it.grupCodigo },
+                        val subgruposWithGrupo = getSubgruposUseCase.getSubgruposByMultipleGruposWithCompleteJoin(
+                            gruposCodigos = selectedGrupos.map { it.grupCodigo },
                             areaCodigo = areaCodigo,
                             dptoCodigo = dptoCodigo,
                             seccCodigo = seccCodigo,
                             fliaCodigo = fliaCodigo
-                        ).first()
+                        )
                         
                         // Convertir SubgrupoWithGrupo a Subgrupo para mantener compatibilidad
                         val subgrupos = subgruposWithGrupo.map { subgrupoWithGrupo ->
@@ -673,8 +691,8 @@ class TomaManualViewModel(
                         
                         selectedGrupos.forEach { grupo ->
                             try {
-                                val subgrupos = subgrupoDao.getSubgruposByGrupoWithJoin(
-                                    grupCodigo = grupo.grupCodigo,
+                                val subgrupos = getSubgruposUseCase.getSubgruposByGrupoWithJoin(
+                                    grupoCodigo = grupo.grupCodigo,
                                     areaCodigo = areaCodigo,
                                     dptoCodigo = dptoCodigo,
                                     seccCodigo = seccCodigo,
@@ -887,11 +905,11 @@ class TomaManualViewModel(
                 InventoryLogger.logInfo("DB_CHECK", "Verificando estado de las tablas...")
                 
                 // Verificar tabla subgrupo
-                val totalSubgrupos = subgrupoDao.getCount()
+                val totalSubgrupos = getSubgruposUseCase.getSubgruposCount()
                 InventoryLogger.logDatabaseCount("subgrupo", totalSubgrupos)
                 
                 // Verificar tabla grupo
-                grupoDao.getAllGrupos().collect { grupos ->
+                getGruposUseCase().collect { grupos ->
                     InventoryLogger.logDatabaseCount("grupo", grupos.size)
                     if (grupos.size > 0) {
                         InventoryLogger.logInfo("DB_CHECK_GRUPO", "Primeros 3 grupos:")
@@ -904,7 +922,7 @@ class TomaManualViewModel(
                 // Verificar si hay subgrupos para los grupos específicos
                 val selectedGrupos = _uiState.value.selectedGrupos
                 selectedGrupos.forEach { grupo ->
-                    subgrupoDao.getAllSubgrupos().collect { todosSubgrupos ->
+                    getSubgruposUseCase().collect { todosSubgrupos ->
                         val subgruposDelGrupo = todosSubgrupos.filter { it.sugrGrupo == grupo.grupCodigo }
                         InventoryLogger.logInfo("DB_CHECK_SUBGRUPOS", "Subgrupos para grupo ${grupo.grupCodigo}: ${subgruposDelGrupo.size}")
                         
@@ -943,8 +961,8 @@ class TomaManualViewModel(
                     InventoryLogger.logInfo("PROCESANDO_GRUPO_FALLBACK", "Procesando grupo: ${grupo.grupCodigo} - ${grupo.grupDesc}")
                     
                     try {
-                        subgrupoDao.getSubgruposByGrupoWithJoin(
-                            grupCodigo = grupo.grupCodigo,
+                        getSubgruposUseCase.getSubgruposByGrupoWithJoin(
+                            grupoCodigo = grupo.grupCodigo,
                             areaCodigo = grupo.grupArea,
                             dptoCodigo = grupo.grupDpto,
                             seccCodigo = grupo.grupSeccion,
@@ -1022,8 +1040,8 @@ class TomaManualViewModel(
                             InventoryLogger.logInfo("SQL_QUERY_MULTIPLE", sqlQuery)
                             InventoryLogger.logInfo("SQL_PARAMS_MULTIPLE", "Parámetros: grupCodigos=$grupCodigos, areaCodigo=$areaCodigo, dptoCodigo=$dptoCodigo, seccCodigo=$seccCodigo")
                             
-                            subgrupoDao.getSubgruposByMultipleGruposWithJoin(
-                                grupCodigos = grupCodigos,
+                            getSubgruposUseCase.getSubgruposByMultipleGruposWithJoin(
+                                gruposCodigos = grupCodigos,
                                 areaCodigo = areaCodigo,
                                 dptoCodigo = dptoCodigo,
                                 seccCodigo = seccCodigo,
@@ -1069,8 +1087,8 @@ class TomaManualViewModel(
                                 InventoryLogger.logInfo("SQL_QUERY_INDIVIDUAL", sqlQueryIndividual)
                                 InventoryLogger.logInfo("SQL_PARAMS_INDIVIDUAL", "Parámetros: grupCodigo=${grupo.grupCodigo}, areaCodigo=${grupo.grupArea}, dptoCodigo=${grupo.grupDpto}, seccCodigo=${grupo.grupSeccion}")
                                 
-                                subgrupoDao.getSubgruposByGrupoWithJoin(
-                                    grupCodigo = grupo.grupCodigo,
+                                getSubgruposUseCase.getSubgruposByGrupoWithJoin(
+                                    grupoCodigo = grupo.grupCodigo,
                                     areaCodigo = grupo.grupArea,
                                     dptoCodigo = grupo.grupDpto,
                                     seccCodigo = grupo.grupSeccion,
@@ -1100,8 +1118,8 @@ class TomaManualViewModel(
                         InventoryLogger.logInfo("PROCESANDO_GRUPO_INDIVIDUAL", "Procesando grupo: ${grupo.grupCodigo} - ${grupo.grupDesc}")
                         
                         try {
-                            subgrupoDao.getSubgruposByGrupoWithJoin(
-                                grupCodigo = grupo.grupCodigo,
+                            getSubgruposUseCase.getSubgruposByGrupoWithJoin(
+                                grupoCodigo = grupo.grupCodigo,
                                 areaCodigo = grupo.grupArea,
                                 dptoCodigo = grupo.grupDpto,
                                 seccCodigo = grupo.grupSeccion,
@@ -1273,12 +1291,44 @@ class TomaManualViewModel(
     
     // Función para mostrar el diálogo de confirmación de toma
     fun showConfirmarTomaDialog() {
-        _uiState.value = _uiState.value.copy(showConfirmarTomaDialog = true)
+        // Marcar todos los artículos seleccionados como inventario no visible por defecto
+        val articulosActualizados = _uiState.value.selectedArticulosLotes.map { articulo ->
+            articulo.copy(inventarioVisible = "N")
+        }
+        
+        _uiState.value = _uiState.value.copy(
+            selectedArticulosLotes = articulosActualizados,
+            showConfirmarTomaDialog = true
+        )
     }
     
     // Función para ocultar el diálogo de confirmación de toma
     fun hideConfirmarTomaDialog() {
         _uiState.value = _uiState.value.copy(showConfirmarTomaDialog = false)
+    }
+    
+    // Función para actualizar la marca de inventario visible en los artículos seleccionados
+    fun updateInventarioVisibleMark(inventarioVisible: Boolean) {
+        android.util.Log.d("TomaManualViewModel", "🔄 Actualizando inventario visible: $inventarioVisible")
+        
+        val articulosActualizados = _uiState.value.selectedArticulosLotes.map { articulo ->
+            articulo.copy(
+                inventarioVisible = if (inventarioVisible) "Y" else "N"
+            )
+        }
+        
+        _uiState.value = _uiState.value.copy(
+            selectedArticulosLotes = articulosActualizados,
+            inventarioVisible = inventarioVisible
+        )
+        
+        android.util.Log.d("TomaManualViewModel", "✅ Inventario visible actualizado: ${_uiState.value.inventarioVisible}")
+        android.util.Log.d("TomaManualViewModel", "📊 Artículos seleccionados: ${_uiState.value.selectedArticulosLotes.size}")
+    }
+    
+    // Función para limpiar el mensaje de éxito
+    fun clearSuccessMessage() {
+        _uiState.value = _uiState.value.copy(successMessage = null)
     }
     
     // Función para cargar artículos con lotes desde Oracle
@@ -1353,7 +1403,7 @@ class TomaManualViewModel(
                             android.util.Log.d("TomaManualViewModel", "Ejecutando consulta Oracle en hilo de background...")
                             
                             android.util.Log.d("TomaManualViewModel", "🔄 Llamando al repositorio...")
-                            val resultado = articuloLoteRepository.getArticulosLotes(
+                            val resultado = getArticulosLotesUseCase(
                                 subgruposSeleccionados = subgruposSeleccionados,
                                 sucursal = sucursal,
                                 deposito = deposito,
@@ -1427,7 +1477,7 @@ class TomaManualViewModel(
                         _uiState.value = _uiState.value.copy(loadingMessage = "Ejecutando consulta Oracle...")
                         android.util.Log.d("TomaManualViewModel", "Ejecutando consulta Oracle para familia específica...")
                         
-                        val resultado = articuloLoteRepository.getArticulosLotes(
+                        val resultado = getArticulosLotesUseCase(
                             subgruposSeleccionados = subgruposSeleccionados,
                             sucursal = sucursal,
                             deposito = deposito,
@@ -1498,6 +1548,8 @@ class TomaManualViewModel(
         _uiState.value = _uiState.value.copy(
             isLoading = true,
             loadingMessage = "Creando toma del inventario...",
+            loadingProgress = 0f,
+            successMessage = null,
             errorMessage = null
         )
         
@@ -1561,13 +1613,16 @@ class TomaManualViewModel(
                 
                 // 🚀 Insertar la cabecera del inventario
                 android.util.Log.d("TomaManualViewModel", "🚀 Iniciando inserción de cabecera del inventario...")
-                _uiState.value = _uiState.value.copy(loadingMessage = "Insertando cabecera del inventario...")
+                _uiState.value = _uiState.value.copy(
+                    loadingMessage = "Insertando cabecera del inventario...",
+                    loadingProgress = 10f
+                )
                 
                 // 🔍 Obtener el usuario logueado
                 android.util.Log.d("TomaManualViewModel", "🔍 Obteniendo usuario logueado...")
                 val usuarioLogueado = withContext(Dispatchers.IO) {
                     try {
-                        loggedUserDao.getLoggedUserSync()
+                        getLoggedUserUseCase()
                     } catch (e: Exception) {
                         android.util.Log.e("TomaManualViewModel", "❌ Error al obtener usuario logueado: ${e.message}", e)
                         null
@@ -1581,9 +1636,16 @@ class TomaManualViewModel(
                 
                 android.util.Log.d("TomaManualViewModel", "✅ Usuario logueado obtenido: ${usuarioLogueado.username}")
                 
-                val idCabecera = withContext(Dispatchers.IO) {
+                // 🚀 TRANSACCIÓN ÚNICA: Insertar cabecera y detalle en una sola operación
+                android.util.Log.d("TomaManualViewModel", "🚀 Iniciando transacción única de cabecera y detalle...")
+                _uiState.value = _uiState.value.copy(
+                    loadingMessage = "Creando inventario completo...",
+                    loadingProgress = 10f
+                )
+                
+                val (idCabecera, totalArticulosInsertados) = withContext(Dispatchers.IO) {
                     try {
-                        articuloLoteRepository.insertarCabeceraInventario(
+                        insertarCabeceraYDetalleInventarioUseCase(
                             sucursal = sucursal,
                             deposito = deposito,
                             area = area,
@@ -1592,48 +1654,31 @@ class TomaManualViewModel(
                             familia = familia,
                             subgruposSeleccionados = subgruposSeleccionados,
                             isFamiliaTodos = isFamiliaTodos,
-                            userdb = usuarioLogueado.username // ✅ Usuario real del login
-                        )
-                    } catch (e: Exception) {
-                        android.util.Log.e("TomaManualViewModel", "❌ Error al insertar cabecera: ${e.message}", e)
-                        throw e
-                    }
-                }
-                
-                android.util.Log.d("TomaManualViewModel", "✅ Cabecera del inventario insertada exitosamente")
-                android.util.Log.d("TomaManualViewModel", "🎯 ID de cabecera generado: $idCabecera")
-                
-                // 🔄 SEGUNDO: Insertar el detalle del inventario
-                android.util.Log.d("TomaManualViewModel", "🚀 Iniciando inserción de detalle del inventario...")
-                _uiState.value = _uiState.value.copy(loadingMessage = "Insertando artículos del inventario...")
-                
-                val totalArticulosInsertados = withContext(Dispatchers.IO) {
-                    try {
-                        articuloLoteRepository.insertarDetalleInventario(
-                            idCabecera = idCabecera,
+                            userdb = usuarioLogueado.username, // ✅ Usuario real del login
+                            inventarioVisible = _uiState.value.inventarioVisible,
                             articulosSeleccionados = _uiState.value.selectedArticulosLotes,
-                            sucursal = sucursal,
-                            deposito = deposito,
-                            area = area,
-                            departamento = departamento,
-                            seccion = seccion,
                             onProgressUpdate = { current, total ->
-                                updateProgress(current, total)
+                                // Ajustar progreso del 10% al 90% para el detalle
+                                val adjustedProgress = 10f + (current.toFloat() / total.toFloat() * 80f)
+                                updateProgress(current, total, adjustedProgress)
                             }
                         )
                     } catch (e: Exception) {
-                        android.util.Log.e("TomaManualViewModel", "❌ Error al insertar detalle: ${e.message}", e)
+                        android.util.Log.e("TomaManualViewModel", "❌ Error en transacción única: ${e.message}", e)
                         throw e
                     }
                 }
                 
-                android.util.Log.d("TomaManualViewModel", "✅ Detalle del inventario insertado exitosamente")
+                android.util.Log.d("TomaManualViewModel", "✅ TRANSACCIÓN ÚNICA COMPLETADA EXITOSAMENTE")
+                android.util.Log.d("TomaManualViewModel", "🎯 ID de cabecera generado: $idCabecera")
                 android.util.Log.d("TomaManualViewModel", "📊 Total de artículos insertados: $totalArticulosInsertados")
                 
                 // ✅ Actualizar UI con éxito
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     loadingMessage = null,
+                    loadingProgress = 100f,
+                    successMessage = "Toma del inventario creada exitosamente. ID: $idCabecera, Artículos: $totalArticulosInsertados",
                     errorMessage = null
                 )
                 
@@ -1642,6 +1687,7 @@ class TomaManualViewModel(
                 android.util.Log.d("TomaManualViewModel", "   • ID de cabecera: $idCabecera")
                 android.util.Log.d("TomaManualViewModel", "   • Total de artículos: $totalArticulosInsertados")
                 android.util.Log.d("TomaManualViewModel", "   • Usuario: ${usuarioLogueado.username}")
+                android.util.Log.d("TomaManualViewModel", "   • Transacción única: ✅ EXITOSA")
                 
                 // TODO: Aquí se podría navegar a otra pantalla o mostrar un mensaje de confirmación
                 
@@ -1650,7 +1696,9 @@ class TomaManualViewModel(
                 _uiState.value = _uiState.value.copy(
                     errorMessage = "Error al crear la toma del inventario: ${e.message}",
                     isLoading = false,
-                    loadingMessage = null
+                    loadingMessage = null,
+                    loadingProgress = 0f,
+                    successMessage = null
                 )
             }
         }
@@ -1677,20 +1725,28 @@ class TomaManualViewModel(
     }
     
     // Función para actualizar el progreso de la consulta
-    fun updateProgress(current: Int, total: Int) {
+    fun updateProgress(current: Int, total: Int, adjustedProgress: Float? = null) {
         val percentage = if (total > 0) {
             (current.toFloat() / total.toFloat()) * 100f
         } else {
             0f
         }
         
+        // Para el loading progress, usar el progreso ajustado si se proporciona, sino calcular
+        val finalLoadingProgress = adjustedProgress ?: if (total > 0) {
+            30f + (percentage * 0.6f) // 30% base + 60% del progreso del detalle
+        } else {
+            30f
+        }
+        
         _uiState.value = _uiState.value.copy(
             currentProgress = current,
             totalProgress = total,
-            progressPercentage = percentage
+            progressPercentage = percentage,
+            loadingProgress = finalLoadingProgress
         )
         
-        android.util.Log.d("TomaManualViewModel", "📊 Progreso actualizado: $current/$total (${String.format("%.1f", percentage)}%)")
+        android.util.Log.d("TomaManualViewModel", "📊 Progreso actualizado: $current/$total (${String.format("%.1f", percentage)}%) - Loading: ${String.format("%.1f", finalLoadingProgress)}%")
     }
     
     // Función para resetear el progreso

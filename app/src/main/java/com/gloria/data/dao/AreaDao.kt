@@ -13,6 +13,12 @@ interface AreaDao {
     @Query("SELECT * FROM area WHERE areaCodigo = :areaCodigo")
     suspend fun getAreaByCodigo(areaCodigo: Int): Area?
     
+    @Query("SELECT * FROM area /*WHERE areaSucursal = :sucursalCodigo*/ ORDER BY areaCodigo")
+    fun getAreasBySucursal(): Flow<List<Area>>
+    
+    @Query("SELECT * FROM area  ORDER BY areaCodigo")
+    fun getAreasByDepartamento(): Flow<List<Area>>
+    
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertArea(area: Area)
     

@@ -12,7 +12,7 @@ interface SucursalDepartamentoDao {
     fun getAllSucursalDepartamentos(): Flow<List<SucursalDepartamento>>
     
     @Query("SELECT * FROM sucursal_departamento WHERE suc_codigo = :sucCodigo ORDER BY dep_codigo")
-    fun getDepartamentosBySucursal(sucCodigo: Int): Flow<List<SucursalDepartamento>>
+    suspend fun getDepartamentosBySucursal(sucCodigo: Int): List<SucursalDepartamento>
     
     @Query("SELECT DISTINCT suc_codigo, suc_desc FROM sucursal_departamento ORDER BY suc_codigo")
     suspend fun getSucursales(): List<Sucursal>

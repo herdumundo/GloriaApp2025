@@ -194,9 +194,9 @@ interface SubgrupoDao {
         grupCodigos: List<Int>,
         areaCodigo: Int,
         dptoCodigo: Int,
+        fliaCodigo: Int,
         seccCodigo: Int,
-        fliaCodigo: Int
-    ): Flow<List<SubgrupoWithGrupo>>
+        ):  List<SubgrupoWithGrupo>
     
     @Query("SELECT * FROM subgrupo WHERE sugrCodigo = :sugrCodigo")
     suspend fun getSubgrupoByCodigo(sugrCodigo: Int): Subgrupo?

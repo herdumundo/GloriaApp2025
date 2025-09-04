@@ -1,7 +1,7 @@
 package com.gloria.domain.usecase.articulo
 
 import com.gloria.data.model.ArticuloToma
-import com.gloria.repository.ArticuloTomaRepository
+import com.gloria.data.repository.ArticuloTomaRepository
 import javax.inject.Inject
 
 class GetArticulosTomaUseCase @Inject constructor(

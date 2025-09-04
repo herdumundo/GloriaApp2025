@@ -1,7 +1,8 @@
 package com.gloria.repository
 
+import android.annotation.SuppressLint
 import android.util.Log
-import com.gloria.data.dao.LoggedUserDao
+import com.gloria.data.repository.LoggedUserRepository
 import com.gloria.data.entity.LoggedUser
 import com.gloria.util.ConnectionOracle
 import com.gloria.util.Controles
@@ -14,7 +15,7 @@ import java.sql.ResultSet
  * Repositorio para manejar operaciones de autenticación con Oracle
  */
 class AuthRepository(
-    private val loggedUserDao: LoggedUserDao
+    private val loggedUserRepository: LoggedUserRepository
 ) {
     
     /**
@@ -61,7 +62,7 @@ class AuthRepository(
                     loginTimestamp = System.currentTimeMillis()
                 )
                 Log.d("AuthRepository", "💾 Guardando usuario en base de datos local...")
-                loggedUserDao.insertLoggedUser(loggedUser)
+                loggedUserRepository.insertLoggedUser(loggedUser)
                 Log.d("AuthRepository", "✅ Usuario guardado: $username")
             } catch (e: Exception) {
                 Log.e("AuthRepository", "❌ Error al guardar usuario: ${e.message}")
@@ -90,6 +91,7 @@ class AuthRepository(
     /**
      * Registra un nuevo usuario en la base de datos
      */
+    @SuppressLint("SuspiciousIndentation")
     fun registerUser(username: String, password: String): AuthResult {
         var connection: Connection? = null
         var statement: PreparedStatement? = null
@@ -163,7 +165,7 @@ class AuthRepository(
     suspend fun logout() {
         try {
             Log.d("AuthRepository", "🚪 Cerrando sesión del usuario...")
-            loggedUserDao.clearLoggedUsers()
+            loggedUserRepository.clearLoggedUsers()
             Log.d("AuthRepository", "✅ Sesión cerrada correctamente")
         } catch (e: Exception) {
             Log.e("AuthRepository", "❌ Error al cerrar sesión: ${e.message}")

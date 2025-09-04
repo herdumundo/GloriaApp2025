@@ -1,18 +1,18 @@
 package com.gloria.domain.usecase
 
-import com.gloria.data.dao.LoggedUserDao
+import com.gloria.data.repository.LoggedUserRepository
 import com.gloria.data.entity.LoggedUser
 import com.gloria.repository.SucursalRepository
 import com.gloria.repository.SucursalResult
 import kotlinx.coroutines.flow.first
+import javax.inject.Inject
 
 /**
  * Caso de uso para obtener las sucursales del usuario logueado
  * Reutilizable para diferentes partes de la aplicación
  */
-class GetSucursalesUseCase(
-    private val loggedUserDao: LoggedUserDao,
-    private val sucursalRepository: SucursalRepository
+class GetSucursalesUseCase @Inject constructor(
+    private val loggedUserRepository: LoggedUserRepository
 ) {
     
     /**
@@ -22,11 +22,14 @@ class GetSucursalesUseCase(
     suspend operator fun invoke(): SucursalResult {
         try {
             // Obtener el usuario logueado de la base de datos local
-            val loggedUser = loggedUserDao.getLoggedUserSync()
+            val loggedUser = loggedUserRepository.getLoggedUserSync()
             
             if (loggedUser == null) {
                 return SucursalResult.Error("No hay usuario logueado")
             }
+            
+            // Crear repository localmente
+            val sucursalRepository = SucursalRepository()
             
             // Usar las credenciales del usuario logueado para consultar Oracle
             return sucursalRepository.getSucursales(

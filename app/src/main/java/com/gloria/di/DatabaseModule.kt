@@ -67,4 +67,15 @@ object DatabaseModule {
     fun provideSucursalDepartamentoDao(database: AppDatabase): SucursalDepartamentoDao {
         return database.sucursalDepartamentoDao()
     }
+
+    @Provides
+    fun provideArticuloTomaDao(): ArticuloTomaDao {
+        return ArticuloTomaDaoImpl()
+    }
+
+    @Provides
+    fun provideCancelacionTomaDao(): CancelacionTomaDao {
+        return CancelacionTomaDaoImpl()
+    }
 }
+

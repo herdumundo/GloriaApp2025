@@ -33,42 +33,11 @@ fun ArticulosTomaScreen(
         viewModel.cargarArticulos(nroToma)
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "Artículos de la toma #$nroToma",
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.Default.ArrowBack,
-                            contentDescription = "Volver"
-                        )
-                    }
-                },
-                actions = {
-                    // Botón para seleccionar/deseleccionar todos
-                    IconButton(
-                        onClick = { viewModel.seleccionarTodos() }
-                    ) {
-                        Icon(
-                            imageVector = if (state.articulos.all { it.isSelected }) 
-                                Icons.Default.Check else Icons.Default.Close,
-                            contentDescription = "Seleccionar todos"
-                        )
-                    }
-                }
-            )
-        }
-    ) { paddingValues ->
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
+
         ) {
             when {
                 state.isLoading -> {
@@ -145,32 +114,76 @@ fun ArticulosTomaScreen(
                                 containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.1f)
                             )
                         ) {
-                            Row(
+                            Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(16.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                                    .padding(16.dp)
                             ) {
-                                                    Column {
-                        Text(
-                            text = "Artículos de la toma",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            text = "${state.articulos.count { it.isSelected }} de ${state.articulos.size} seleccionados",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                                
-                                Button(
-                                    onClick = { viewModel.deseleccionarTodos() },
-                                    enabled = state.articulos.any { it.isSelected }
+                                // Primera fila: Información de selección
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text("Limpiar selección")
+                                    Column {
+                                        Text(
+                                            text = "Artículos de la toma",
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                        Text(
+                                            text = "${state.articulos.count { it.isSelected }} de ${state.articulos.size} seleccionados",
+                                            fontSize = 12.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    
+                                    Button(
+                                        onClick = { viewModel.deseleccionarTodos() },
+                                        enabled = state.articulos.any { it.isSelected }
+                                    ) {
+                                        Text("Limpiar selección")
+                                    }
+                                }
+                                
+                                // Segunda fila: Botón de cancelar
+                                if (state.articulos.any { it.isSelected }) {
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = if (state.articulos.count { it.isSelected } == state.articulos.size) {
+                                                "Cancelar toda la toma #$nroToma"
+                                            } else {
+                                                "Cancelar ${state.articulos.count { it.isSelected }} artículos seleccionados"
+                                            },
+                                            fontSize = 12.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        
+                                        Button(
+                                            onClick = { viewModel.cancelarSeleccionados(nroToma) },
+                                            enabled = !state.isLoading,
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = MaterialTheme.colorScheme.error
+                                            )
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Close,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text(
+                                                text = if (state.isLoading) "Cancelando..." else "Cancelar",
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -198,5 +211,39 @@ fun ArticulosTomaScreen(
                 }
             }
         }
+        
+        // Diálogo de confirmación de cancelación exitosa
+        if (state.showConfirmacionDialog) {
+            AlertDialog(
+                onDismissRequest = { viewModel.cerrarConfirmacionDialog() },
+                title = {
+                    Text(
+                        text = "Cancelación Exitosa",
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                text = {
+                    Text(
+                        text = if (state.articulos.count { it.isSelected } == state.articulos.size) {
+                            "La toma #$nroToma ha sido cancelada completamente."
+                        } else {
+                            "Los artículos seleccionados han sido cancelados exitosamente."
+                        },
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = { 
+                            viewModel.cerrarConfirmacionDialog()
+                            onNavigateBack()
+                        }
+                    ) {
+                        Text("Aceptar")
+                    }
+                }
+            )
+        }
     }
-}
+

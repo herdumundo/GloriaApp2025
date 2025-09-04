@@ -1,7 +1,7 @@
 package com.gloria.repository
 
 import com.gloria.data.dao.InventarioDetalleDao
-import com.gloria.data.dao.LoggedUserDao
+import com.gloria.data.repository.LoggedUserRepository
 import com.gloria.data.model.ArticuloInventario
 import com.gloria.data.model.InventarioCard
 import kotlinx.coroutines.flow.Flow
@@ -14,7 +14,7 @@ import javax.inject.Inject
  */
 class InventarioRepository @Inject constructor(
     private val inventarioDetalleDao: InventarioDetalleDao,
-    private val loggedUserDao: LoggedUserDao
+    private val loggedUserRepository: LoggedUserRepository
 ) {
     
     /**
@@ -160,7 +160,7 @@ class InventarioRepository @Inject constructor(
     /**
      * Obtiene el usuario logueado
      */
-    suspend fun getLoggedUser() = loggedUserDao.getLoggedUserSync()
+    suspend fun getLoggedUser() = loggedUserRepository.getLoggedUserSync()
     
     /**
      * Guarda una toma manual

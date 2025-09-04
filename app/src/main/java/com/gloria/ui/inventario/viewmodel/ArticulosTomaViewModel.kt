@@ -18,19 +18,17 @@ data class ArticulosTomaState(
     val articulos: List<ArticuloToma> = emptyList(),
     val isLoading: Boolean = false,
     val error: String? = null,
-    val cancelacionExitosa: Boolean = false
+    val cancelacionExitosa: Boolean = false,
+    val showConfirmacionDialog: Boolean = false
 )
-
 @HiltViewModel
 class ArticulosTomaViewModel @Inject constructor(
     private val getArticulosTomaUseCase: GetArticulosTomaUseCase,
     private val cancelarTomaParcialUseCase: CancelarTomaParcialUseCase,
     private val cancelarTomaTotalUseCase: CancelarTomaTotalUseCase
 ) : ViewModel() {
-
     private val _state = MutableStateFlow(ArticulosTomaState())
     val state: StateFlow<ArticulosTomaState> = _state
-
     fun cargarArticulos(nroToma: Int) {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
@@ -65,6 +63,9 @@ class ArticulosTomaViewModel @Inject constructor(
             try {
                 val articulosSeleccionados = _state.value.articulos.filter { it.isSelected }
                 
+                android.util.Log.d("ArticulosTomaViewModel", "🚀 Iniciando cancelación de toma #$nroToma")
+                android.util.Log.d("ArticulosTomaViewModel", "📊 Artículos seleccionados: ${articulosSeleccionados.size} de ${_state.value.articulos.size}")
+                
                 if (articulosSeleccionados.isEmpty()) {
                     _state.update { it.copy(
                         isLoading = false,
@@ -75,21 +76,26 @@ class ArticulosTomaViewModel @Inject constructor(
 
                 val result = if (articulosSeleccionados.size == _state.value.articulos.size) {
                     // Si todos los artículos están seleccionados, cancelar toma total
+                    android.util.Log.d("ArticulosTomaViewModel", "🔄 Cancelando TOMA TOTAL")
                     cancelarTomaTotalUseCase(nroToma, Variables.userdb)
                 } else {
                     // Si solo algunos artículos están seleccionados, cancelar toma parcial
                     val secuencias = articulosSeleccionados.map { it.winvdSecu }
+                    android.util.Log.d("ArticulosTomaViewModel", "🔄 Cancelando TOMA PARCIAL con secuencias: $secuencias")
                     cancelarTomaParcialUseCase(nroToma, secuencias)
                 }
 
                 result.fold(
-                    onSuccess = {
+                    onSuccess = { resultado ->
+                        android.util.Log.d("ArticulosTomaViewModel", "✅ Cancelación exitosa: $resultado registros afectados")
                         _state.update { it.copy(
                             isLoading = false,
-                            cancelacionExitosa = true
+                            cancelacionExitosa = true,
+                            showConfirmacionDialog = true
                         )}
                     },
                     onFailure = { error ->
+                        android.util.Log.e("ArticulosTomaViewModel", "❌ Error en cancelación: ${error.message}", error)
                         _state.update { it.copy(
                             isLoading = false,
                             error = "Error al cancelar la toma: ${error.message}"
@@ -97,6 +103,7 @@ class ArticulosTomaViewModel @Inject constructor(
                     }
                 )
             } catch (e: Exception) {
+                android.util.Log.e("ArticulosTomaViewModel", "💥 Error inesperado: ${e.message}", e)
                 _state.update { it.copy(
                     isLoading = false,
                     error = "Error inesperado: ${e.message}"
@@ -168,5 +175,9 @@ class ArticulosTomaViewModel @Inject constructor(
 
     fun limpiarError() {
         _state.update { it.copy(error = null) }
+    }
+    
+    fun cerrarConfirmacionDialog() {
+        _state.update { it.copy(showConfirmacionDialog = false, cancelacionExitosa = false) }
     }
 }

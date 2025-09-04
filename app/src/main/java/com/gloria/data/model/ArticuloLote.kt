@@ -13,5 +13,6 @@ data class ArticuloLote(
     val artCodigo: String,
     val ardeFecVtoLote: String,
     val sugrCodigo: Int,
-    val sugrDesc: String
+    val sugrDesc: String,
+    val inventarioVisible: String = "N" // Y = Visible, N = No visible
 )

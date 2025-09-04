@@ -37,6 +37,7 @@ import com.gloria.ui.inventario.viewmodel.ConteoInventarioViewModel
 import com.gloria.data.AppDatabase
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.launch
+import androidx.hilt.navigation.compose.hiltViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -176,7 +177,7 @@ fun MainMenuScreen(
                             }
                         )
                         "manual" -> TomaManualScreen(
-                            onBackPressed = {
+                            onNavigateBack = {
                                 currentScreen = "main"
                                 selectedTipoToma = null
                             }
@@ -409,20 +410,17 @@ private fun MainContent(
             "registro_inventario" -> {
                 if (currentScreen == "conteo_inventario") {
                     // Mostrar pantalla de conteo
+                    val conteoViewModel: ConteoInventarioViewModel = hiltViewModel()
                     ConteoInventarioScreen(
                         nroInventario = nroInventarioSeleccionado,
                         onBackPressed = onBackFromConteo,
-                        viewModel = ConteoInventarioViewModel(
-                            inventarioDetalleDao = AppDatabase.getDatabase(LocalContext.current).inventarioDetalleDao()
-                        )
+                        viewModel = conteoViewModel
                     )
                 } else {
                     // Mostrar pantalla de registro de inventarios
+                    val registroViewModel: RegistroInventarioViewModel = hiltViewModel()
                     RegistroInventarioScreen(
-                        viewModel = RegistroInventarioViewModel(
-                            inventarioDetalleDao = AppDatabase.getDatabase(LocalContext.current).inventarioDetalleDao(),
-                            loggedUserDao = AppDatabase.getDatabase(LocalContext.current).loggedUserDao()
-                        ),
+                        viewModel = registroViewModel,
                         onNavigateToConteo = onNavigateToConteo
                     )
                 }
@@ -444,22 +442,12 @@ private fun MainContent(
             }
             "exportar_inventario" -> ExportarInventarioScreen()
             "exportar_parcial" -> ExportarParcialScreen()
-            "sincronizar_datos" -> SincronizarDatosScreen(
-                sincronizacionViewModel = SincronizacionViewModel(
-                    SincronizacionCompletaRepository(
-                        areaDao = AppDatabase.getDatabase(LocalContext.current).areaDao(),
-                        departamentoDao = AppDatabase.getDatabase(LocalContext.current).departamentoDao(),
-                        seccionDao = AppDatabase.getDatabase(LocalContext.current).seccionDao(),
-                        familiaDao = AppDatabase.getDatabase(LocalContext.current).familiaDao(),
-                        grupoDao = AppDatabase.getDatabase(LocalContext.current).grupoDao(),
-                        subgrupoDao = AppDatabase.getDatabase(LocalContext.current).subgrupoDao(),
-                        sucursalDepartamentoDao = AppDatabase.getDatabase(LocalContext.current).sucursalDepartamentoDao()
-                    ),
-                    InventarioSincronizacionRepository(
-                        inventarioDetalleDao = AppDatabase.getDatabase(LocalContext.current).inventarioDetalleDao()
-                    )
+            "sincronizar_datos" -> {
+                val sincronizacionViewModel: SincronizacionViewModel = hiltViewModel()
+                SincronizarDatosScreen(
+                    sincronizacionViewModel = sincronizacionViewModel
                 )
-            )
+            }
             else -> HomeContent(username = username, sucursal = sucursal)
         }
     }

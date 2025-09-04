@@ -13,12 +13,12 @@ import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.sql.Statement
 import java.text.SimpleDateFormat
-import java.util.*
+import javax.inject.Inject
 
 /**
  * Repositorio para la sincronización de inventarios desde Oracle a Room
  */
-class InventarioSincronizacionRepository(
+class InventarioSincronizacionRepository @Inject constructor(
     private val inventarioDetalleDao: InventarioDetalleDao
 ) {
     

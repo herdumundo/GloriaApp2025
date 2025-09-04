@@ -30,20 +30,11 @@ class CancelacionInventarioViewModel @Inject constructor(
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
             try {
-                getCancelacionesTomaUseCase(Variables.userdb).fold(
-                    onSuccess = { cancelaciones ->
-                        _state.update { it.copy(
-                            cancelaciones = cancelaciones,
-                            isLoading = false
-                        )}
-                    },
-                    onFailure = { error ->
-                        _state.update { it.copy(
-                            isLoading = false,
-                            error = "Error al cargar las cancelaciones: ${error.message}"
-                        )}
-                    }
-                )
+                val cancelaciones = getCancelacionesTomaUseCase(Variables.userdb)
+                _state.update { it.copy(
+                    cancelaciones = cancelaciones,
+                    isLoading = false
+                )}
             } catch (e: Exception) {
                 _state.update { it.copy(
                     isLoading = false,

@@ -3,12 +3,16 @@ package com.gloria.ui.inventario.viewmodel
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.gloria.data.dao.InventarioDetalleDao
+import com.gloria.domain.usecase.inventario.GetArticulosInventarioUseCase
+import com.gloria.domain.usecase.inventario.ActualizarCantidadInventarioUseCase
+import com.gloria.domain.usecase.inventario.ActualizarEstadoInventarioUseCase
 import com.gloria.data.model.ArticuloInventario
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 /**
  * Estado de la UI para la pantalla de Conteo de Inventario
@@ -38,8 +42,11 @@ data class EstadoConteo(
 /**
  * ViewModel para la pantalla de Conteo de Inventario
  */
-class ConteoInventarioViewModel(
-    private val inventarioDetalleDao: InventarioDetalleDao
+@HiltViewModel
+class ConteoInventarioViewModel @Inject constructor(
+    private val getArticulosInventarioUseCase: GetArticulosInventarioUseCase,
+    private val actualizarCantidadInventarioUseCase: ActualizarCantidadInventarioUseCase,
+    private val actualizarEstadoInventarioUseCase: ActualizarEstadoInventarioUseCase
 ) : ViewModel() {
     
     private val _uiState = MutableStateFlow(ConteoInventarioState())
@@ -56,7 +63,7 @@ class ConteoInventarioViewModel(
             )
             
             try {
-                inventarioDetalleDao.getArticulosInventario(nroInventario).collect { articulos ->
+                getArticulosInventarioUseCase(nroInventario).collect { articulos ->
                     // Inicializar artículos contados y cantidades basado en winvdCantInv
                     val articulosContados = mutableSetOf<Int>()
                     val cantidadesContadas = mutableMapOf<String, Int>()
@@ -330,7 +337,7 @@ class ConteoInventarioViewModel(
                     Log.d("LogConteo", "Actualizando BD - Inventario: $nroInventario, Secuencia: ${articulo.winvdSecu}, Cantidad: $cantidadInventario")
                     
                     // Actualizar en la base de datos
-                    inventarioDetalleDao.actualizarCantidadInventario(
+                    actualizarCantidadInventarioUseCase(
                         numeroInventario = nroInventario,
                         secuencia = articulo.winvdSecu,
                         cantidad = cantidadInventario,
@@ -339,7 +346,7 @@ class ConteoInventarioViewModel(
                 }
                 
                 // Actualizar estado del inventario principal a "P"
-                inventarioDetalleDao.actualizarEstadoInventario(
+                actualizarEstadoInventarioUseCase(
                     numeroInventario = nroInventario,
                     estado = "P"
                 )

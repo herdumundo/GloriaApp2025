@@ -1,6 +1,6 @@
 package com.gloria.domain.usecase.cancelacion
 
-import com.gloria.repository.CancelacionTomaRepository
+import com.gloria.data.repository.CancelacionTomaRepository
 import javax.inject.Inject
 
 class CancelarTomaTotalUseCase @Inject constructor(

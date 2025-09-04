@@ -1,0 +1,36 @@
+package com.gloria.domain.usecase.toma
+
+import com.gloria.data.repository.LoggedUserRepository
+import com.gloria.data.model.ArticuloLote
+import com.gloria.data.repository.ArticuloLoteRepository
+import kotlinx.coroutines.flow.Flow
+import javax.inject.Inject
+
+class GetArticulosLotesUseCase @Inject constructor(
+    private val loggedUserRepository: LoggedUserRepository
+) {
+    suspend operator fun invoke(
+        subgruposSeleccionados: List<Pair<Int, Int>>,
+        sucursal: Int,
+        deposito: Int,
+        area: Int,
+        departamento: Int,
+        seccion: Int,
+        familia: String,
+        isFamiliaTodos: Boolean = false,
+        onProgressUpdate: (current: Int, total: Int) -> Unit
+    ): Flow<List<ArticuloLote>> {
+        val articuloLoteRepository = ArticuloLoteRepository()
+        return articuloLoteRepository.getArticulosLotes(
+            subgruposSeleccionados = subgruposSeleccionados,
+            sucursal = sucursal,
+            deposito = deposito,
+            area = area,
+            departamento = departamento,
+            seccion = seccion,
+            familia = familia,
+            isFamiliaTodos = isFamiliaTodos,
+            onProgressUpdate = onProgressUpdate
+        )
+    }
+}
