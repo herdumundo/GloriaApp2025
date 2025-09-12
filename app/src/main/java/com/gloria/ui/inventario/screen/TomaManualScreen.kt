@@ -39,9 +39,9 @@ fun TomaManualScreen(
     navController: NavHostController
     ) {
     val uiState by viewModel.uiState.collectAsState()
-    BackHandler {
+  /*  BackHandler {
         navController.navigate("home")
-    }
+    }*/
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()

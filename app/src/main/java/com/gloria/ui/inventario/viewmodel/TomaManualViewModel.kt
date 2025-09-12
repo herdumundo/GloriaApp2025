@@ -89,8 +89,6 @@ class TomaManualViewModel @Inject constructor(
     private val getGruposUseCase: GetGruposUseCase,
     private val getSubgruposUseCase: GetSubgruposUseCase,
     private val getLoggedUserUseCase: GetLoggedUserUseCase,
-    private val insertarCabeceraInventarioUseCase: InsertarCabeceraInventarioUseCase,
-    private val insertarDetalleInventarioUseCase: InsertarDetalleInventarioUseCase,
     private val insertarCabeceraYDetalleInventarioUseCase: InsertarCabeceraYDetalleInventarioUseCase,
     private val getArticulosLotesUseCase: GetArticulosLotesUseCase
 ) : ViewModel() {

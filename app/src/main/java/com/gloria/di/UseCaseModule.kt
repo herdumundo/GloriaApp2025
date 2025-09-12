@@ -18,9 +18,8 @@ import com.gloria.domain.usecase.toma.GetDepartamentosUseCase
 import com.gloria.domain.usecase.toma.GetSeccionesUseCase
 import com.gloria.domain.usecase.toma.GetFamiliasUseCase
 import com.gloria.domain.usecase.toma.GetGruposUseCase
-import com.gloria.domain.usecase.toma.GetSubgruposUseCase
-import com.gloria.domain.usecase.toma.GetLoggedUserUseCase
-import com.gloria.repository.AuthRepository
+import com.gloria.domain.usecase.toma.GetSucursalesUseCase as GetSucursalesTomaUseCase
+ import com.gloria.repository.AuthRepository
 import com.gloria.repository.InventarioRepository
 import com.gloria.repository.SincronizacionCompletaRepository
 import com.gloria.data.repository.AreaRepository
@@ -55,10 +54,13 @@ import com.gloria.domain.usecase.inventario.ActualizarCantidadInventarioUseCase
 import com.gloria.domain.usecase.inventario.ActualizarEstadoInventarioUseCase
 import com.gloria.data.repository.InventarioDetalleRepository
 import com.gloria.data.repository.InventarioSincronizacionRepository
+import com.gloria.domain.usecase.toma.GetLoggedUserUseCase
+import com.gloria.domain.usecase.toma.GetSubgruposUseCase
 import com.gloria.ui.inventario.viewmodel.SincronizacionViewModel
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.scopes.ViewModelScoped
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
@@ -218,19 +220,13 @@ object UseCaseModule {
 
     @Provides
     @Singleton
-    fun provideGetSubgruposUseCase(
-        subgrupoRepository: SubgrupoRepository
-    ): GetSubgruposUseCase {
-        return GetSubgruposUseCase(subgrupoRepository)
-    }
-
-    @Provides
-    @Singleton
     fun provideGetLoggedUserUseCase(
         loggedUserRepository: LoggedUserRepository
     ): GetLoggedUserUseCase {
         return GetLoggedUserUseCase(loggedUserRepository)
     }
+
+
 
     @Provides
     @Singleton
@@ -348,6 +344,13 @@ object UseCaseModule {
 
     @Provides
     @Singleton
+    fun provideGetSubgruposUseCase(
+        repository: SubgrupoRepository
+    ): GetSubgruposUseCase {
+        return GetSubgruposUseCase(repository)
+    }
+    @Provides
+    @Singleton
     fun provideSincronizarDatosUseCase(
         sincronizacionCompletaRepository: SincronizacionCompletaRepository
     ): SincronizarDatosUseCase {
@@ -447,4 +450,7 @@ object UseCaseModule {
             sincronizarInventariosUseCase, getTotalInventariosLocalesUseCase
         )
     }
+
+
+
 }
