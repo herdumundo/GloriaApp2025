@@ -1,5 +1,6 @@
 package com.gloria.ui.inventario.screen
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -19,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavHostController
 import com.gloria.ui.inventario.viewmodel.TomaManualViewModel
 import com.gloria.data.entity.*
 import com.gloria.ui.components.SelectionCard
@@ -33,11 +35,13 @@ import com.gloria.ui.components.ArticulosEncontradosDialog
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TomaManualScreen(
-    onNavigateBack: () -> Unit,
-    viewModel: TomaManualViewModel = hiltViewModel()
-) {
+    viewModel: TomaManualViewModel ,
+    navController: NavHostController
+    ) {
     val uiState by viewModel.uiState.collectAsState()
-
+    BackHandler {
+        navController.navigate("home")
+    }
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -709,7 +713,7 @@ fun TomaManualScreen(
                         TextButton(onClick = { 
                             viewModel.hideConfirmarTomaDialog()
                             viewModel.clearSuccessMessage()
-                            onNavigateBack() // Navegar de vuelta al menú principal
+
                         }) {
                             Text("Aceptar")
                         }

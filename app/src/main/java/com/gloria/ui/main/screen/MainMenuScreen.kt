@@ -22,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavHostController
 import com.gloria.domain.model.MenuItems
 import com.gloria.ui.inventario.screen.*
 import com.gloria.ui.inventario.screen.ConteoInventarioScreen
@@ -29,7 +30,7 @@ import com.gloria.ui.inventario.screen.ArticulosTomaScreen
 import com.gloria.ui.theme.ThemeManager
 import com.gloria.ui.components.SeleccionTipoTomaDialog
 import com.gloria.domain.model.TipoToma
-import com.gloria.ui.inventario.viewmodel.SincronizacionViewModel
+import com.gloria.ui.inventario.viewmodel.TomaManualViewModel
 import com.gloria.repository.SincronizacionCompletaRepository
 import com.gloria.data.repository.InventarioSincronizacionRepository
 import com.gloria.ui.inventario.viewmodel.RegistroInventarioViewModel
@@ -42,16 +43,14 @@ import androidx.hilt.navigation.compose.hiltViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainMenuScreen(
+    navController: NavHostController,
     username: String,
     sucursal: String,
     onLogoutClick: () -> Unit
 ) {
     var selectedMenuItem by remember { mutableStateOf("registro_toma") }
     var showTipoTomaDialog by remember { mutableStateOf(false) }
-    var currentScreen by remember { mutableStateOf("main") }
     var selectedTipoToma by remember { mutableStateOf<TipoToma?>(null) }
-    var nroInventarioSeleccionado by remember { mutableStateOf(0) }
-    var nroTomaSeleccionado by remember { mutableStateOf(0) }
 
 
     val drawerState = rememberDrawerState(DrawerValue.Closed)
@@ -74,7 +73,8 @@ fun MainMenuScreen(
                         if (itemId == "registro_toma") {
                             showTipoTomaDialog = true
                         } else {
-                            currentScreen = "main"
+                            // Navegar usando NavController
+                            navController.navigate(itemId)
                         }
                         scope.launch { 
                             drawerState.close() 
@@ -91,8 +91,9 @@ fun MainMenuScreen(
                     onDismiss = { showTipoTomaDialog = false },
                     onTipoSeleccionado = { tipoToma ->
                         selectedTipoToma = tipoToma
-                        currentScreen = "toma"
                         showTipoTomaDialog = false
+                        // Navegar directamente a la pantalla de toma
+                        navController.navigate("registro_toma")
                     }
                 )
             }
@@ -166,75 +167,22 @@ fun MainMenuScreen(
                     .fillMaxSize()
                     .background(MaterialTheme.colorScheme.background)
             ) {
-                // Contenido principal
-                            when (currentScreen) {
-                "toma" -> {
-                    when (selectedTipoToma?.id) {
-                        "criterio_seleccion" -> TomaCriterioScreen(
-                            onBackPressed = {
-                                currentScreen = "main"
-                                selectedTipoToma = null
-                            }
-                        )
-                        "manual" -> TomaManualScreen(
-                            onNavigateBack = {
-                                currentScreen = "main"
-                                selectedTipoToma = null
-                            }
-                        )
-                        else -> MainContent(
-                            selectedMenuItem = selectedMenuItem,
-                            username = username,
-                            sucursal = sucursal,
-                            currentScreen = currentScreen,
-                            nroInventarioSeleccionado = nroInventarioSeleccionado,
-                            nroTomaSeleccionado = nroTomaSeleccionado,
-                            onNavigateToConteo = { nroInventario ->
-                                nroInventarioSeleccionado = nroInventario
-                                currentScreen = "conteo_inventario"
-                            },
-                            onBackFromConteo = {
-                                currentScreen = "main"
-                                nroInventarioSeleccionado = 0
-                            },
-                            onNavigateToArticulos = { nroToma ->
-                                nroTomaSeleccionado = nroToma
-                                currentScreen = "articulos_toma"
-                            },
-                            onBackFromArticulos = {
-                                currentScreen = "main"
-                                nroTomaSeleccionado = 0
-                            },
-                            modifier = Modifier.fillMaxSize()
+                // Contenido principal simplificado
+                when (selectedTipoToma?.id) {
+                    "criterio_seleccion" -> TomaCriterioScreen(
+                        onBackPressed = {
+                            selectedTipoToma = null
+                        }
+                    )
+                    "manual" -> {
+                        val tomaManualViewModel: TomaManualViewModel = hiltViewModel()
+                        TomaManualScreen(
+                            viewModel = tomaManualViewModel,
+                            navController = navController
                         )
                     }
+                    else -> HomeContent(username = username, sucursal = sucursal)
                 }
-                else -> MainContent(
-                    selectedMenuItem = selectedMenuItem,
-                    username = username,
-                    sucursal = sucursal,
-                    currentScreen = currentScreen,
-                    nroInventarioSeleccionado = nroInventarioSeleccionado,
-                    nroTomaSeleccionado = nroTomaSeleccionado,
-                    onNavigateToConteo = { nroInventario ->
-                        nroInventarioSeleccionado = nroInventario
-                        currentScreen = "conteo_inventario"
-                    },
-                    onBackFromConteo = {
-                        currentScreen = "main"
-                        nroInventarioSeleccionado = 0
-                    },
-                    onNavigateToArticulos = { nroToma ->
-                        nroTomaSeleccionado = nroToma
-                        currentScreen = "articulos_toma"
-                    },
-                    onBackFromArticulos = {
-                        currentScreen = "main"
-                        nroTomaSeleccionado = 0
-                    },
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
             }
         }
     }
@@ -387,71 +335,6 @@ private fun DrawerHeader(
     }
 }
 
-@Composable
-private fun MainContent(
-    selectedMenuItem: String,
-    username: String,
-    sucursal: String,
-    currentScreen: String,
-    nroInventarioSeleccionado: Int,
-    nroTomaSeleccionado: Int,
-    onNavigateToConteo: (Int) -> Unit,
-    onBackFromConteo: () -> Unit,
-    onNavigateToArticulos: (Int) -> Unit,
-    onBackFromArticulos: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        when (selectedMenuItem) {
-            "registro_toma" -> RegistroTomaScreen()
-            "registro_inventario" -> {
-                if (currentScreen == "conteo_inventario") {
-                    // Mostrar pantalla de conteo
-                    val conteoViewModel: ConteoInventarioViewModel = hiltViewModel()
-                    ConteoInventarioScreen(
-                        nroInventario = nroInventarioSeleccionado,
-                        onBackPressed = onBackFromConteo,
-                        viewModel = conteoViewModel
-                    )
-                } else {
-                    // Mostrar pantalla de registro de inventarios
-                    val registroViewModel: RegistroInventarioViewModel = hiltViewModel()
-                    RegistroInventarioScreen(
-                        viewModel = registroViewModel,
-                        onNavigateToConteo = onNavigateToConteo
-                    )
-                }
-            }
-            "cancelacion_inventario" -> {
-                if (currentScreen == "articulos_toma") {
-                    // Mostrar pantalla de artículos de la toma
-                    ArticulosTomaScreen(
-                        nroToma = nroTomaSeleccionado,
-                        onNavigateBack = onBackFromArticulos
-                    )
-                } else {
-                    // Mostrar pantalla de cancelaciones
-                    CancelacionInventarioScreen(
-                        onNavigateBack = { /* Volver al menú principal */ },
-                        onNavigateToArticulos = onNavigateToArticulos
-                    )
-                }
-            }
-            "exportar_inventario" -> ExportarInventarioScreen()
-            "exportar_parcial" -> ExportarParcialScreen()
-            "sincronizar_datos" -> {
-                val sincronizacionViewModel: SincronizacionViewModel = hiltViewModel()
-                SincronizarDatosScreen(
-                    sincronizacionViewModel = sincronizacionViewModel
-                )
-            }
-            else -> HomeContent(username = username, sucursal = sucursal)
-        }
-    }
-}
 
 @Composable
 private fun HomeContent(

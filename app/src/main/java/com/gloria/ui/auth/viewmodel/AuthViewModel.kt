@@ -41,7 +41,7 @@ class AuthViewModel @Inject constructor(
     private val getSucursalesUseCase: GetSucursalesUseCase
 ) : ViewModel() {
     
-    private val _state = MutableStateFlow(AuthState())
+      val _state = MutableStateFlow(AuthState())
     val state: StateFlow<AuthState> = _state.asStateFlow()
     
     fun handleEvent(event: AuthEvent) {
@@ -64,7 +64,7 @@ class AuthViewModel @Inject constructor(
         }
     }
     
-    private fun login(username: String, password: String) {
+      fun login(username: String, password: String) {
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, errorMessage = null)
             
@@ -153,7 +153,7 @@ class AuthViewModel @Inject constructor(
         }
     }
     
-    private fun logout() {
+      fun logout() {
         viewModelScope.launch {
             // Usar el caso de uso para logout
             logoutUseCase()

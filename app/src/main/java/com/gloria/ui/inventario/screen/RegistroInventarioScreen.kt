@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavHostController
 import com.gloria.ui.components.InventarioCard
 import com.gloria.ui.inventario.viewmodel.RegistroInventarioViewModel
 
@@ -23,7 +24,8 @@ import com.gloria.ui.inventario.viewmodel.RegistroInventarioViewModel
 @Composable
 fun RegistroInventarioScreen(
     viewModel: RegistroInventarioViewModel,
-    onNavigateToConteo: (Int) -> Unit = {}
+    onNavigateToConteo: (Int) -> Unit = {},
+    navController: NavHostController
 ) {
     val uiState by viewModel.uiState.collectAsState()
     

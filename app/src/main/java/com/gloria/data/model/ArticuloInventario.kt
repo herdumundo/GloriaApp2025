@@ -23,5 +23,6 @@ data class ArticuloInventario(
     val tomaRegistro: String,                   // Registro de la toma
     val codBarra: String,                       // Código de barras
     val caja: Int,                              // Cantidad por caja
-    val gruesa: Int                             // Cantidad por gruesa
+    val gruesa: Int,                            // Cantidad por gruesa
+    val stockVisible: String                    // Indicador de visibilidad del stock (Y/N)
 )

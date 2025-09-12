@@ -65,53 +65,57 @@ fun ArticuloConteoCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .padding(4.dp),
-        shape = RoundedCornerShape(8.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
         border = BorderStroke(
             width = 1.dp,
-            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
         )
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp)
+                .padding(16.dp)
         ) {
             // Información principal del artículo
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            Column(
+                modifier = Modifier.fillMaxWidth()
             ) {
                 // Código y descripción del artículo
-                Column(
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(
-                        text = "${articulo.winvdArt} ${articulo.artDesc}",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1
-                    )
-                    Text(
-                        text = articulo.codBarra,
-                        fontSize = 12.sp,
-                        fontFamily = FontFamily.Monospace,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                Text(
+                    text = "${articulo.winvdArt} - ${articulo.artDesc}",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 2
+                )
                 
-                // Información de clasificación en una sola fila
+                Spacer(modifier = Modifier.height(4.dp))
+                
+                // Código de barras
+                Text(
+                    text = "Código: ${articulo.codBarra}",
+                    fontSize = 12.sp,
+                    fontFamily = FontFamily.Monospace,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                
+                Spacer(modifier = Modifier.height(12.dp))
+                
+                // Información de clasificación en grid
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     // Familia
-                    Column {
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        horizontalAlignment = Alignment.Start
+                    ) {
                         Text(
                             text = "Familia",
                             fontSize = 10.sp,
@@ -120,14 +124,20 @@ fun ArticuloConteoCard(
                         )
                         Text(
                             text = articulo.fliaDesc,
-                            fontSize = 11.sp,
+                            fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurface,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1
                         )
                     }
                     
+                    Spacer(modifier = Modifier.width(8.dp))
+                    
                     // Grupo
-                    Column {
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        horizontalAlignment = Alignment.Start
+                    ) {
                         Text(
                             text = "Grupo",
                             fontSize = 10.sp,
@@ -136,14 +146,20 @@ fun ArticuloConteoCard(
                         )
                         Text(
                             text = articulo.grupDesc,
-                            fontSize = 11.sp,
+                            fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurface,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1
                         )
                     }
                     
+                    Spacer(modifier = Modifier.width(8.dp))
+                    
                     // Lote
-                    Column {
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        horizontalAlignment = Alignment.Start
+                    ) {
                         Text(
                             text = "Lote",
                             fontSize = 10.sp,
@@ -152,14 +168,20 @@ fun ArticuloConteoCard(
                         )
                         Text(
                             text = articulo.winvdLote,
-                            fontSize = 11.sp,
+                            fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurface,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1
                         )
                     }
                     
+                    Spacer(modifier = Modifier.width(8.dp))
+                    
                     // Vencimiento
-                    Column {
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        horizontalAlignment = Alignment.Start
+                    ) {
                         Text(
                             text = "Vto",
                             fontSize = 10.sp,
@@ -168,15 +190,16 @@ fun ArticuloConteoCard(
                         )
                         Text(
                             text = articulo.winvdFecVto,
-                            fontSize = 11.sp,
+                            fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurface,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1
                         )
                     }
                 }
             }
             
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             
             // Campos de entrada para conteo
             Row(
@@ -189,12 +212,12 @@ fun ArticuloConteoCard(
                 ) {
                     Text(
                         text = "Cajas",
-                        fontSize = 12.sp,
+                        fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     
-                    Spacer(modifier = Modifier.height(2.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
                     
                     OutlinedTextField(
                         value = cajasInput,
@@ -226,13 +249,7 @@ fun ArticuloConteoCard(
                             unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
                             focusedContainerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.1f)
                         ),
-                        shape = RoundedCornerShape(6.dp)
-                    )
-                    
-                    Text(
-                        text = "Último ingresado: $ultimoValorIngresado",
-                        fontSize = 10.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        shape = RoundedCornerShape(8.dp)
                     )
                 }
                 
@@ -242,12 +259,12 @@ fun ArticuloConteoCard(
                 ) {
                     Text(
                         text = "Unidades",
-                        fontSize = 12.sp,
+                        fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     
-                    Spacer(modifier = Modifier.height(2.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
                     
                     OutlinedTextField(
                         value = unidadesInput,
@@ -279,18 +296,12 @@ fun ArticuloConteoCard(
                             unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
                             focusedContainerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.1f)
                         ),
-                        shape = RoundedCornerShape(6.dp)
-                    )
-                    
-                    Text(
-                        text = "Último ingresado: $ultimoValorIngresado",
-                        fontSize = 10.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        shape = RoundedCornerShape(8.dp)
                     )
                 }
             }
             
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             
             // Total y botón Contar
             Row(
@@ -299,12 +310,24 @@ fun ArticuloConteoCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Total o estado
-                Text(
-                    text = if (haSidoContado) "Total: $totalFinal" else "Total: ${articulo.winvdCantInv}",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = if (haSidoContado) Color(0xFF2E7D32) else Color(0xFF2E7D32)
-                )
+                Column {
+                    Text(
+                        text = if (haSidoContado) "Total: $totalFinal" else "Total: $totalCalculado",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (haSidoContado) Color(0xFF2E7D32) else Color(0xFF2E7D32)
+                    )
+                    
+                    // Mostrar stock solo si stockVisible = "Y"
+                    if (articulo.stockVisible == "Y") {
+                        Text(
+                            text = "Stock: ${articulo.winvdCantAct}",
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
                 
                 // Botón Contar
                 Button(
@@ -343,13 +366,13 @@ fun ArticuloConteoCard(
                         onUnidadesChanged(0)
                     },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (haSidoContado)   Color(0xFF2E7D32) else Color(0xFF830000)
+                        containerColor = if (haSidoContado) Color(0xFF2E7D32) else Color(0xFF830000)
                     ),
-                    shape = RoundedCornerShape(6.dp)
+                    shape = RoundedCornerShape(8.dp)
                 ) {
                     Text(
                         text = if (haSidoContado) "CONTAR MÁS" else "CONTAR",
-                        fontSize = 12.sp,
+                        fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onPrimary
                     )

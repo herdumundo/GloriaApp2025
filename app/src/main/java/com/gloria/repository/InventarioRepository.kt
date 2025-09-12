@@ -1,6 +1,7 @@
 package com.gloria.repository
 
 import com.gloria.data.dao.InventarioDetalleDao
+import com.gloria.data.entity.InventarioDetalle
 import com.gloria.data.repository.LoggedUserRepository
 import com.gloria.data.model.ArticuloInventario
 import com.gloria.data.model.InventarioCard
@@ -94,7 +95,8 @@ class InventarioRepository @Inject constructor(
                     tomaRegistro = detalle.toma_registro.toString(),
                     codBarra = detalle.cod_barra,
                     caja = detalle.caja,
-                    gruesa = detalle.GRUESA
+                    gruesa = detalle.GRUESA,
+                    stockVisible = detalle.stockVisible
                 )
             }
         }
@@ -127,7 +129,8 @@ class InventarioRepository @Inject constructor(
                     tomaRegistro = detalle.toma_registro.toString(),
                     codBarra = detalle.cod_barra,
                     caja = detalle.caja,
-                    gruesa = detalle.GRUESA
+                    gruesa = detalle.GRUESA,
+                    stockVisible=detalle.stockVisible
                 )
             }
         }
@@ -173,7 +176,7 @@ class InventarioRepository @Inject constructor(
         return try {
             // Crear detalles de inventario para cada artículo
             val detallesInventario = articulosSeleccionados.mapIndexed { index, articulo ->
-                com.gloria.data.entity.InventarioDetalle(
+                InventarioDetalle(
                     winvd_nro_inv = nroInventario,
                     winvd_secu = index + 1,
                     winvd_cant_act = articulo.cantidad.toInt(),
@@ -210,7 +213,8 @@ class InventarioRepository @Inject constructor(
                     GRUESA = 0,
                     UNID_IND = 0,
                     sucursal = "",
-                    deposito = ""
+                    deposito = "",
+                    stockVisible =articulo.inventarioVisible
                 )
             }
             

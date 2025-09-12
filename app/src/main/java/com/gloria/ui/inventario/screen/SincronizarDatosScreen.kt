@@ -1,6 +1,8 @@
 package com.gloria.ui.inventario.screen
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material.icons.Icons
@@ -13,6 +15,7 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -27,37 +30,24 @@ fun SincronizarDatosScreen(
 ) {
     val uiState by sincronizacionViewModel.uiState.collectAsState()
     
+    val configuration = LocalConfiguration.current
+    val screenHeight = configuration.screenHeightDp.dp
+    val isSmallScreen = screenHeight < 600.dp
+    
+    // Padding adaptativo según el tamaño de pantalla
+    val horizontalPadding = if (isSmallScreen) 12.dp else 16.dp
+    val verticalPadding = if (isSmallScreen) 8.dp else 16.dp
+    
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = horizontalPadding, vertical = verticalPadding),
+        verticalArrangement = Arrangement.spacedBy(if (isSmallScreen) 8.dp else 16.dp)
     ) {
-        // Header
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 24.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = Icons.Default.Refresh,
-                contentDescription = "Sincronizar Datos",
-                modifier = Modifier.size(32.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Spacer(modifier = Modifier.width(16.dp))
-            Text(
-                text = "Sincronizar Datos",
-                style = MaterialTheme.typography.headlineLarge,
-                fontWeight = FontWeight.Bold
-            )
-        }
-        
         // Estado de sincronización
         Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 16.dp),
+            modifier = Modifier.fillMaxWidth(),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
             colors = CardDefaults.cardColors(
                 containerColor = when {
@@ -69,7 +59,7 @@ fun SincronizarDatosScreen(
             )
         ) {
             Row(
-                modifier = Modifier.padding(16.dp),
+                modifier = Modifier.padding(if (isSmallScreen) 12.dp else 16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
@@ -87,11 +77,12 @@ fun SincronizarDatosScreen(
                         else -> MaterialTheme.colorScheme.primary
                     }
                 )
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(if (isSmallScreen) 8.dp else 12.dp))
                 Column {
                     Text(
                         text = "Estado de Sincronización",
-                        style = MaterialTheme.typography.titleMedium,
+                        style = if (isSmallScreen) MaterialTheme.typography.titleSmall 
+                               else MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
@@ -136,21 +127,115 @@ fun SincronizarDatosScreen(
         
         // Opciones de sincronización
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(if (isSmallScreen) 12.dp else 16.dp)
         ) {
             // Primera fila: Subir y Descargar datos maestros
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                // Subir datos
-                Card(
-                    modifier = Modifier.weight(1f),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            if (isSmallScreen) {
+                // En pantallas pequeñas, mostrar en columna
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(if (isSmallScreen) 8.dp else 12.dp)
                 ) {
+                    // Subir datos
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(if (isSmallScreen) 12.dp else 16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Send,
+                                contentDescription = "Subir datos",
+                                modifier = Modifier.size(if (isSmallScreen) 36.dp else 48.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(modifier = Modifier.height(if (isSmallScreen) 6.dp else 8.dp))
+                            Text(
+                                text = "Subir Datos",
+                                style = if (isSmallScreen) MaterialTheme.typography.titleSmall 
+                                       else MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center
+                            )
+                            Text(
+                                text = "Enviar inventarios locales al servidor",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(if (isSmallScreen) 8.dp else 12.dp))
+                            Button(
+                                onClick = { /* TODO: Subir datos */ },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Subir")
+                            }
+                        }
+                    }
+                    
+                    // Descargar datos maestros
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(if (isSmallScreen) 12.dp else 16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = "Descargar datos maestros",
+                                modifier = Modifier.size(if (isSmallScreen) 36.dp else 48.dp),
+                                tint = MaterialTheme.colorScheme.secondary
+                            )
+                            Spacer(modifier = Modifier.height(if (isSmallScreen) 6.dp else 8.dp))
+                            Text(
+                                text = "Datos Maestros",
+                                style = if (isSmallScreen) MaterialTheme.typography.titleSmall 
+                                       else MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center
+                            )
+                            Text(
+                                text = "Actualizar catálogo desde el servidor",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(if (isSmallScreen) 8.dp else 12.dp))
+                            OutlinedButton(
+                                onClick = { 
+                                    sincronizacionViewModel.sincronizarDatos()
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                enabled = !uiState.isLoading
+                            ) {
+                                if (uiState.isLoading) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(16.dp),
+                                        strokeWidth = 2.dp
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                }
+                                Text("Descargar")
+                            }
+                        }
+                    }
+                }
+            } else {
+                // En pantallas grandes, mostrar en fila
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Subir datos
+                    Card(
+                        modifier = Modifier.weight(1f),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                    ) {
                     Column(
                         modifier = Modifier.padding(16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
@@ -182,13 +267,13 @@ fun SincronizarDatosScreen(
                             Text("Subir")
                         }
                     }
-                }
-                
-                // Descargar datos maestros
-                Card(
-                    modifier = Modifier.weight(1f),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-                ) {
+                    }
+                    
+                    // Descargar datos maestros
+                    Card(
+                        modifier = Modifier.weight(1f),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                    ) {
                     Column(
                         modifier = Modifier.padding(16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
@@ -239,19 +324,20 @@ fun SincronizarDatosScreen(
                 elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
+                    modifier = Modifier.padding(if (isSmallScreen) 12.dp else 16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Icon(
                         imageVector = Icons.Default.Refresh,
                         contentDescription = "Sincronizar inventarios",
-                        modifier = Modifier.size(48.dp),
+                        modifier = Modifier.size(if (isSmallScreen) 36.dp else 48.dp),
                         tint = MaterialTheme.colorScheme.tertiary
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(if (isSmallScreen) 6.dp else 8.dp))
                     Text(
                         text = "Sincronizar Inventarios",
-                        style = MaterialTheme.typography.titleMedium,
+                        style = if (isSmallScreen) MaterialTheme.typography.titleSmall 
+                               else MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center
                     )
@@ -312,16 +398,14 @@ fun SincronizarDatosScreen(
         // Mensaje de error
         if (uiState.errorMessage != null) {
             Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp),
+                modifier = Modifier.fillMaxWidth(),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)
                 )
             ) {
                 Row(
-                    modifier = Modifier.padding(16.dp),
+                    modifier = Modifier.padding(if (isSmallScreen) 12.dp else 16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
@@ -329,11 +413,12 @@ fun SincronizarDatosScreen(
                         contentDescription = "Error",
                         tint = MaterialTheme.colorScheme.error
                     )
-                    Spacer(modifier = Modifier.width(12.dp))
+                    Spacer(modifier = Modifier.width(if (isSmallScreen) 8.dp else 12.dp))
                     Column {
                         Text(
                             text = "Error en la sincronización",
-                            style = MaterialTheme.typography.titleMedium,
+                            style = if (isSmallScreen) MaterialTheme.typography.titleSmall 
+                                   else MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.error
                         )
@@ -359,26 +444,28 @@ fun SincronizarDatosScreen(
             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
         ) {
             Column(
-                modifier = Modifier.padding(24.dp),
+                modifier = Modifier.padding(if (isSmallScreen) 16.dp else 24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
                     text = "Sincronización Completa",
-                    style = MaterialTheme.typography.headlineSmall,
+                    style = if (isSmallScreen) MaterialTheme.typography.titleLarge 
+                           else MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
                 )
                 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(if (isSmallScreen) 8.dp else 12.dp))
                 
                 Text(
                     text = "Realiza una sincronización bidireccional completa:",
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = if (isSmallScreen) MaterialTheme.typography.bodyMedium 
+                           else MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center
                 )
                 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(if (isSmallScreen) 6.dp else 8.dp))
                 
                 Text(
                     text = "• Subir inventarios locales\n• Descargar catálogo actualizado\n• Verificar consistencia de datos\n• Resolver conflictos automáticamente",
@@ -387,7 +474,7 @@ fun SincronizarDatosScreen(
                     lineHeight = MaterialTheme.typography.bodyMedium.lineHeight * 1.5
                 )
                 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(if (isSmallScreen) 16.dp else 24.dp))
                 
                 Button(
                     onClick = { 
@@ -395,7 +482,7 @@ fun SincronizarDatosScreen(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(48.dp),
+                        .height(if (isSmallScreen) 44.dp else 48.dp),
                     enabled = !uiState.isLoading
                 ) {
                     if (uiState.isLoading) {
@@ -410,6 +497,11 @@ fun SincronizarDatosScreen(
                 }
             }
         }
-    }
-}
+        
+        // Espacio adicional para asegurar scroll en pantallas pequeñas
+        if (isSmallScreen) {
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+        }}}
+
 

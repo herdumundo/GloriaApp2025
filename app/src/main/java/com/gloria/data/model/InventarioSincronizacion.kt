@@ -39,5 +39,6 @@ data class InventarioSincronizacion(
     val GRUESA: Int,                    // a.GRUESA
     val UNID_IND: Int,                  // a.UNID_IND
     val SUC_DESC: String,               // suc.SUC_DESC
-    val DEP_DESC: String                // suc.DEP_DESC
+    val DEP_DESC: String,               // suc.DEP_DESC
+    val WINVE_STOCK_VISIBLE: String     // c.WINVE_STOCK_VISIBLE
 )

@@ -212,7 +212,8 @@ interface InventarioDetalleDao {
             toma_registro as tomaRegistro,
             cod_barra as codBarra,
             caja,
-            GRUESA as gruesa
+            GRUESA as gruesa,
+            stockVisible
         FROM STKW002INV 
         WHERE winvd_nro_inv = :nroInventario 
         ORDER BY CAST(winvd_art as integer) ASC

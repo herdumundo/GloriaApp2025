@@ -79,5 +79,6 @@ data class InventarioDetalle(
     
     // Descripciones de ubicación
     val sucursal: String,             // Descripción de la sucursal
-    val deposito: String              // Descripción del depósito
+    val deposito: String,              // Descripción del depósito
+    val stockVisible: String,         // Indicador de visibilidad del stock
 )

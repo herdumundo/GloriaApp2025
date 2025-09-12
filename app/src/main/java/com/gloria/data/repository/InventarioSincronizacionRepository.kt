@@ -86,7 +86,7 @@ class InventarioSincronizacionRepository @Inject constructor(
             val sqlQuery = """
                 SELECT  
                     'A' AS toma,
-                    0 AS invd_cant_inv,
+                    b.WINVD_CANT_ACT as invd_cant_inv,
                     ART_DESC,
                     ARDE_SUC,
                     winvd_nro_inv,
@@ -98,7 +98,7 @@ class InventarioSincronizacionRepository @Inject constructor(
                     winvd_secc,
                     winvd_flia,
                     winvd_grupo,
-                    0 AS winvd_cant_act,
+                    b.WINVD_CANT_ACT AS winvd_cant_act,
                     winve_fec,
                     dpto_desc,
                     secc_desc,
@@ -129,7 +129,8 @@ class InventarioSincronizacionRepository @Inject constructor(
                     a.GRUESA,
                     a.UNID_IND,
                     suc.SUC_DESC,
-                    suc.DEP_DESC
+                    suc.DEP_DESC,
+                    c.WINVE_STOCK_VISIBLE
                 FROM  
                     ADCS.V_WEB_ARTICULOS_CLASIFICACION a
                     INNER JOIN  ADCS.WEB_INVENTARIO_det b  ON a.ART_CODIGO = b.winvd_art  AND a.SECC_CODIGO = b.winvd_secc
@@ -149,7 +150,8 @@ class InventarioSincronizacionRepository @Inject constructor(
                     winvd_flia, winvd_grupo,winve_fec,dpto_desc,secc_desc,flia_desc,grup_desc, 
                     area_desc, sugr_codigo,winve_grupo,winve_tipo_toma,winve_login,winve_grupo_parcial, 
                     winve_flia, winve_dep,ART_DESC,a.coba_codigo_barra,a.caja,a.GRUESA,
-                    a.UNID_IND,suc.SUC_DESC,suc.DEP_DESC,b.WINVD_LOTE,b.winvd_fec_vto,winvd_secu
+                    a.UNID_IND,suc.SUC_DESC,suc.DEP_DESC,b.WINVD_LOTE,b.winvd_fec_vto,winvd_secu,
+                    c.WINVE_STOCK_VISIBLE, b.WINVD_CANT_ACT
             """.trimIndent()
             
             // 🚀 Ejecutar query
@@ -196,7 +198,8 @@ class InventarioSincronizacionRepository @Inject constructor(
                     GRUESA = resultSet!!.getInt("GRUESA"),
                     UNID_IND = resultSet!!.getInt("UNID_IND"),
                     SUC_DESC = resultSet!!.getString("SUC_DESC") ?: "",
-                    DEP_DESC = resultSet!!.getString("DEP_DESC") ?: ""
+                    DEP_DESC = resultSet!!.getString("DEP_DESC") ?: "",
+                    WINVE_STOCK_VISIBLE = resultSet!!.getString("WINVE_STOCK_VISIBLE") ?: "N"
                 )
                 
                 inventarios.add(inventario)
@@ -234,7 +237,7 @@ class InventarioSincronizacionRepository @Inject constructor(
                 winvd_nro_inv = oracle.winvd_nro_inv,
                 winvd_secu = oracle.winvd_secu,
                 winvd_cant_act = oracle.winvd_cant_act,
-                winvd_cant_inv = oracle.invd_cant_inv,
+                winvd_cant_inv = 0,
                 winvd_fec_vto = oracle.winvd_fec_vto,
                 winve_fec = oracle.winve_fec,
                 ARDE_SUC = oracle.ARDE_SUC,
@@ -267,7 +270,8 @@ class InventarioSincronizacionRepository @Inject constructor(
                 GRUESA = oracle.GRUESA,
                 UNID_IND = oracle.UNID_IND,
                 sucursal = oracle.SUC_DESC,
-                deposito = oracle.DEP_DESC
+                deposito = oracle.DEP_DESC,
+                stockVisible = oracle.WINVE_STOCK_VISIBLE ?: "N" // Valor por defecto "N" si es null
             )
         }
         

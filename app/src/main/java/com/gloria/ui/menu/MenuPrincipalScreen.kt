@@ -25,6 +25,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.gloria.ui.inventario.viewmodel.TomaManualViewModel
 import androidx.navigation.NavHostController
 import androidx.activity.compose.BackHandler
 import androidx.compose.ui.platform.LocalContext
@@ -220,12 +221,13 @@ fun MenuPrincipalScreen(
                                     selectedTipoToma = null
                                 }
                             )
-                            "manual" -> com.gloria.ui.inventario.screen.TomaManualScreen(
-                                onNavigateBack = {
-                                    currentScreen = "main"
-                                    selectedTipoToma = null
-                                }
-                            )
+                            "manual" -> {
+                                val tomaManualViewModel: TomaManualViewModel = hiltViewModel()
+                                com.gloria.ui.inventario.screen.TomaManualScreen(
+                                    viewModel = tomaManualViewModel,
+                                    navController = navController
+                                )
+                            }
                             else -> {
                                 // Contenido del menú principal
                                 LazyColumn(
@@ -324,7 +326,8 @@ fun MenuPrincipalScreen(
                             onNavigateToConteo = { nroInventario ->
                                 nroInventarioSeleccionado = nroInventario
                                 currentScreen = "conteo_inventario"
-                            }
+                            },
+                            navController = navController
                         )
                     }
                     "cancelacion_inventario" -> {
@@ -356,6 +359,7 @@ fun MenuPrincipalScreen(
                                 currentScreen = "registro_inventario"
                                 nroInventarioSeleccionado = 0
                             },
+                            onNavigateToMainMenu = { currentScreen = "menu_principal" },
                             viewModel = conteoViewModel
                         )
                     }

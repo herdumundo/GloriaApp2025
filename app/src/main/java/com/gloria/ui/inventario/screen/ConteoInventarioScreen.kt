@@ -1,5 +1,6 @@
 package com.gloria.ui.inventario.screen
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -9,6 +10,7 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -29,9 +31,16 @@ import com.gloria.ui.inventario.viewmodel.ConteoInventarioViewModel
 fun ConteoInventarioScreen(
     nroInventario: Int,
     onBackPressed: () -> Unit,
+    onNavigateToMainMenu: () -> Unit,
     viewModel: ConteoInventarioViewModel
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var showExitDialog by remember { mutableStateOf(false) }
+    
+    // Manejar el botón atrás
+    BackHandler {
+        showExitDialog = true
+    }
     
     // Cargar artículos al iniciar la pantalla
     LaunchedEffect(nroInventario) {
@@ -67,7 +76,7 @@ fun ConteoInventarioScreen(
                             modifier = Modifier.weight(1f),
                             placeholder = { 
                                 Text(
-                                    text = "Buscar por: código, descripción, familia, grupo, lote o código de barras",
+                                    text = "Buscar por cualquier campo",
                                     fontSize = 12.sp
                                 ) 
                             },
@@ -451,6 +460,64 @@ fun ConteoInventarioScreen(
             dismissButton = {
                 TextButton(
                     onClick = { viewModel.cancelarRegistro() }
+                ) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+    
+    // Diálogo de confirmación para salir
+    if (showExitDialog) {
+        AlertDialog(
+            onDismissRequest = { showExitDialog = false },
+            title = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ExitToApp,
+                        contentDescription = "Salir",
+                        tint = Color(0xFF8B0000),
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Salir del conteo",
+                        color = Color(0xFF8B0000)
+                    )
+                }
+            },
+            text = {
+                Column {
+                    Text(
+                        text = "¿Estás seguro de que deseas salir del conteo de inventario?",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Los cambios no guardados se perderán.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { 
+                        showExitDialog = false
+                        onNavigateToMainMenu()
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF8B0000)
+                    )
+                ) {
+                    Text("Sí, salir")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showExitDialog = false }
                 ) {
                     Text("Cancelar")
                 }

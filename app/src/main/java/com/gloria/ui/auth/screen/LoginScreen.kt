@@ -23,12 +23,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.gloria.R
@@ -45,31 +47,47 @@ fun LoginScreen(
     var password by remember { mutableStateOf("") }
     var showPassword by remember { mutableStateOf(false) }
     
+    val configuration = LocalConfiguration.current
+    val screenHeight = configuration.screenHeightDp.dp
+    val isSmallScreen = screenHeight < 600.dp
+    
     // Gradiente rojo oscuro para el fondo
     val gradientColors: List<Color> = listOf(
         Color(0xFF8B0000),  // Rojo oscuro
         Color(0xFF4A0000)   // Rojo muy oscuro
     )
     
-    Box(
+    Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .background(brush = Brush.verticalGradient(colors = gradientColors)),
+        verticalArrangement = Arrangement.spacedBy(if (isSmallScreen) 8.dp else 16.dp)
     ) {
-        Header(Modifier.align(Alignment.TopEnd))
+        // Header
+        Header(Modifier.align(Alignment.End))
+        
+        // Body - contenido principal
         Body(
-            modifier = Modifier.align(Alignment.Center),
+            modifier = Modifier.fillMaxWidth(),
             username = username,
             password = password,
             showPassword = showPassword,
             isLoading = isLoading,
+            isSmallScreen = isSmallScreen,
             onUsernameChange = { username = it },
             onPasswordChange = { password = it },
             onShowPasswordChange = { showPassword = it },
             onLoginClick = { onLoginClick(username, password) }
         )
-        Footer(Modifier.align(Alignment.BottomCenter))
+        
+        // Footer
+        Footer(Modifier.align(Alignment.CenterHorizontally))
+        
+        // Espacio adicional para asegurar scroll en pantallas pequeñas
+        if (isSmallScreen) {
+            Spacer(modifier = Modifier.height(32.dp))
+        }
     }
     
     // Mostrar diálogo de error cuando hay un mensaje de error
@@ -105,6 +123,7 @@ fun Body(
     password: String,
     showPassword: Boolean,
     isLoading: Boolean,
+    isSmallScreen: Boolean,
     onUsernameChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
     onShowPasswordChange: (Boolean) -> Unit,
@@ -120,19 +139,25 @@ fun Body(
     AnimatedVisibility(
         visible = contentVisible,
         enter = fadeIn(animationSpec = androidx.compose.animation.core.tween(durationMillis = 1000)),
-        modifier = modifier
+        modifier = modifier.fillMaxWidth()
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = if (isSmallScreen) 16.dp else 32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
             // Logo/Icono del sistema
-            SystemLogo(Modifier.padding(bottom = 32.dp))
+            SystemLogo(
+                modifier = Modifier.padding(bottom = if (isSmallScreen) 16.dp else 32.dp),
+                isSmallScreen = isSmallScreen
+            )
 
             // Card contenedor del formulario
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(if (isSmallScreen) 12.dp else 16.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = Color.White.copy(alpha = 0.1f)
                 ),
@@ -140,30 +165,25 @@ fun Body(
                 border = BorderStroke(1.dp, Color.White.copy(alpha = 0.2f))
             ) {
                 Column(
-                    modifier = Modifier.padding(24.dp),
+                    modifier = Modifier.padding(if (isSmallScreen) 16.dp else 24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // Título
-                    Text(
-                        text = "Sistema de Inventario",
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
+               
                     
                     Text(
                         text = "Iniciar Sesión",
-                        style = MaterialTheme.typography.titleMedium,
+                        style = if (isSmallScreen) MaterialTheme.typography.titleSmall 
+                               else MaterialTheme.typography.titleMedium,
                         color = Color.White.copy(alpha = 0.9f),
-                        modifier = Modifier.padding(bottom = 24.dp)
+                        modifier = Modifier.padding(bottom = if (isSmallScreen) 16.dp else 24.dp)
                     )
 
                     // Campo de username
                     UsernameField(
                         username = username,
                         onUsernameChange = onUsernameChange,
-                        modifier = Modifier.padding(bottom = 16.dp)
+                        isSmallScreen = isSmallScreen,
+                        modifier = Modifier.padding(bottom = if (isSmallScreen) 12.dp else 16.dp)
                     )
 
                     // Campo de contraseña
@@ -172,7 +192,8 @@ fun Body(
                         showPassword = showPassword,
                         onPasswordChange = onPasswordChange,
                         onShowPasswordChange = onShowPasswordChange,
-                        modifier = Modifier.padding(bottom = 24.dp)
+                        isSmallScreen = isSmallScreen,
+                        modifier = Modifier.padding(bottom = if (isSmallScreen) 16.dp else 24.dp)
                     )
 
                     // Botón de login
@@ -180,8 +201,28 @@ fun Body(
                         isLoading = isLoading,
                         enabled = username.isNotBlank() && password.isNotBlank(),
                         onLoginClick = onLoginClick,
-                        modifier = Modifier.padding(bottom = 16.dp)
+                        isSmallScreen = isSmallScreen,
+                        modifier = Modifier.padding(bottom = if (isSmallScreen) 8.dp else 16.dp)
                     )
+                    
+                    // Información adicional para asegurar scroll
+                    if (isSmallScreen) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        
+                        Text(
+                            text = "Versión 1.0.0",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White.copy(alpha = 0.7f),
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                        
+                        Text(
+                            text = "Sistema de gestión de inventario",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White.copy(alpha = 0.6f),
+                            textAlign = TextAlign.Center
+                        )
+                    }
                 }
             }
         }
@@ -189,7 +230,7 @@ fun Body(
 }
 
 @Composable
-fun SystemLogo(modifier: Modifier) {
+fun SystemLogo(modifier: Modifier, isSmallScreen: Boolean) {
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally
@@ -197,33 +238,33 @@ fun SystemLogo(modifier: Modifier) {
         // Icono del sistema de inventario
         Box(
             modifier = Modifier
-                .size(120.dp)
+                .size(if (isSmallScreen) 80.dp else 120.dp)
                 .background(
                     Color.White.copy(alpha = 0.2f),
-                    shape = RoundedCornerShape(60.dp)
+                    shape = RoundedCornerShape(if (isSmallScreen) 40.dp else 60.dp)
                 ),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = Icons.Default.Person,
                 contentDescription = "Sistema de Inventario",
-                modifier = Modifier.size(60.dp),
+                modifier = Modifier.size(if (isSmallScreen) 40.dp else 60.dp),
                 tint = Color.White
             )
         }
         
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(if (isSmallScreen) 8.dp else 16.dp))
         
         Text(
             text = "INVENTARIO",
-            fontSize = 24.sp,
+            fontSize = if (isSmallScreen) 18.sp else 24.sp,
             fontWeight = FontWeight.Bold,
             color = Color.White
         )
         
         Text(
             text = "v1.0.0",
-            fontSize = 14.sp,
+            fontSize = if (isSmallScreen) 12.sp else 14.sp,
             color = Color.White.copy(alpha = 0.8f)
         )
     }
@@ -233,6 +274,7 @@ fun SystemLogo(modifier: Modifier) {
 fun UsernameField(
     username: String,
     onUsernameChange: (String) -> Unit,
+    isSmallScreen: Boolean,
     modifier: Modifier = Modifier
 ) {
     OutlinedTextField(
@@ -256,7 +298,7 @@ fun UsernameField(
         ),
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(if (isSmallScreen) 8.dp else 12.dp)
     )
 }
 
@@ -266,6 +308,7 @@ fun PasswordField(
     showPassword: Boolean,
     onPasswordChange: (String) -> Unit,
     onShowPasswordChange: (Boolean) -> Unit,
+    isSmallScreen: Boolean,
     modifier: Modifier = Modifier
 ) {
     OutlinedTextField(
@@ -299,7 +342,7 @@ fun PasswordField(
         ),
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(if (isSmallScreen) 8.dp else 12.dp)
     )
 }
 
@@ -308,19 +351,20 @@ fun LoginButton(
     isLoading: Boolean,
     enabled: Boolean,
     onLoginClick: () -> Unit,
+    isSmallScreen: Boolean,
     modifier: Modifier = Modifier
 ) {
     Button(
         onClick = onLoginClick,
         modifier = modifier
             .fillMaxWidth()
-            .height(50.dp),
+            .height(if (isSmallScreen) 44.dp else 50.dp),
         enabled = enabled && !isLoading,
         colors = ButtonDefaults.buttonColors(
             containerColor = Color(0xFF4A0000),  // Rojo muy oscuro
             disabledContainerColor = Color.Gray
         ),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(if (isSmallScreen) 8.dp else 12.dp),
         elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
     ) {
         if (isLoading) {
@@ -341,26 +385,29 @@ fun LoginButton(
                 )
             }
         } else {
-            Text(
-                text = "Iniciar Sesión",
-                color = Color.White,
-                fontWeight = FontWeight.Medium,
-                fontSize = 16.sp
-            )
+                Text(
+                    text = "Iniciar Sesión",
+                    color = Color.White,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = if (isSmallScreen) 14.sp else 16.sp
+                )
         }
     }
 }
 
 @Composable
 fun Footer(modifier: Modifier) {
+    val configuration = LocalConfiguration.current
+    val isSmallScreen = configuration.screenHeightDp.dp < 600.dp
+    
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(24.dp),
+            .padding(if (isSmallScreen) 16.dp else 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         LoginDivider()
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(if (isSmallScreen) 8.dp else 16.dp))
     }
 }
 
