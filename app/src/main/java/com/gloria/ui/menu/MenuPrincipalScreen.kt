@@ -31,6 +31,16 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.collectAsState
+import com.gloria.ui.inventario.screen.ArticulosTomaScreen
+import com.gloria.ui.inventario.screen.CancelacionInventarioScreen
+import com.gloria.ui.inventario.screen.ConteoInventarioScreen
+import com.gloria.ui.inventario.screen.RegistroInventarioScreen
+import com.gloria.ui.inventario.screen.SincronizarDatosScreen
+import com.gloria.ui.inventario.screen.TomaCriterioScreen
+import com.gloria.ui.inventario.screen.TomaManualScreen
+import com.gloria.ui.inventario.viewmodel.ConteoInventarioViewModel
+import com.gloria.ui.inventario.viewmodel.RegistroInventarioViewModel
+import com.gloria.ui.inventario.viewmodel.SincronizacionViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -215,7 +225,7 @@ fun MenuPrincipalScreen(
                 when (currentScreen) {
                     "toma" -> {
                         when (selectedTipoToma?.id) {
-                            "criterio_seleccion" -> com.gloria.ui.inventario.screen.TomaCriterioScreen(
+                            "criterio_seleccion" -> TomaCriterioScreen(
                                 onBackPressed = {
                                     currentScreen = "main"
                                     selectedTipoToma = null
@@ -223,7 +233,7 @@ fun MenuPrincipalScreen(
                             )
                             "manual" -> {
                                 val tomaManualViewModel: TomaManualViewModel = hiltViewModel()
-                                com.gloria.ui.inventario.screen.TomaManualScreen(
+                                TomaManualScreen(
                                     viewModel = tomaManualViewModel,
                                     navController = navController
                                 )
@@ -314,53 +324,47 @@ fun MenuPrincipalScreen(
                         }
                     }
                     "sincronizar_datos" -> {
-                        val sincronizacionViewModel: com.gloria.ui.inventario.viewmodel.SincronizacionViewModel = hiltViewModel()
-                        com.gloria.ui.inventario.screen.SincronizarDatosScreen(
-                            sincronizacionViewModel = sincronizacionViewModel
-                        )
+                        val sincronizacionViewModel:  SincronizacionViewModel= hiltViewModel()
+                        SincronizarDatosScreen(
+                           sincronizacionViewModel = sincronizacionViewModel
+                       )
                     }
                     "registro_inventario" -> {
-                        val registroViewModel: com.gloria.ui.inventario.viewmodel.RegistroInventarioViewModel = hiltViewModel()
-                        com.gloria.ui.inventario.screen.RegistroInventarioScreen(
-                            viewModel = registroViewModel,
-                            onNavigateToConteo = { nroInventario ->
-                                nroInventarioSeleccionado = nroInventario
-                                currentScreen = "conteo_inventario"
-                            },
-                            navController = navController
-                        )
+                        val registroViewModel:  RegistroInventarioViewModel = hiltViewModel()
+                        RegistroInventarioScreen(
+                             viewModel = registroViewModel,
+                             onNavigateToConteo = { nroInventario ->
+                                 nroInventarioSeleccionado = nroInventario
+                                 currentScreen = "conteo_inventario"
+                             },
+                             navController = navController
+                         )
                     }
                     "cancelacion_inventario" -> {
-                        com.gloria.ui.inventario.screen.CancelacionInventarioScreen(
-                            onNavigateBack = {
-                                currentScreen = "main"
-                                selectedMenuItem = "home"
-                            },
-                            onNavigateToArticulos = { nroToma ->
-                                nroTomaSeleccionado = nroToma
-                                currentScreen = "articulos_toma"
-                            }
-                        )
+                        CancelacionInventarioScreen(
+                           onNavigateBack = {
+                               currentScreen = "main"
+                               selectedMenuItem = "home"
+                           },
+                           onNavigateToArticulos = { nroToma ->
+                               nroTomaSeleccionado = nroToma
+                               currentScreen = "articulos_toma"
+                           }
+                       )
                     }
-                    "articulos_toma" -> {
-                        com.gloria.ui.inventario.screen.ArticulosTomaScreen(
-                            nroToma = nroTomaSeleccionado,
-                            onNavigateBack = {
-                                currentScreen = "cancelacion_inventario"
-                                nroTomaSeleccionado = 0
-                            }
-                        )
-                    }
+                   /* "articulos_toma" -> {
+                        ArticulosTomaScreen(
+                             nroToma = nroTomaSeleccionado,
+                            articulosTomaViewModel,
+                            navController
+                         )
+                    }*/
                     "conteo_inventario" -> {
-                        val conteoViewModel: com.gloria.ui.inventario.viewmodel.ConteoInventarioViewModel = hiltViewModel()
-                        com.gloria.ui.inventario.screen.ConteoInventarioScreen(
+                        val conteoViewModel: ConteoInventarioViewModel = hiltViewModel()
+                        ConteoInventarioScreen(
                             nroInventario = nroInventarioSeleccionado,
-                            onBackPressed = {
-                                currentScreen = "registro_inventario"
-                                nroInventarioSeleccionado = 0
-                            },
-                            onNavigateToMainMenu = { currentScreen = "menu_principal" },
-                            viewModel = conteoViewModel
+                            viewModel = conteoViewModel,
+                            navController = navController
                         )
                     }
                     else -> {

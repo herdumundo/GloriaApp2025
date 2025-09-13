@@ -31,17 +31,20 @@ import com.gloria.ui.components.SingleSelectWithAllDialog
 import com.gloria.ui.components.CompactSingleSelectDialog
 import com.gloria.ui.components.SelectableItem
 import com.gloria.ui.components.ArticulosEncontradosDialog
+import com.gloria.ui.components.ExitConfirmationDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TomaManualScreen(
-    viewModel: TomaManualViewModel ,
-    navController: NavHostController
-    ) {
+    viewModel: TomaManualViewModel,
+    navController: NavHostController,
+ ) {
     val uiState by viewModel.uiState.collectAsState()
-  /*  BackHandler {
-        navController.navigate("home")
-    }*/
+    var showExitDialog by remember { mutableStateOf(false) }
+
+    BackHandler {
+        showExitDialog = true
+    }
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -603,8 +606,8 @@ fun TomaManualScreen(
             onDeselectAll = { viewModel.clearArticulosLotesSelection() },
             onUpdateInventarioVisible = { inventarioVisible -> viewModel.updateInventarioVisibleMark(inventarioVisible) },
             onDismiss = { viewModel.hideArticulosLotesDialog() },
-            inventarioVisible = uiState.inventarioVisible
-        )
+            inventarioVisible = uiState.inventarioVisible,
+         )
     }
 
     if (uiState.showConfirmarTomaDialog) {
@@ -713,7 +716,7 @@ fun TomaManualScreen(
                         TextButton(onClick = { 
                             viewModel.hideConfirmarTomaDialog()
                             viewModel.clearSuccessMessage()
-
+                            navController.navigate("menu_principal")
                         }) {
                             Text("Aceptar")
                         }
@@ -736,4 +739,17 @@ fun TomaManualScreen(
             }
         )
     }
+
+    // Diálogo de confirmación de salida
+    ExitConfirmationDialog(
+        showDialog = showExitDialog,
+        onDismiss = { showExitDialog = false },
+        navController = navController,
+        route = "menu_principal",
+        title = "Salir de la toma",
+        message = "¿Estás seguro de que deseas volver al menu principal?",
+        warningMessage = "Los cambios no guardados se perderán.",
+        confirmButtonText = "Sí, salir",
+        dismissButtonText = "Cancelar"
+    )
 }

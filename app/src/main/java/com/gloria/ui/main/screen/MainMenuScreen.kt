@@ -1,7 +1,8 @@
 package com.gloria.ui.main.screen
 
-import androidx.compose.foundation.clickable
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -34,8 +35,7 @@ import com.gloria.repository.SincronizacionCompletaRepository
 import com.gloria.data.repository.InventarioSincronizacionRepository
 import com.gloria.ui.inventario.viewmodel.RegistroInventarioViewModel
 import com.gloria.ui.inventario.viewmodel.SincronizacionViewModel
-import com.gloria.ui.inventario.screen.ArticulosTomaScreen
-import com.gloria.ui.inventario.viewmodel.ArticulosTomaViewModel
+ import com.gloria.ui.inventario.viewmodel.ArticulosTomaViewModel
 import com.gloria.data.AppDatabase
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.launch
@@ -57,6 +57,10 @@ fun MainMenuScreen(
 
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    
+    // Deshabilitar el botón atrás en el menú principal
+    BackHandler {
+    }
     
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -181,7 +185,8 @@ fun MainMenuScreen(
                                 val tomaManualViewModel: TomaManualViewModel = hiltViewModel()
                                 TomaManualScreen(
                                     viewModel = tomaManualViewModel,
-                                    navController = navController
+                                    navController = navController,
+
                                 )
                             }
                             else -> HomeContent(
@@ -230,11 +235,8 @@ fun MainMenuScreen(
                             val articulosViewModel: ArticulosTomaViewModel = hiltViewModel()
                             ArticulosTomaScreen(
                                 nroToma = nroToma,
-                                onNavigateBack = {
-                                    selectedMenuItem = "cancelacion_inventario"
-                                    nroTomaSeleccionado = null
-                                },
-                                viewModel = articulosViewModel
+                                viewModel = articulosViewModel,
+                                navController
                             )
                         } ?: HomeContent(
                             username = username, 
@@ -439,15 +441,10 @@ private fun HomeContent(
                 tint = MaterialTheme.colorScheme.primary
             )
         }
-        
+        8
         Spacer(modifier = Modifier.height(32.dp))
         
-        Text(
-            text = "¡Bienvenido, $username!",
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground
-        )
+
         
         Spacer(modifier = Modifier.height(16.dp))
         
@@ -484,94 +481,10 @@ private fun HomeContent(
                 )
             }
         }
+
         
-        Spacer(modifier = Modifier.height(24.dp))
-        
-        // Cards de navegación rápida
-        Text(
-            text = "Acceso Rápido",
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground
-        )
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        // Card de Registro de Toma
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { onCardClick("registro_toma") },
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer
-            )
-        ) {
-            Row(
-                modifier = Modifier.padding(20.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Person,
-                    contentDescription = "Registro de Toma",
-                    modifier = Modifier.size(32.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-                Spacer(modifier = Modifier.width(16.dp))
-                Column {
-                    Text(
-                        text = "Registro de Toma",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                    Text(
-                        text = "Crear nueva toma de inventario",
-                        fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                    )
-                }
-            }
-        }
-        
-        Spacer(modifier = Modifier.height(12.dp))
-        
-        // Card de Registro de Inventario
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { onCardClick("registro_inventario") },
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.secondaryContainer
-            )
-        ) {
-            Row(
-                modifier = Modifier.padding(20.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Person,
-                    contentDescription = "Registro de Inventario",
-                    modifier = Modifier.size(32.dp),
-                    tint = MaterialTheme.colorScheme.secondary
-                )
-                Spacer(modifier = Modifier.width(16.dp))
-                Column {
-                    Text(
-                        text = "Registro de Inventario",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer
-                    )
-                    Text(
-                        text = "Gestionar inventarios existentes",
-                        fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
-                    )
-                }
-            }
-        }
+
+
     }
 }
 
@@ -602,7 +515,7 @@ private fun ThemeToggleItem() {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { ThemeManager.toggleTheme() }
+            .clickable  { ThemeManager.toggleTheme() }
             .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically

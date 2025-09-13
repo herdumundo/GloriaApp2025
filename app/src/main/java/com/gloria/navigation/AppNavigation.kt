@@ -67,13 +67,7 @@ fun AppNavigation(
                 }
             )
         }
-        
-        // Registro de Toma - Ahora manejado por MainMenuScreen
-        // composable("registro_toma") { ... }
-        
-        // Registro de Inventario - Ahora manejado por MainMenuScreen  
-        // composable("registro_inventario") { ... }
-        
+
         // Conteo de Inventario
         composable(
             "conteo_inventario/{nroInventario}",
@@ -85,15 +79,8 @@ fun AppNavigation(
             val conteoViewModel: ConteoInventarioViewModel = hiltViewModel()
             ConteoInventarioScreen(
                 nroInventario = nroInventario,
-                onBackPressed = {
-                    navController.popBackStack()
-                },
-                onNavigateToMainMenu = {
-                    navController.navigate("menu_principal") {
-                        popUpTo("menu_principal") { inclusive = true }
-                    }
-                },
-                viewModel = conteoViewModel
+                viewModel = conteoViewModel,
+                navController
             )
         }
         
@@ -103,22 +90,10 @@ fun AppNavigation(
             val articulosTomaViewModel: ArticulosTomaViewModel = hiltViewModel()
             ArticulosTomaScreen(
                 nroToma = nroToma,
-                onNavigateBack = {
-                    navController.popBackStack()
-                }
+                articulosTomaViewModel,
+                navController
             )
         }
-        
-        // Cancelación de Inventario - Ahora manejado por MainMenuScreen
-        // composable("cancelacion_inventario") { ... }
-        
-        // Exportar Inventario - Ahora manejado por MainMenuScreen
-        // composable("exportar_inventario") { ... }
-        
-        // Exportar Inventario Parcial - Ahora manejado por MainMenuScreen
-        // composable("exportar_parcial") { ... }
-        
-        // Sincronizar Datos - Ahora manejado por MainMenuScreen
-        // composable("sincronizar_datos") { ... }
+
     }
 }

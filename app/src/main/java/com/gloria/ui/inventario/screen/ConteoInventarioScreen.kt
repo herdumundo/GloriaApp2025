@@ -20,7 +20,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavHostController
 import com.gloria.ui.components.ArticuloConteoCard
+import com.gloria.ui.components.ExitConfirmationDialog
 import com.gloria.ui.inventario.viewmodel.ConteoInventarioViewModel
 
 /**
@@ -30,9 +32,8 @@ import com.gloria.ui.inventario.viewmodel.ConteoInventarioViewModel
 @Composable
 fun ConteoInventarioScreen(
     nroInventario: Int,
-    onBackPressed: () -> Unit,
-    onNavigateToMainMenu: () -> Unit,
-    viewModel: ConteoInventarioViewModel
+    viewModel: ConteoInventarioViewModel,
+    navController: NavHostController
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showExitDialog by remember { mutableStateOf(false) }
@@ -467,61 +468,16 @@ fun ConteoInventarioScreen(
         )
     }
     
-    // Diálogo de confirmación para salir
-    if (showExitDialog) {
-        AlertDialog(
-            onDismissRequest = { showExitDialog = false },
-            title = {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.ExitToApp,
-                        contentDescription = "Salir",
-                        tint = Color(0xFF8B0000),
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Salir del conteo",
-                        color = Color(0xFF8B0000)
-                    )
-                }
-            },
-            text = {
-                Column {
-                    Text(
-                        text = "¿Estás seguro de que deseas salir del conteo de inventario?",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Los cambios no guardados se perderán.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = { 
-                        showExitDialog = false
-                        onNavigateToMainMenu()
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF8B0000)
-                    )
-                ) {
-                    Text("Sí, salir")
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = { showExitDialog = false }
-                ) {
-                    Text("Cancelar")
-                }
-            }
-        )
-    }
-    }}
+    // Diálogo de confirmación de salida
+    ExitConfirmationDialog(
+        showDialog = showExitDialog,
+        onDismiss = { showExitDialog = false },
+        navController = navController,
+        route = "menu_principal",
+        title = "Salir del conteo",
+        message = "¿Estás seguro de que deseas salir del conteo de inventario?",
+        warningMessage = "Los cambios no guardados se perderán.",
+        confirmButtonText = "Sí, salir",
+        dismissButtonText = "Cancelar"
+    )
+    } }

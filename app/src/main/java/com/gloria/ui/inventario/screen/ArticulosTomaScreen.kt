@@ -1,8 +1,8 @@
 package com.gloria.ui.inventario.screen
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
@@ -16,23 +16,28 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavHostController
 import com.gloria.ui.components.ArticulosTomaTable
+import com.gloria.ui.components.ConfirmationDialog
 import com.gloria.ui.inventario.viewmodel.ArticulosTomaViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ArticulosTomaScreen(
     nroToma: Int,
-    onNavigateBack: () -> Unit,
-    viewModel: ArticulosTomaViewModel = hiltViewModel()
+    viewModel: ArticulosTomaViewModel = hiltViewModel(),
+    navController: NavHostController
 ) {
+
     val state by viewModel.state.collectAsState()
 
     // Cargar datos cuando la pantalla se compone
     LaunchedEffect(nroToma) {
         viewModel.cargarArticulos(nroToma)
     }
-
+    BackHandler {
+        navController.navigate("menu_principal")
+    }
     Box(
         modifier = Modifier.fillMaxSize()
     ) {
@@ -266,143 +271,52 @@ fun ArticulosTomaScreen(
             }
         }
         
-        // Diálogo de confirmación de cancelación (idéntico al de TomaManualScreen)
-        if (state.showConfirmarCancelacionDialog) {
-            AlertDialog(
-                onDismissRequest = { 
-                    if (!state.isLoading && state.successMessage == null) {
-                        viewModel.hideConfirmarCancelacionDialog()
-                    }
-                },
-                text = {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(20.dp)
-                    ) {
-                        // Título
-                        Text(
-                            text = when {
-                                state.isLoading -> "Cancelando..."
-                                state.successMessage != null -> "¡Éxito!"
-                                else -> "Confirmar Cancelación"
-                            },
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        
-                        // Contenido según el estado
-                        when {
-                            state.isLoading -> {
-                                // Mostrar loading con porcentaje
-                                CircularProgressIndicator(
-                                    progress = state.loadingProgress / 100f,
-                                    modifier = Modifier.size(80.dp),
-                                    strokeWidth = 8.dp,
-                                    color = MaterialTheme.colorScheme.error
-                                )
-                                
-                                Text(
-                                    text = "Procesando... ${state.loadingProgress.toInt()}%",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Medium,
-                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                
-                                Text(
-                                    text = if (state.articulos.count { it.isSelected } == state.articulos.size) {
-                                        "Cancelando toda la toma #$nroToma"
-                                    } else {
-                                        "Cancelando ${state.articulos.count { it.isSelected }} artículos seleccionados"
-                                    },
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            state.successMessage != null -> {
-                                // Mostrar mensaje de éxito
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(64.dp),
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                                
-                                Text(
-                                    text = "Cancelación realizada correctamente",
-                                    style = MaterialTheme.typography.titleLarge,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    fontWeight = FontWeight.Bold,
-                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                                )
-                                
-                                Text(
-                                    text = state.successMessage!!,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                                )
-                            }
-                            else -> {
-                                // Mostrar mensaje de confirmación
-                                Icon(
-                                    imageVector = Icons.Default.Close,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(48.dp),
-                                    tint = MaterialTheme.colorScheme.error
-                                )
-                                
-                                Text(
-                                    text = if (state.articulos.count { it.isSelected } == state.articulos.size) {
-                                        "¿Está seguro de que desea cancelar toda la toma #$nroToma?"
-                                    } else {
-                                        "¿Está seguro de que desea cancelar ${state.articulos.count { it.isSelected }} artículos seleccionados?"
-                                    },
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
-                        }
-                    }
-                },
-                confirmButton = {
-                    when {
-                        state.isLoading -> {
-                            // No mostrar botón durante loading
-                        }
-                        state.successMessage != null -> {
-                            TextButton(onClick = { 
-                                viewModel.hideConfirmarCancelacionDialog()
-                                viewModel.clearSuccessMessage()
-                                onNavigateBack() // Navegar de vuelta a la lista de tomas
-                            }) {
-                                Text("Aceptar")
-                            }
-                        }
-                        else -> {
-                            TextButton(onClick = { 
-                                viewModel.cancelarSeleccionados(nroToma)
-                            }) {
-                                Text("Confirmar")
-                            }
-                        }
-                    }
-                },
-                dismissButton = {
-                    if (!state.isLoading && state.successMessage == null) {
-                        TextButton(onClick = { viewModel.hideConfirmarCancelacionDialog() }) {
-                            Text("Cancelar")
-                        }
-                    }
-                }
-            )
-        }
+        // Diálogo de confirmación de cancelación
+        ConfirmationDialog(
+            showDialog = state.showConfirmarCancelacionDialog,
+            onDismiss = { viewModel.hideConfirmarCancelacionDialog() },
+            onConfirm = { viewModel.cancelarSeleccionados(nroToma) },
+            navController = navController,
+            route = "menu_principal",
+            
+            // Estados
+            isLoading = state.isLoading,
+            loadingProgress = state.loadingProgress,
+            successMessage = state.successMessage,
+            
+            // Títulos
+            title = "Confirmar Cancelación",
+            loadingTitle = "Cancelando...",
+            successTitle = "¡Éxito!",
+            
+            // Mensajes
+            message = if (state.articulos.count { it.isSelected } == state.articulos.size) {
+                "¿Está seguro de que desea cancelar toda la toma #$nroToma?"
+            } else {
+                "¿Está seguro de que desea cancelar ${state.articulos.count { it.isSelected }} artículos seleccionados?"
+            },
+            loadingMessage = if (state.articulos.count { it.isSelected } == state.articulos.size) {
+                "Cancelando toda la toma #$nroToma"
+            } else {
+                "Cancelando ${state.articulos.count { it.isSelected }} artículos seleccionados"
+            },
+            successMainMessage = "Cancelación realizada correctamente",
+            
+            // Botones
+            confirmButtonText = "Confirmar",
+            successButtonText = "Aceptar",
+            dismissButtonText = "Cancelar",
+            
+            // Colores
+            confirmIconColor = MaterialTheme.colorScheme.error,
+            successIconColor = MaterialTheme.colorScheme.primary,
+            loadingColor = MaterialTheme.colorScheme.error,
+            confirmButtonColor = MaterialTheme.colorScheme.error,
+            
+            // Iconos
+            confirmIcon = Icons.Default.Close,
+            successIcon = Icons.Default.Check
+        )
     }
+
 
