@@ -12,15 +12,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TomaCriterioScreen(
-    onBackPressed: () -> Unit
+    onBackPressed: () -> Unit,
+    onNavigateToHome: () -> Unit = {}
 ) {
     var criterioSeleccionado by remember { mutableStateOf("") }
     var fechaInicio by remember { mutableStateOf("") }
     var fechaFin by remember { mutableStateOf("") }
+    var showSuccessDialog by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(false) }
     
     Scaffold(
         topBar = {
@@ -100,14 +105,63 @@ fun TomaCriterioScreen(
             
             // Botón de crear toma
             Button(
-                onClick = { /* TODO: Implementar lógica de creación */ },
+                onClick = { 
+                    if (criterioSeleccionado.isNotEmpty() && fechaInicio.isNotEmpty() && fechaFin.isNotEmpty()) {
+                        isLoading = true
+                        // Simular proceso de creación (aquí iría la lógica real)
+                        // Por ahora simulamos con un delay
+                        kotlinx.coroutines.GlobalScope.launch {
+                            kotlinx.coroutines.delay(2000) // Simular proceso
+                            isLoading = false
+                            showSuccessDialog = true
+                        }
+                    }
+                },
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary
-                )
+                ),
+                enabled = !isLoading && criterioSeleccionado.isNotEmpty() && fechaInicio.isNotEmpty() && fechaFin.isNotEmpty()
             ) {
-                Text("Crear Toma", fontSize = 16.sp)
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                } else {
+                    Text("Crear Toma", fontSize = 16.sp)
+                }
             }
         }
+    }
+    
+    // Diálogo de éxito
+    if (showSuccessDialog) {
+        AlertDialog(
+            onDismissRequest = { showSuccessDialog = false },
+            title = {
+                Text(
+                    text = "¡Éxito!",
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            },
+            text = {
+                Text("La toma ha sido creada exitosamente.")
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showSuccessDialog = false
+                        onNavigateToHome()
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary
+                    )
+                ) {
+                    Text("Aceptar")
+                }
+            }
+        )
     }
 }

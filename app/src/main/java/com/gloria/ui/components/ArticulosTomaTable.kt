@@ -212,7 +212,10 @@ fun ArticulosTomaTable(
         LazyColumn(
             modifier = Modifier.fillMaxSize()
         ) {
-            itemsIndexed(articulos) { index, articulo ->
+            itemsIndexed(
+                items = articulos,
+                key = { index, articulo -> "${articulo.winvdSecu}_${articulo.winvdArt}_${articulo.winvdLote}_$index" }
+            ) { index, articulo ->
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()

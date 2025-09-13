@@ -33,12 +33,9 @@ fun ArticulosTomaScreen(
         viewModel.cargarArticulos(nroToma)
     }
 
-
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-
-        ) {
+    Box(
+        modifier = Modifier.fillMaxSize()
+    ) {
             when {
                 state.isLoading -> {
                     Column(

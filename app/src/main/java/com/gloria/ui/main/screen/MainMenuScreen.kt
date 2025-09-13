@@ -1,8 +1,7 @@
 package com.gloria.ui.main.screen
 
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -35,6 +34,8 @@ import com.gloria.repository.SincronizacionCompletaRepository
 import com.gloria.data.repository.InventarioSincronizacionRepository
 import com.gloria.ui.inventario.viewmodel.RegistroInventarioViewModel
 import com.gloria.ui.inventario.viewmodel.SincronizacionViewModel
+import com.gloria.ui.inventario.screen.ArticulosTomaScreen
+import com.gloria.ui.inventario.viewmodel.ArticulosTomaViewModel
 import com.gloria.data.AppDatabase
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.launch
@@ -51,6 +52,7 @@ fun MainMenuScreen(
     var selectedMenuItem by remember { mutableStateOf("registro_toma") }
     var showTipoTomaDialog by remember { mutableStateOf(false) }
     var selectedTipoToma by remember { mutableStateOf<TipoToma?>(null) }
+    var nroTomaSeleccionado by remember { mutableStateOf<Int?>(null) }
 
 
     val drawerState = rememberDrawerState(DrawerValue.Closed)
@@ -89,8 +91,6 @@ fun MainMenuScreen(
                     onTipoSeleccionado = { tipoToma ->
                         selectedTipoToma = tipoToma
                         showTipoTomaDialog = false
-                        // Navegar directamente a la pantalla de toma
-                        navController.navigate("registro_toma")
                     }
                 )
             }
@@ -171,6 +171,10 @@ fun MainMenuScreen(
                             "criterio_seleccion" -> TomaCriterioScreen(
                                 onBackPressed = {
                                     selectedTipoToma = null
+                                },
+                                onNavigateToHome = {
+                                    selectedTipoToma = null
+                                    selectedMenuItem = "menu_principal"
                                 }
                             )
                             "manual" -> {
@@ -180,7 +184,16 @@ fun MainMenuScreen(
                                     navController = navController
                                 )
                             }
-                            else -> HomeContent(username = username, sucursal = sucursal)
+                            else -> HomeContent(
+                                username = username, 
+                                sucursal = sucursal,
+                                onCardClick = { itemId ->
+                                    selectedMenuItem = itemId
+                                    if (itemId == "registro_toma") {
+                                        showTipoTomaDialog = true
+                                    }
+                                }
+                            )
                         }
                     }
                     "registro_inventario" -> {
@@ -199,7 +212,8 @@ fun MainMenuScreen(
                                 selectedMenuItem = "menu_principal"
                             },
                             onNavigateToArticulos = { nroToma ->
-                                navController.navigate("articulos_toma/$nroToma")
+                                nroTomaSeleccionado = nroToma
+                                selectedMenuItem = "articulos_toma"
                             }
                         )
                     }
@@ -211,7 +225,38 @@ fun MainMenuScreen(
                             sincronizacionViewModel = sincronizacionViewModel
                         )
                     }
-                    else -> HomeContent(username = username, sucursal = sucursal)
+                    "articulos_toma" -> {
+                        nroTomaSeleccionado?.let { nroToma ->
+                            val articulosViewModel: ArticulosTomaViewModel = hiltViewModel()
+                            ArticulosTomaScreen(
+                                nroToma = nroToma,
+                                onNavigateBack = {
+                                    selectedMenuItem = "cancelacion_inventario"
+                                    nroTomaSeleccionado = null
+                                },
+                                viewModel = articulosViewModel
+                            )
+                        } ?: HomeContent(
+                            username = username, 
+                            sucursal = sucursal,
+                            onCardClick = { itemId ->
+                                selectedMenuItem = itemId
+                                if (itemId == "registro_toma") {
+                                    showTipoTomaDialog = true
+                                }
+                            }
+                        )
+                    }
+                    else -> HomeContent(
+                        username = username, 
+                        sucursal = sucursal,
+                        onCardClick = { itemId ->
+                            selectedMenuItem = itemId
+                            if (itemId == "registro_toma") {
+                                showTipoTomaDialog = true
+                            }
+                        }
+                    )
                 }
             }
         }
@@ -369,7 +414,8 @@ private fun DrawerHeader(
 @Composable
 private fun HomeContent(
     username: String,
-    sucursal: String
+    sucursal: String,
+    onCardClick: (String) -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -436,6 +482,94 @@ private fun HomeContent(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodyMedium
                 )
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        // Cards de navegación rápida
+        Text(
+            text = "Acceso Rápido",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        // Card de Registro de Toma
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onCardClick("registro_toma") },
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer
+            )
+        ) {
+            Row(
+                modifier = Modifier.padding(20.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Person,
+                    contentDescription = "Registro de Toma",
+                    modifier = Modifier.size(32.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+                Column {
+                    Text(
+                        text = "Registro de Toma",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                    Text(
+                        text = "Crear nueva toma de inventario",
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                    )
+                }
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(12.dp))
+        
+        // Card de Registro de Inventario
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onCardClick("registro_inventario") },
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.secondaryContainer
+            )
+        ) {
+            Row(
+                modifier = Modifier.padding(20.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Person,
+                    contentDescription = "Registro de Inventario",
+                    modifier = Modifier.size(32.dp),
+                    tint = MaterialTheme.colorScheme.secondary
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+                Column {
+                    Text(
+                        text = "Registro de Inventario",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                    Text(
+                        text = "Gestionar inventarios existentes",
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                    )
+                }
             }
         }
     }
