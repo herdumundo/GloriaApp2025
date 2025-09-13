@@ -34,7 +34,7 @@ import com.gloria.ui.inventario.viewmodel.TomaManualViewModel
 import com.gloria.repository.SincronizacionCompletaRepository
 import com.gloria.data.repository.InventarioSincronizacionRepository
 import com.gloria.ui.inventario.viewmodel.RegistroInventarioViewModel
-import com.gloria.ui.inventario.viewmodel.ConteoInventarioViewModel
+import com.gloria.ui.inventario.viewmodel.SincronizacionViewModel
 import com.gloria.data.AppDatabase
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.launch
@@ -72,9 +72,6 @@ fun MainMenuScreen(
                         selectedMenuItem = itemId
                         if (itemId == "registro_toma") {
                             showTipoTomaDialog = true
-                        } else {
-                            // Navegar usando NavController
-                            navController.navigate(itemId)
                         }
                         scope.launch { 
                             drawerState.close() 
@@ -167,18 +164,51 @@ fun MainMenuScreen(
                     .fillMaxSize()
                     .background(MaterialTheme.colorScheme.background)
             ) {
-                // Contenido principal simplificado
-                when (selectedTipoToma?.id) {
-                    "criterio_seleccion" -> TomaCriterioScreen(
-                        onBackPressed = {
-                            selectedTipoToma = null
+                // Contenido principal según el menú seleccionado
+                when (selectedMenuItem) {
+                    "registro_toma" -> {
+                        when (selectedTipoToma?.id) {
+                            "criterio_seleccion" -> TomaCriterioScreen(
+                                onBackPressed = {
+                                    selectedTipoToma = null
+                                }
+                            )
+                            "manual" -> {
+                                val tomaManualViewModel: TomaManualViewModel = hiltViewModel()
+                                TomaManualScreen(
+                                    viewModel = tomaManualViewModel,
+                                    navController = navController
+                                )
+                            }
+                            else -> HomeContent(username = username, sucursal = sucursal)
                         }
-                    )
-                    "manual" -> {
-                        val tomaManualViewModel: TomaManualViewModel = hiltViewModel()
-                        TomaManualScreen(
-                            viewModel = tomaManualViewModel,
+                    }
+                    "registro_inventario" -> {
+                        val registroViewModel: RegistroInventarioViewModel = hiltViewModel()
+                        RegistroInventarioScreen(
+                            viewModel = registroViewModel,
+                            onNavigateToConteo = { nroInventario ->
+                                navController.navigate("conteo_inventario/$nroInventario")
+                            },
                             navController = navController
+                        )
+                    }
+                    "cancelacion_inventario" -> {
+                        CancelacionInventarioScreen(
+                            onNavigateBack = {
+                                selectedMenuItem = "menu_principal"
+                            },
+                            onNavigateToArticulos = { nroToma ->
+                                navController.navigate("articulos_toma/$nroToma")
+                            }
+                        )
+                    }
+                    "exportar_inventario" -> ExportarInventarioScreen()
+                    "exportar_parcial" -> ExportarParcialScreen()
+                    "sincronizar_datos" -> {
+                        val sincronizacionViewModel: SincronizacionViewModel = hiltViewModel()
+                        SincronizarDatosScreen(
+                            sincronizacionViewModel = sincronizacionViewModel
                         )
                     }
                     else -> HomeContent(username = username, sucursal = sucursal)

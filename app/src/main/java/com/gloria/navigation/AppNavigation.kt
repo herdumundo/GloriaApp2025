@@ -68,26 +68,11 @@ fun AppNavigation(
             )
         }
         
-        // Registro de Toma
-        composable("registro_toma") {
-            val registroTomaViewModel: TomaManualViewModel = hiltViewModel()
-            TomaManualScreen(
-                viewModel = registroTomaViewModel,
-                navController = navController
-            )
-        }
+        // Registro de Toma - Ahora manejado por MainMenuScreen
+        // composable("registro_toma") { ... }
         
-        // Registro de Inventario
-        composable("registro_inventario") {
-            val registroViewModel: RegistroInventarioViewModel = hiltViewModel()
-            RegistroInventarioScreen(
-                viewModel = registroViewModel,
-                onNavigateToConteo = { nroInventario ->
-                    navController.navigate("conteo_inventario/$nroInventario")
-                },
-                navController = navController
-            )
-        }
+        // Registro de Inventario - Ahora manejado por MainMenuScreen  
+        // composable("registro_inventario") { ... }
         
         // Conteo de Inventario
         composable(
@@ -124,37 +109,16 @@ fun AppNavigation(
             )
         }
         
-        // Cancelación de Inventario
-        composable("cancelacion_inventario") {
-            // TODO: Implementar pantalla de cancelación
-            CancelacionInventarioScreen(
-                onNavigateBack = {
-                    navController.popBackStack()
-                },
-                onNavigateToArticulos = { nroToma ->
-                    navController.navigate("articulos_toma/$nroToma")
-                }
-            )
-        }
+        // Cancelación de Inventario - Ahora manejado por MainMenuScreen
+        // composable("cancelacion_inventario") { ... }
         
-        // Exportar Inventario
-        composable("exportar_inventario") {
-            // TODO: Implementar pantalla de exportación
-            ExportarInventarioScreen()
-        }
+        // Exportar Inventario - Ahora manejado por MainMenuScreen
+        // composable("exportar_inventario") { ... }
         
-        // Exportar Inventario Parcial
-        composable("exportar_parcial") {
-            // TODO: Implementar pantalla de exportación parcial
-            ExportarParcialScreen()
-        }
+        // Exportar Inventario Parcial - Ahora manejado por MainMenuScreen
+        // composable("exportar_parcial") { ... }
         
-        // Sincronizar Datos
-        composable("sincronizar_datos") {
-            val sincronizacionViewModel: SincronizacionViewModel = hiltViewModel()
-            SincronizarDatosScreen(
-                sincronizacionViewModel = sincronizacionViewModel
-            )
-        }
+        // Sincronizar Datos - Ahora manejado por MainMenuScreen
+        // composable("sincronizar_datos") { ... }
     }
 }
