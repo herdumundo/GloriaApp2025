@@ -43,6 +43,7 @@ import com.gloria.data.dao.SubgrupoDao
 import com.gloria.data.dao.CancelacionTomaDao
 import com.gloria.data.dao.ArticuloTomaDao
 import com.gloria.data.dao.SucursalDepartamentoDao
+import com.gloria.data.repository.ArticuloLoteRepository
 import com.gloria.domain.usecase.sincronizacion.SincronizarDatosUseCase
 import com.gloria.domain.usecase.sincronizacion.GetEstadisticasSincronizacionUseCase
 import com.gloria.domain.usecase.sincronizacion.SincronizarInventariosUseCase
@@ -162,18 +163,20 @@ object UseCaseModule {
         return InsertarDetalleInventarioUseCase(loggedUserRepository)
     }
 
-    @Provides
-    @Singleton
-    fun provideInsertarCabeceraYDetalleInventarioUseCase(): InsertarCabeceraYDetalleInventarioUseCase {
-        return InsertarCabeceraYDetalleInventarioUseCase()
-    }
 
     @Provides
     @Singleton
+    fun provideInsertarCabeceraYDetalleInventarioUseCase(
+        repository: ArticuloLoteRepository
+    ): InsertarCabeceraYDetalleInventarioUseCase {
+        return InsertarCabeceraYDetalleInventarioUseCase(repository)
+    }
+    @Provides
+    @Singleton
     fun provideGetArticulosLotesUseCase(
-        loggedUserRepository: LoggedUserRepository
+        repository: ArticuloLoteRepository
     ): GetArticulosLotesUseCase {
-        return GetArticulosLotesUseCase(loggedUserRepository)
+        return GetArticulosLotesUseCase(repository)
     }
 
 

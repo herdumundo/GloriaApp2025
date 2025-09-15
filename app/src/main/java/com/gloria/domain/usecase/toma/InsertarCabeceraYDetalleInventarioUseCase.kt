@@ -4,7 +4,9 @@ import com.gloria.data.repository.ArticuloLoteRepository
 import com.gloria.data.model.ArticuloLote
 import javax.inject.Inject
 
-class InsertarCabeceraYDetalleInventarioUseCase @Inject constructor() {
+class InsertarCabeceraYDetalleInventarioUseCase @Inject constructor(
+    private val articuloLoteRepository: ArticuloLoteRepository
+) {
     suspend operator fun invoke(
         sucursal: Int,
         deposito: Int,
@@ -20,7 +22,6 @@ class InsertarCabeceraYDetalleInventarioUseCase @Inject constructor() {
         tipoToma: String = "M", // "M" = Manual, "C" = Criterio
         onProgressUpdate: ((current: Int, total: Int) -> Unit)? = null
     ): Pair<Int, Int> {
-        val articuloLoteRepository = ArticuloLoteRepository()
         return articuloLoteRepository.insertarCabeceraYDetalleInventario(
             sucursal = sucursal,
             deposito = deposito,

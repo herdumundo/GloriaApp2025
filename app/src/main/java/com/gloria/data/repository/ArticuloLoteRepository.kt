@@ -9,8 +9,11 @@ import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.sql.Statement
 import android.util.Log
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class ArticuloLoteRepository {
+@Singleton
+class ArticuloLoteRepository @Inject constructor() {
     
     suspend fun getArticulosLotes(
         subgruposSeleccionados: List<Pair<Int, Int>>, // (grupCodigo, sugrCodigo)
