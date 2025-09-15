@@ -7,7 +7,7 @@ import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
 class GetArticulosLotesUseCase @Inject constructor(
-    private val loggedUserRepository: LoggedUserRepository
+    private val articuloLoteRepository: ArticuloLoteRepository
 ) {
     suspend operator fun invoke(
         subgruposSeleccionados: List<Pair<Int, Int>>,
@@ -21,7 +21,6 @@ class GetArticulosLotesUseCase @Inject constructor(
         isGruposTodos: Boolean = false, // ✅ Nuevo parámetro para indicar si se seleccionaron todos los grupos
         onProgressUpdate: (current: Int, total: Int) -> Unit
     ): Flow<List<ArticuloLote>> {
-        val articuloLoteRepository = ArticuloLoteRepository()
         return articuloLoteRepository.getArticulosLotes(
             subgruposSeleccionados = subgruposSeleccionados,
             sucursal = sucursal,

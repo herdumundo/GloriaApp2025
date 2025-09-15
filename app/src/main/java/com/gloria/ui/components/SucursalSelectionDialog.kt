@@ -3,6 +3,7 @@ package com.gloria.ui.components
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.clickable
 import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOn
@@ -23,8 +24,6 @@ fun SucursalSelectionDialog(
     onSucursalSelected: (Sucursal) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var selectedSucursal by remember { mutableStateOf<Sucursal?>(null) }
-    
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -61,24 +60,12 @@ fun SucursalSelectionDialog(
                 items(sucursales) { sucursal ->
                     SucursalItem(
                         sucursal = sucursal,
-                        isSelected = selectedSucursal == sucursal,
-                        onSelect = { selectedSucursal = sucursal }
+                        onSelect = { onSucursalSelected(sucursal) }
                     )
                 }
             }
         },
         confirmButton = {
-            Button(
-                onClick = {
-                    selectedSucursal?.let { onSucursalSelected(it) }
-                },
-                enabled = selectedSucursal != null,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Continuar", fontSize = 14.sp)
-            }
-        },
-        dismissButton = {
             OutlinedButton(
                 onClick = onDismiss,
                 modifier = Modifier.fillMaxWidth()
@@ -94,20 +81,17 @@ fun SucursalSelectionDialog(
 @Composable
 private fun SucursalItem(
     sucursal: Sucursal,
-    isSelected: Boolean,
     onSelect: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onSelect() },
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) {
-                MaterialTheme.colorScheme.primaryContainer
-            } else {
-                MaterialTheme.colorScheme.surface
-            }
+            containerColor = MaterialTheme.colorScheme.surface
         ),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = if (isSelected) 2.dp else 1.dp
+            defaultElevation = 1.dp
         )
     ) {
         Row(
@@ -120,7 +104,7 @@ private fun SucursalItem(
                 imageVector = Icons.Default.LocationOn,
                 contentDescription = "Sucursal",
                 modifier = Modifier.size(24.dp),
-                tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                tint = MaterialTheme.colorScheme.primary
             )
             
             Spacer(modifier = Modifier.width(12.dp))
@@ -132,20 +116,14 @@ private fun SucursalItem(
                     text = sucursal.descripcion,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
-                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
                     text = "Rol: ${sucursal.rol}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            
-            RadioButton(
-                selected = isSelected,
-                onClick = onSelect,
-                modifier = Modifier.size(20.dp)
-            )
         }
     }
 }

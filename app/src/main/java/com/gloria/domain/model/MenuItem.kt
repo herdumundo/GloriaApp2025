@@ -41,16 +41,10 @@ object MenuItems {
         ),
         MenuItem(
             id = "exportar_inventario",
-            title = "Exportar Inventario",
+            title = "Enviar datos",
             icon = Icons.AutoMirrored.Filled.Send,
             route = "exportar_inventario"
-        ),
-        MenuItem(
-            id = "exportar_parcial",
-            title = "Exportar Inventario Parcial",
-            icon = Icons.AutoMirrored.Filled.Send,
-            route = "exportar_parcial"
-        ),
+        ) ,
         MenuItem(
             id = "sincronizar_datos",
             title = "Sincronizar Datos",
