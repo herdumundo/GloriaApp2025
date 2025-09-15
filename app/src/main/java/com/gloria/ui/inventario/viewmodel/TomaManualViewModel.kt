@@ -76,7 +76,8 @@ data class TomaManualUiState(
     val loadingProgress: Float = 0f,
     val successMessage: String? = null,
     val showConfirmarTomaDialog: Boolean = false,
-    val inventarioVisible: Boolean = false
+    val inventarioVisible: Boolean = false,
+    val tipoToma: String = "M" // "M" = Manual, "C" = Criterio
 )
 
 @HiltViewModel
@@ -97,11 +98,10 @@ class TomaManualViewModel @Inject constructor(
     val uiState: StateFlow<TomaManualUiState> = _uiState.asStateFlow()
     
     init {
-        loadSucursales()
-        loadAreas()
+        // Las sucursales y áreas se cargan desde el LaunchedEffect de la pantalla
     }
     
-    private fun loadSucursales() {
+    fun loadSucursales() {
         viewModelScope.launch {
             try {
                 _uiState.value = _uiState.value.copy(isLoading = true)
@@ -119,7 +119,7 @@ class TomaManualViewModel @Inject constructor(
         }
     }
     
-    private fun loadAreas() {
+    fun loadAreas() {
         viewModelScope.launch {
             try {
                 getAreasUseCase().collect { areas ->
@@ -359,6 +359,10 @@ class TomaManualViewModel @Inject constructor(
                     // Los grupos no son necesarios para la consulta
                     InventoryLogger.logInfo("FAMILIAS_TODAS_SKIP_GRUPOS", "Saltando carga de grupos - no necesarios para consulta de todas las familias")
                     
+                    // ✅ Ejecutar búsqueda automáticamente
+                    InventoryLogger.logInfo("AUTO_SEARCH_FAMILIA_TODOS", "Ejecutando búsqueda automática para todas las familias")
+                    loadArticulosLotes()
+                    
                 } else {
                     InventoryLogger.logWarning("FAMILIAS_TODAS_ERROR", "No hay sección seleccionada para cargar todas las familias")
                 }
@@ -435,6 +439,26 @@ class TomaManualViewModel @Inject constructor(
     fun confirmGrupoSelection() {
         InventoryLogger.logInfo("CONFIRM_GRUPO_SELECTION", "Confirmando selección de grupos")
         
+        val isGruposTodos = _uiState.value.isGruposTodos
+        
+        if (isGruposTodos) {
+            // Si se seleccionaron todos los grupos, saltar el diálogo de subgrupos y cargar artículos directamente
+            InventoryLogger.logInfo("GRUPOS_TODOS_CONFIRM", "Se seleccionaron todos los grupos - saltando diálogo de subgrupos")
+            
+            _uiState.value = _uiState.value.copy(
+                selectedSubgrupos = emptyList(),
+                subgrupos = emptyList(),
+                showGrupoDialog = false,
+                showSubgrupoDialog = false, // ✅ No mostrar diálogo de subgrupos
+                isSubgruposTodos = false
+            )
+            
+            // Cargar artículos directamente
+            loadArticulosLotes()
+            return
+        }
+        
+        // Lógica normal para grupos específicos
         viewModelScope.launch {
             try {
                 _uiState.value = _uiState.value.copy(
@@ -781,6 +805,10 @@ class TomaManualViewModel @Inject constructor(
         _uiState.value.selectedSubgrupos.forEach { subgrupo ->
             InventoryLogger.logSubgrupo(subgrupo, "CONFIRMED_SELECTION")
         }
+        
+        // ✅ Ejecutar búsqueda automáticamente
+        InventoryLogger.logInfo("AUTO_SEARCH_SUBGRUPOS", "Ejecutando búsqueda automática para subgrupos seleccionados")
+        loadArticulosLotes()
     }
     
     fun clearError() {
@@ -1324,15 +1352,41 @@ class TomaManualViewModel @Inject constructor(
         android.util.Log.d("TomaManualViewModel", "📊 Artículos seleccionados: ${_uiState.value.selectedArticulosLotes.size}")
     }
     
+    // Función para establecer el tipo de toma (Manual o Criterio)
+    fun setTipoToma(tipoToma: String) {
+        android.util.Log.d("TomaManualViewModel", "🔄 Estableciendo tipo de toma: $tipoToma")
+        
+        _uiState.value = _uiState.value.copy(
+            tipoToma = tipoToma
+        )
+        
+        android.util.Log.d("TomaManualViewModel", "✅ Tipo de toma establecido: ${_uiState.value.tipoToma}")
+    }
+    
     // Función para limpiar el mensaje de éxito
     fun clearSuccessMessage() {
         _uiState.value = _uiState.value.copy(successMessage = null)
+    }
+    
+    // Función para limpiar todos los parámetros después del registro exitoso
+    fun clearAllParameters() {
+        android.util.Log.d("TomaManualViewModel", "🧹 Limpiando todos los parámetros del ViewModel...")
+        
+        _uiState.value = TomaManualUiState()
+        
+        android.util.Log.d("TomaManualViewModel", "✅ Todos los parámetros limpiados exitosamente")
     }
     
     // Función para cargar artículos con lotes desde Oracle
     fun loadArticulosLotes() {
         android.util.Log.d("TomaManualViewModel", "🚀 FUNCIÓN loadArticulosLotes() EJECUTADA")
         android.util.Log.d("TomaManualViewModel", "📱 Usuario hizo clic en el botón 'Buscar productos'")
+        
+        // Limpiar selección anterior y cerrar diálogo si está abierto
+        _uiState.value = _uiState.value.copy(
+            selectedArticulosLotes = emptyList(),
+            showArticulosLotesDialog = false
+        )
         
         // Resetear progreso anterior
         resetProgress()
@@ -1410,6 +1464,7 @@ class TomaManualViewModel @Inject constructor(
                                 seccion = seccion,
                                 familia = familia ?: "", // Convertir null a string vacío
                                 isFamiliaTodos = true,
+                                isGruposTodos = false, // Para "todas las familias" no aplica grupos específicos
                                 onProgressUpdate = { current, total ->
                                     updateProgress(current, total)
                                 }
@@ -1451,12 +1506,28 @@ class TomaManualViewModel @Inject constructor(
                 // Lógica normal para familia específica
                 _uiState.value = _uiState.value.copy(loadingMessage = "Verificando subgrupos seleccionados...")
                 
+                val isGruposTodos = _uiState.value.isGruposTodos
+                
                 // Crear lista de pares (grupCodigo, sugrCodigo) para la consulta
-                val subgruposSeleccionados = _uiState.value.selectedSubgrupos.map { subgrupo ->
-                    subgrupo.sugrGrupo to subgrupo.sugrCodigo
+                val subgruposSeleccionados = if (isGruposTodos) {
+                    // Si se seleccionaron todos los grupos, usar todos los subgrupos disponibles
+                    _uiState.value.subgrupos.map { subgrupo ->
+                        subgrupo.sugrGrupo to subgrupo.sugrCodigo
+                    }
+                } else {
+                    // Si se seleccionaron grupos específicos, usar solo los subgrupos seleccionados
+                    _uiState.value.selectedSubgrupos.map { subgrupo ->
+                        subgrupo.sugrGrupo to subgrupo.sugrCodigo
+                    }
                 }
                 
-                if (subgruposSeleccionados.isEmpty()) {
+                android.util.Log.d("TomaManualViewModel", "🔍 Verificando subgrupos:")
+                android.util.Log.d("TomaManualViewModel", "   • Es todos los grupos: $isGruposTodos")
+                android.util.Log.d("TomaManualViewModel", "   • Subgrupos disponibles: ${_uiState.value.subgrupos.size}")
+                android.util.Log.d("TomaManualViewModel", "   • Subgrupos seleccionados: ${_uiState.value.selectedSubgrupos.size}")
+                android.util.Log.d("TomaManualViewModel", "   • Subgrupos para consulta: ${subgruposSeleccionados.size}")
+                
+                if (!isFamiliaTodos && !isGruposTodos && subgruposSeleccionados.isEmpty()) {
                     _uiState.value = _uiState.value.copy(
                         errorMessage = "Debe seleccionar al menos un subgrupo",
                         isLoading = false,
@@ -1483,6 +1554,8 @@ class TomaManualViewModel @Inject constructor(
                             departamento = departamento,
                             seccion = seccion,
                             familia = familia ?: "", // Convertir null a string vacío
+                            isFamiliaTodos = false,
+                            isGruposTodos = isGruposTodos, // ✅ Pasar el estado de grupos todos
                             onProgressUpdate = { current, total ->
                                 updateProgress(current, total)
                             }
@@ -1562,10 +1635,21 @@ class TomaManualViewModel @Inject constructor(
                 val departamento = _uiState.value.selectedDpto?.dptoCodigo
                 val seccion = _uiState.value.selectedSeccion?.seccCodigo
                 val familia = _uiState.value.selectedFamilia?.fliaCodigo?.toString()
-                val subgruposSeleccionados = _uiState.value.selectedSubgrupos.map { subgrupo ->
-                    subgrupo.sugrGrupo to subgrupo.sugrCodigo
-                }
                 val isFamiliaTodos = _uiState.value.isFamiliaTodos
+                val isGruposTodos = _uiState.value.isGruposTodos
+                
+                // Construir lista de subgrupos según el tipo de selección
+                val subgruposSeleccionados = if (isGruposTodos) {
+                    // Si se seleccionaron todos los grupos, usar todos los subgrupos disponibles
+                    _uiState.value.subgrupos.map { subgrupo ->
+                        subgrupo.sugrGrupo to subgrupo.sugrCodigo
+                    }
+                } else {
+                    // Si se seleccionaron grupos específicos, usar solo los subgrupos seleccionados
+                    _uiState.value.selectedSubgrupos.map { subgrupo ->
+                        subgrupo.sugrGrupo to subgrupo.sugrCodigo
+                    }
+                }
                 
                 android.util.Log.d("TomaManualViewModel", "📊 Valores para inserción:")
                 android.util.Log.d("TomaManualViewModel", "   • Sucursal: $sucursal")
@@ -1575,7 +1659,9 @@ class TomaManualViewModel @Inject constructor(
                 android.util.Log.d("TomaManualViewModel", "   • Sección: $seccion")
                 android.util.Log.d("TomaManualViewModel", "   • Familia: $familia")
                 android.util.Log.d("TomaManualViewModel", "   • Es todas las familias: $isFamiliaTodos")
+                android.util.Log.d("TomaManualViewModel", "   • Es todos los grupos: $isGruposTodos")
                 android.util.Log.d("TomaManualViewModel", "   • Subgrupos seleccionados: $subgruposSeleccionados")
+                android.util.Log.d("TomaManualViewModel", "   • Total subgrupos: ${subgruposSeleccionados.size}")
                 
                 if (sucursal == null || deposito == null || area == null || departamento == null || seccion == null) {
                     android.util.Log.e("TomaManualViewModel", "❌ Campos requeridos faltantes para inserción, abortando...")
@@ -1597,7 +1683,7 @@ class TomaManualViewModel @Inject constructor(
                     return@launch
                 }
                 
-                if (!isFamiliaTodos && subgruposSeleccionados.isEmpty()) {
+                if (!isFamiliaTodos && !isGruposTodos && subgruposSeleccionados.isEmpty()) {
                     android.util.Log.e("TomaManualViewModel", "❌ Subgrupos requeridos para inserción, abortando...")
                     _uiState.value = _uiState.value.copy(
                         errorMessage = "Debe seleccionar al menos un subgrupo para crear la toma",
@@ -1655,6 +1741,7 @@ class TomaManualViewModel @Inject constructor(
                             userdb = usuarioLogueado.username, // ✅ Usuario real del login
                             inventarioVisible = _uiState.value.inventarioVisible,
                             articulosSeleccionados = _uiState.value.selectedArticulosLotes,
+                            tipoToma = _uiState.value.tipoToma, // ✅ Tipo de toma (M=Manual, C=Criterio)
                             onProgressUpdate = { current, total ->
                                 // Ajustar progreso del 10% al 90% para el detalle
                                 val adjustedProgress = 10f + (current.toFloat() / total.toFloat() * 80f)

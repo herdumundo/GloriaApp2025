@@ -18,6 +18,7 @@ class GetArticulosLotesUseCase @Inject constructor(
         seccion: Int,
         familia: String,
         isFamiliaTodos: Boolean = false,
+        isGruposTodos: Boolean = false, // ✅ Nuevo parámetro para indicar si se seleccionaron todos los grupos
         onProgressUpdate: (current: Int, total: Int) -> Unit
     ): Flow<List<ArticuloLote>> {
         val articuloLoteRepository = ArticuloLoteRepository()
@@ -30,6 +31,7 @@ class GetArticulosLotesUseCase @Inject constructor(
             seccion = seccion,
             familia = familia,
             isFamiliaTodos = isFamiliaTodos,
+            isGruposTodos = isGruposTodos,
             onProgressUpdate = onProgressUpdate
         )
     }

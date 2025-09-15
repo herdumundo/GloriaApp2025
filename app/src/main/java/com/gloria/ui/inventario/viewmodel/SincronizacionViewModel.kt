@@ -23,7 +23,11 @@ data class SincronizacionState(
     val isSincronizandoInventarios: Boolean = false,
     val inventariosProgressMessage: String = "",
     val inventariosProgressCurrent: Int = 0,
-    val inventariosProgressTotal: Int = 0
+    val inventariosProgressTotal: Int = 0,
+    // Nuevos campos para progreso de datos maestros
+    val masterDataProgressMessage: String = "",
+    val masterDataProgressCurrent: Int = 0,
+    val masterDataProgressTotal: Int = 0
 )
 
 @HiltViewModel
@@ -47,11 +51,20 @@ class SincronizacionViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(
                 isLoading = true,
                 isSuccess = false,
-                errorMessage = null
+                errorMessage = null,
+                masterDataProgressMessage = "🔄 Iniciando sincronización...",
+                masterDataProgressCurrent = 0,
+                masterDataProgressTotal = 7
             )
             
             try {
-                val result = sincronizarDatosUseCase()
+                val result = sincronizarDatosUseCase { message, current, total ->
+                    _uiState.value = _uiState.value.copy(
+                        masterDataProgressMessage = message,
+                        masterDataProgressCurrent = current,
+                        masterDataProgressTotal = total
+                    )
+                }
                 
                 if (result.isSuccess) {
                     val syncResult = result.getOrNull()
@@ -68,20 +81,25 @@ class SincronizacionViewModel @Inject constructor(
                         isSuccess = true,
                         syncedItemsCount = totalCount,
                         lastSyncTimestamp = syncResult?.timestamp,
-                        errorMessage = null
+                        errorMessage = null,
+                        masterDataProgressMessage = "✅ Sincronización completada",
+                        masterDataProgressCurrent = 7,
+                        masterDataProgressTotal = 7
                     )
                 } else {
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         isSuccess = false,
-                        errorMessage = result.exceptionOrNull()?.message ?: "Error desconocido"
+                        errorMessage = result.exceptionOrNull()?.message ?: "Error desconocido",
+                        masterDataProgressMessage = "❌ Error en sincronización"
                     )
                 }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     isSuccess = false,
-                    errorMessage = e.message ?: "Error desconocido"
+                    errorMessage = e.message ?: "Error desconocido",
+                    masterDataProgressMessage = "❌ Error en sincronización"
                 )
             }
         }

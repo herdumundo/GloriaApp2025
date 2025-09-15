@@ -25,11 +25,119 @@ fun ArticulosEncontradosDialog(
     onUpdateInventarioVisible: (Boolean) -> Unit,
     onDismiss: () -> Unit,
     inventarioVisible: Boolean = false,
+    autoSelectAll: Boolean = false, // Nuevo parámetro para selección automática
+    disableDeselection: Boolean = false, // Nuevo parámetro para deshabilitar deselección
     modifier: Modifier = Modifier
 ) {
     var searchText by remember { mutableStateOf("") }
     var showZeroStock by remember { mutableStateOf(false) }
     var consolidar by remember { mutableStateOf(false) }
+    
+    // Selección automática cuando autoSelectAll es true
+    LaunchedEffect(autoSelectAll, articulosLotes) {
+        if (autoSelectAll && articulosLotes.isNotEmpty() && selectedArticulosLotes.isEmpty()) {
+            onSelectAll(articulosLotes)
+        }
+    }
+    
+    // Mantener selección automática cuando cambia el filtro de stock cero en toma por criterio
+    LaunchedEffect(autoSelectAll, showZeroStock, articulosLotes, inventarioVisible) {
+        if (autoSelectAll && articulosLotes.isNotEmpty()) {
+            // Si es toma por criterio, siempre mantener todos los artículos seleccionados
+            // Usar los artículos filtrados y consolidados para la selección
+            val stockFiltered = if (showZeroStock) {
+                articulosLotes
+            } else {
+                articulosLotes.filter { it.cantidad > 0 }
+            }
+            
+            val searchFiltered = if (searchText.isEmpty()) {
+                stockFiltered
+            } else {
+                stockFiltered.filter { articulo ->
+                    articulo.artDesc.contains(searchText, ignoreCase = true) ||
+                    articulo.artCodigo.contains(searchText, ignoreCase = true) ||
+                    articulo.fliaDesc.contains(searchText, ignoreCase = true) ||
+                    articulo.grupDesc.contains(searchText, ignoreCase = true) ||
+                    articulo.sugrDesc.contains(searchText, ignoreCase = true) ||
+                    articulo.cantidad.toString().contains(searchText) ||
+                    articulo.ardeLote.contains(searchText, ignoreCase = true)
+                }
+            }
+            
+            val finalArticulos = if (consolidar) {
+                searchFiltered.groupBy { it.artCodigo }
+                    .map { (_, articulosDelMismoCodigo) ->
+                        val primerArticulo = articulosDelMismoCodigo.first()
+                        val cantidadTotal = articulosDelMismoCodigo.sumOf { it.cantidad }
+                        
+                        primerArticulo.copy(
+                            cantidad = cantidadTotal,
+                            ardeLote = "N/A",
+                            concatID = "${primerArticulo.artCodigo}_CONSOLIDATED",
+                            inventarioVisible = if (articulosDelMismoCodigo.any { it.inventarioVisible == "Y" }) "Y" else "N"
+                        )
+                    }
+            } else {
+                searchFiltered
+            }
+            
+            onSelectAll(finalArticulos)
+        }
+    }
+    
+    // Mantener selección automática cuando cambia la consolidación en toma por criterio
+    LaunchedEffect(autoSelectAll, consolidar, articulosLotes, inventarioVisible) {
+        if (autoSelectAll && articulosLotes.isNotEmpty()) {
+            // Si es toma por criterio, siempre mantener todos los artículos seleccionados
+            // Usar los artículos filtrados y consolidados para la selección
+            val stockFiltered = if (showZeroStock) {
+                articulosLotes
+            } else {
+                articulosLotes.filter { it.cantidad > 0 }
+            }
+            
+            val searchFiltered = if (searchText.isEmpty()) {
+                stockFiltered
+            } else {
+                stockFiltered.filter { articulo ->
+                    articulo.artDesc.contains(searchText, ignoreCase = true) ||
+                    articulo.artCodigo.contains(searchText, ignoreCase = true) ||
+                    articulo.fliaDesc.contains(searchText, ignoreCase = true) ||
+                    articulo.grupDesc.contains(searchText, ignoreCase = true) ||
+                    articulo.sugrDesc.contains(searchText, ignoreCase = true) ||
+                    articulo.cantidad.toString().contains(searchText) ||
+                    articulo.ardeLote.contains(searchText, ignoreCase = true)
+                }
+            }
+            
+            val finalArticulos = if (consolidar) {
+                searchFiltered.groupBy { it.artCodigo }
+                    .map { (_, articulosDelMismoCodigo) ->
+                        val primerArticulo = articulosDelMismoCodigo.first()
+                        val cantidadTotal = articulosDelMismoCodigo.sumOf { it.cantidad }
+                        
+                        primerArticulo.copy(
+                            cantidad = cantidadTotal,
+                            ardeLote = "N/A",
+                            concatID = "${primerArticulo.artCodigo}_CONSOLIDATED",
+                            inventarioVisible = if (articulosDelMismoCodigo.any { it.inventarioVisible == "Y" }) "Y" else "N"
+                        )
+                    }
+            } else {
+                searchFiltered
+            }
+            
+            onSelectAll(finalArticulos)
+        }
+    }
+    
+    // Función modificada para manejar toggle con deselección deshabilitada
+    val handleArticuloToggle = { articulo: ArticuloLote ->
+        if (!disableDeselection || !selectedArticulosLotes.contains(articulo)) {
+            onArticuloToggle(articulo)
+        }
+    }
     
     // Filtrar y consolidar artículos basado en la búsqueda, stock, inventario visible y consolidación
     val filteredArticulos = remember(articulosLotes, searchText, showZeroStock, consolidar, inventarioVisible) {
@@ -102,11 +210,23 @@ fun ArticulosEncontradosDialog(
                     // Checkbox para stock cero
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.clickable { showZeroStock = !showZeroStock }
+                        modifier = Modifier.clickable { 
+                            showZeroStock = !showZeroStock
+                            // Si es toma por criterio, mantener selección automática
+                            if (autoSelectAll && articulosLotes.isNotEmpty()) {
+                                onSelectAll(articulosLotes)
+                            }
+                        }
                     ) {
                         Checkbox(
                             checked = showZeroStock,
-                            onCheckedChange = { showZeroStock = it },
+                            onCheckedChange = { 
+                                showZeroStock = it
+                                // Si es toma por criterio, mantener selección automática
+                                if (autoSelectAll && articulosLotes.isNotEmpty()) {
+                                    onSelectAll(articulosLotes)
+                                }
+                            },
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
@@ -120,11 +240,23 @@ fun ArticulosEncontradosDialog(
                     // Checkbox para consolidar
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.clickable { consolidar = !consolidar }
+                        modifier = Modifier.clickable { 
+                            consolidar = !consolidar
+                            // Si es toma por criterio, mantener selección automática
+                            if (autoSelectAll && articulosLotes.isNotEmpty()) {
+                                onSelectAll(articulosLotes)
+                            }
+                        }
                     ) {
                         Checkbox(
                             checked = consolidar,
-                            onCheckedChange = { consolidar = it },
+                            onCheckedChange = { 
+                                consolidar = it
+                                // Si es toma por criterio, mantener selección automática
+                                if (autoSelectAll && articulosLotes.isNotEmpty()) {
+                                    onSelectAll(articulosLotes)
+                                }
+                            },
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
@@ -140,12 +272,20 @@ fun ArticulosEncontradosDialog(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.clickable { 
                             onUpdateInventarioVisible(!inventarioVisible)
+                            // Si es toma por criterio, mantener selección automática
+                            if (autoSelectAll && articulosLotes.isNotEmpty()) {
+                                onSelectAll(articulosLotes)
+                            }
                         }
                     ) {
                         Checkbox(
                             checked = inventarioVisible,
                             onCheckedChange = { 
                                 onUpdateInventarioVisible(it)
+                                // Si es toma por criterio, mantener selección automática
+                                if (autoSelectAll && articulosLotes.isNotEmpty()) {
+                                    onSelectAll(articulosLotes)
+                                }
                             },
                             modifier = Modifier.size(20.dp)
                         )
@@ -161,10 +301,12 @@ fun ArticulosEncontradosDialog(
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.clickable { 
-                            if (allSelected) {
-                                onDeselectAll()
-                            } else {
-                                onSelectAll(filteredArticulos)
+                            if (!disableDeselection) {
+                                if (allSelected) {
+                                    onDeselectAll()
+                                } else {
+                                    onSelectAll(filteredArticulos)
+                                }
                             }
                         }
                     ) {
@@ -173,17 +315,28 @@ fun ArticulosEncontradosDialog(
                             onCheckedChange = { isChecked ->
                                 if (isChecked) {
                                     onSelectAll(filteredArticulos)
-                                } else {
+                                } else if (!disableDeselection) {
                                     onDeselectAll()
                                 }
                             },
+                            enabled = !disableDeselection || !allSelected, // Deshabilitar si está deshabilitada la deselección y ya está seleccionado
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = if (consolidar) "Seleccionar todos los artículos consolidados" else "Seleccionar todos los artículos",
+                            text = if (disableDeselection && allSelected) {
+                                "Todos los artículos seleccionados (por criterio)"
+                            } else if (consolidar) {
+                                "Seleccionar todos los artículos consolidados"
+                            } else {
+                                "Seleccionar todos los artículos"
+                            },
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = if (disableDeselection && allSelected) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurface
+                            }
                         )
                     }
                 }
@@ -247,7 +400,11 @@ fun ArticulosEncontradosDialog(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(vertical = 2.dp)
-                                    .clickable { onArticuloToggle(articulo) },
+                                    .clickable { 
+                                        if (!disableDeselection || !selectedArticulosLotes.contains(articulo)) {
+                                            handleArticuloToggle(articulo)
+                                        }
+                                    },
                                 colors = CardDefaults.cardColors(
                                     containerColor = if (selectedArticulosLotes.contains(articulo))
                                         MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.1f)
@@ -266,7 +423,12 @@ fun ArticulosEncontradosDialog(
                                 ) {
                                     Checkbox(
                                         checked = selectedArticulosLotes.contains(articulo),
-                                        onCheckedChange = { onArticuloToggle(articulo) }
+                                        onCheckedChange = { 
+                                            if (!disableDeselection || !selectedArticulosLotes.contains(articulo)) {
+                                                handleArticuloToggle(articulo)
+                                            }
+                                        },
+                                        enabled = !disableDeselection || !selectedArticulosLotes.contains(articulo)
                                     )
                                     
                                     Spacer(modifier = Modifier.width(8.dp))

@@ -18,7 +18,9 @@ class SincronizacionCompletaRepository(
     private val sucursalDepartamentoRepository: SucursalDepartamentoRepository
 ) {
     
-    suspend fun sincronizarTodasLasTablas(): Result<SincronizacionResult> = withContext(Dispatchers.IO) {
+    suspend fun sincronizarTodasLasTablas(
+        onProgress: (message: String, current: Int, total: Int) -> Unit = { _, _, _ -> }
+    ): Result<SincronizacionResult> = withContext(Dispatchers.IO) {
         try {
             val connection = ConnectionOracle.getConnection()
             
@@ -32,43 +34,52 @@ class SincronizacionCompletaRepository(
             
             // Sincronizar en orden jerárquico para mantener integridad referencial
             try {
+                onProgress("🔄 Conectando a Oracle...", 0, 7)
+                
                 // 1. Sincronizar Áreas
+                onProgress("📁 Sincronizando áreas...", 1, 7)
                 val areas = sincronizarAreas(connection)
                 areaRepository.deleteAllAreas()
                 areaRepository.insertAllAreas(areas)
                 result.areasCount = areas.size
                 
                 // 2. Sincronizar Departamentos
+                onProgress("📂 Sincronizando departamentos...", 2, 7)
                 val departamentos = sincronizarDepartamentos(connection)
                 departamentoRepository.deleteAllDepartamentos()
                 departamentoRepository.insertAllDepartamentos(departamentos)
                 result.departamentosCount = departamentos.size
                 
                 // 3. Sincronizar Secciones
+                onProgress("📋 Sincronizando secciones...", 3, 7)
                 val secciones = sincronizarSecciones(connection)
                 seccionRepository.deleteAllSecciones()
                 seccionRepository.insertAllSecciones(secciones)
                 result.seccionesCount = secciones.size
                 
                 // 4. Sincronizar Familias
+                onProgress("👨‍👩‍👧‍👦 Sincronizando familias...", 4, 7)
                 val familias = sincronizarFamilias(connection)
                 familiaRepository.deleteAllFamilias()
                 familiaRepository.insertAllFamilias(familias)
                 result.familiasCount = familias.size
                 
                 // 5. Sincronizar Grupos
+                onProgress("👥 Sincronizando grupos...", 5, 7)
                 val grupos = sincronizarGrupos(connection)
                 grupoRepository.deleteAllGrupos()
                 grupoRepository.insertAllGrupos(grupos)
                 result.gruposCount = grupos.size
                 
                 // 6. Sincronizar Subgrupos
+                onProgress("🔗 Sincronizando subgrupos...", 6, 7)
                 val subgrupos = sincronizarSubgrupos(connection)
                 subgrupoRepository.deleteAllSubgrupos()
                 subgrupoRepository.insertAllSubgrupos(subgrupos)
                 result.subgruposCount = subgrupos.size
                 
                 // 7. Sincronizar Sucursal-Departamento
+                onProgress("🏢 Sincronizando sucursales y departamentos...", 7, 7)
                 val sucursalDepartamentos = sincronizarSucursalDepartamentos(connection)
                 sucursalDepartamentoRepository.deleteAllSucursalDepartamentos()
                 sucursalDepartamentoRepository.insertAllSucursalDepartamentos(sucursalDepartamentos)

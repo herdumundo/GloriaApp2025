@@ -10,6 +10,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -35,7 +38,8 @@ import com.gloria.repository.SincronizacionCompletaRepository
 import com.gloria.data.repository.InventarioSincronizacionRepository
 import com.gloria.ui.inventario.viewmodel.RegistroInventarioViewModel
 import com.gloria.ui.inventario.viewmodel.SincronizacionViewModel
- import com.gloria.ui.inventario.viewmodel.ArticulosTomaViewModel
+import com.gloria.ui.inventario.viewmodel.ArticulosTomaViewModel
+import com.gloria.ui.components.ConfirmationDialog
 import com.gloria.data.AppDatabase
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.launch
@@ -53,10 +57,42 @@ fun MainMenuScreen(
     var showTipoTomaDialog by remember { mutableStateOf(false) }
     var selectedTipoToma by remember { mutableStateOf<TipoToma?>(null) }
     var nroTomaSeleccionado by remember { mutableStateOf<Int?>(null) }
+    
+    // Estados para sincronización automática
+    var showSyncDialog by remember { mutableStateOf(false) }
+    var isSyncing by remember { mutableStateOf(false) }
+    var syncSuccess by remember { mutableStateOf(false) }
+    var syncError by remember { mutableStateOf<String?>(null) }
+    
+    // ViewModel para sincronización
+    val sincronizacionViewModel: SincronizacionViewModel = hiltViewModel()
 
 
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    
+    // Observar estado de sincronización
+    val syncState by sincronizacionViewModel.uiState.collectAsState()
+    
+    LaunchedEffect(syncState) {
+        if (syncState.isLoading) {
+            isSyncing = true
+            syncError = null
+            syncSuccess = false
+        } else if (syncState.isSuccess) {
+            isSyncing = false
+            syncSuccess = true
+            // Después del éxito, mostrar el diálogo de selección de tipo de toma
+            showTipoTomaDialog = true
+            showSyncDialog = false
+            // Limpiar el estado de éxito del ViewModel
+            sincronizacionViewModel.clearSuccess()
+        } else if (syncState.errorMessage != null) {
+            isSyncing = false
+            syncError = syncState.errorMessage
+            syncSuccess = false
+        }
+    }
     
     // Deshabilitar el botón atrás en el menú principal
     BackHandler {
@@ -77,7 +113,9 @@ fun MainMenuScreen(
                     onItemClick = { itemId ->
                         selectedMenuItem = itemId
                         if (itemId == "registro_toma") {
-                            showTipoTomaDialog = true
+                            // Primero sincronizar datos maestros, luego mostrar diálogo de tipo de toma
+                            showSyncDialog = true
+                            sincronizacionViewModel.sincronizarDatos()
                         }
                         scope.launch { 
                             drawerState.close() 
@@ -88,6 +126,60 @@ fun MainMenuScreen(
             }
         }
             ) {
+            // Diálogo de sincronización de datos maestros
+            if (showSyncDialog) {
+                ConfirmationDialog(
+                    showDialog = showSyncDialog,
+                    onDismiss = { 
+                        showSyncDialog = false
+                        if (syncError != null) {
+                            syncError = null
+                            sincronizacionViewModel.clearError()
+                        }
+                    },
+                    onConfirm = { 
+                        if (syncError != null) {
+                            // Reintentar sincronización
+                            syncError = null
+                            sincronizacionViewModel.clearError()
+                            sincronizacionViewModel.sincronizarDatos()
+                        }
+                    },
+                    
+                    // Estados
+                    isLoading = isSyncing,
+                    loadingProgress = if (syncState.masterDataProgressTotal > 0) {
+                        (syncState.masterDataProgressCurrent.toFloat() / syncState.masterDataProgressTotal.toFloat()) * 100f
+                    } else 0f,
+                    successMessage = if (syncSuccess) "Datos maestros sincronizados correctamente" else null,
+                    
+                    // Títulos
+                    title = "Sincronizando Datos Maestros",
+                    loadingTitle = "Sincronizando...",
+                    successTitle = "¡Sincronización Exitosa!",
+                    
+                    // Mensajes
+                    message = if (syncError != null) syncError!! else "Se están sincronizando los datos maestros desde Oracle",
+                    loadingMessage = syncState.masterDataProgressMessage,
+                    successMainMessage = "Datos maestros actualizados",
+                    
+                    // Botones
+                    confirmButtonText = "Reintentar",
+                    successButtonText = "Continuar",
+                    dismissButtonText = "Cancelar",
+                    
+                    // Colores
+                    confirmIconColor = if (syncError != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                    successIconColor = MaterialTheme.colorScheme.primary,
+                    loadingColor = MaterialTheme.colorScheme.primary,
+                    confirmButtonColor = if (syncError != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                    
+                    // Iconos
+                    confirmIcon = if (syncError != null) Icons.Default.Close else Icons.Default.Refresh,
+                    successIcon = Icons.Default.Check
+                )
+            }
+            
             // Diálogo de selección de tipo de toma
             if (showTipoTomaDialog) {
                 SeleccionTipoTomaDialog(
@@ -95,6 +187,8 @@ fun MainMenuScreen(
                     onTipoSeleccionado = { tipoToma ->
                         selectedTipoToma = tipoToma
                         showTipoTomaDialog = false
+                        // Ambos tipos van a la misma pantalla (TomaManualScreen)
+                        selectedMenuItem = "toma_manual"
                     }
                 )
             }
@@ -104,7 +198,7 @@ fun MainMenuScreen(
                 TopAppBar(
                     title = { 
                         Text(
-                            text = getScreenTitle(selectedMenuItem),
+                            text = getScreenTitle(selectedMenuItem, selectedTipoToma),
                             fontWeight = FontWeight.SemiBold
                         )
                     },
@@ -170,6 +264,19 @@ fun MainMenuScreen(
             ) {
                 // Contenido principal según el menú seleccionado
                 when (selectedMenuItem) {
+                    "toma_manual" -> {
+                        // Pantalla unificada para ambos tipos de toma
+                        val tomaManualViewModel: TomaManualViewModel = hiltViewModel()
+                        TomaManualScreen(
+                            viewModel = tomaManualViewModel,
+                            navController = navController,
+                            tipoToma = selectedTipoToma, // Bandera para identificar el tipo
+                            onNavigateToHome = {
+                                selectedTipoToma = null
+                                selectedMenuItem = "menu_principal"
+                            }
+                        )
+                    }
                     "registro_toma" -> {
                         when (selectedTipoToma?.id) {
                             "criterio_seleccion" -> TomaCriterioScreen(
@@ -186,7 +293,11 @@ fun MainMenuScreen(
                                 TomaManualScreen(
                                     viewModel = tomaManualViewModel,
                                     navController = navController,
-
+                                    tipoToma = selectedTipoToma,
+                                    onNavigateToHome = {
+                                        selectedTipoToma = null
+                                        selectedMenuItem = "menu_principal"
+                                    }
                                 )
                             }
                             else -> HomeContent(
@@ -195,7 +306,9 @@ fun MainMenuScreen(
                                 onCardClick = { itemId ->
                                     selectedMenuItem = itemId
                                     if (itemId == "registro_toma") {
-                                        showTipoTomaDialog = true
+                                        // Primero sincronizar datos maestros, luego mostrar diálogo de tipo de toma
+                                        showSyncDialog = true
+                                        sincronizacionViewModel.sincronizarDatos()
                                     }
                                 }
                             )
@@ -244,7 +357,9 @@ fun MainMenuScreen(
                             onCardClick = { itemId ->
                                 selectedMenuItem = itemId
                                 if (itemId == "registro_toma") {
-                                    showTipoTomaDialog = true
+                                    // Primero sincronizar datos maestros, luego mostrar diálogo de tipo de toma
+                                    showSyncDialog = true
+                                    sincronizacionViewModel.sincronizarDatos()
                                 }
                             }
                         )
@@ -255,7 +370,9 @@ fun MainMenuScreen(
                         onCardClick = { itemId ->
                             selectedMenuItem = itemId
                             if (itemId == "registro_toma") {
-                                showTipoTomaDialog = true
+                                // Primero sincronizar datos maestros, luego mostrar diálogo de tipo de toma
+                                showSyncDialog = true
+                                sincronizacionViewModel.sincronizarDatos()
                             }
                         }
                     )
@@ -548,14 +665,29 @@ private fun ThemeToggleItem() {
     }
 }
 
-private fun getScreenTitle(selectedMenuItem: String): String {
+private fun getScreenTitle(selectedMenuItem: String, selectedTipoToma: TipoToma?): String {
     return when (selectedMenuItem) {
-        "registro_toma" -> "Toma Manual"
+        "toma_manual" -> {
+            when (selectedTipoToma?.id) {
+                "criterio_seleccion" -> "Toma por Criterio"
+                "manual" -> "Toma Manual"
+                else -> "Registro de Toma"
+            }
+        }
+        "registro_toma" -> {
+            when (selectedTipoToma?.id) {
+                "criterio_seleccion" -> "Toma por Criterio"
+                "manual" -> "Toma Manual"
+                else -> "Registro de Toma"
+            }
+        }
         "registro_inventario" -> "Registro de Inventario"
         "cancelacion_inventario" -> "Cancelación de Inventario"
         "exportar_inventario" -> "Exportar Inventario"
         "exportar_parcial" -> "Exportar Inventario Parcial"
         "sincronizar_datos" -> "Sincronizar Datos"
+        "articulos_toma" -> "Artículos de Toma"
+        "menu_principal" -> "Sistema de Inventario"
         else -> "Sistema de Inventario"
     }
 }

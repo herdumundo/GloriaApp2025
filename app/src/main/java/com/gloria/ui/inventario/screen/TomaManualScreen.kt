@@ -31,6 +31,7 @@ import com.gloria.ui.components.SingleSelectWithAllDialog
 import com.gloria.ui.components.CompactSingleSelectDialog
 import com.gloria.ui.components.SelectableItem
 import com.gloria.ui.components.ArticulosEncontradosDialog
+import com.gloria.domain.model.TipoToma
 import com.gloria.ui.components.ExitConfirmationDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -38,9 +39,36 @@ import com.gloria.ui.components.ExitConfirmationDialog
 fun TomaManualScreen(
     viewModel: TomaManualViewModel,
     navController: NavHostController,
- ) {
+    tipoToma: TipoToma? = null, // Bandera para identificar el tipo de toma
+    onNavigateToHome: () -> Unit = {} // Callback para navegar al home
+) {
     val uiState by viewModel.uiState.collectAsState()
     var showExitDialog by remember { mutableStateOf(false) }
+
+    // Cargar datos iniciales cuando se inicializa la pantalla
+    LaunchedEffect(Unit) {
+        viewModel.loadSucursales()
+        viewModel.loadAreas()
+    }
+    
+    // Establecer el tipo de toma en el ViewModel cuando se inicializa la pantalla
+    LaunchedEffect(tipoToma) {
+        if (tipoToma != null) {
+            val tipoTomaString = when (tipoToma.id) {
+                "manual" -> "M"
+                "criterio_seleccion" -> "C"
+                else -> "M"
+            }
+            viewModel.setTipoToma(tipoTomaString)
+        }
+    }
+    
+    // Limpiar parámetros del ViewModel cuando se sale de la pantalla
+    DisposableEffect(Unit) {
+        onDispose {
+            viewModel.clearAllParameters()
+        }
+    }
 
     BackHandler {
         showExitDialog = true
@@ -51,6 +79,8 @@ fun TomaManualScreen(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+
+        
             // Mostrar error si existe
             if (uiState.errorMessage != null) {
                 item {
@@ -169,44 +199,22 @@ fun TomaManualScreen(
                             allSelectedText = "Todos los grupos"
                         )
                         
-                        MultiSelectionCard(
-                            title = "Subgrupos",
-                            selectedCount = uiState.selectedSubgrupos.size,
-                            totalCount = uiState.subgrupos.size,
-                            onSelectClick = { viewModel.showSubgrupoDialog() },
-                            modifier = Modifier.weight(1f),
-                            isEnabled = uiState.selectedGrupos.isNotEmpty(),
-                            allSelectedText = "Todos los subgrupos"
-                        )
+                        // Solo mostrar el campo de subgrupos si NO se seleccionaron todos los grupos
+                        if (!uiState.isGruposTodos) {
+                            MultiSelectionCard(
+                                title = "Subgrupos",
+                                selectedCount = uiState.selectedSubgrupos.size,
+                                totalCount = uiState.subgrupos.size,
+                                onSelectClick = { viewModel.showSubgrupoDialog() },
+                                modifier = Modifier.weight(1f),
+                                isEnabled = uiState.selectedGrupos.isNotEmpty(),
+                                allSelectedText = "Todos los subgrupos"
+                            )
+                        }
                     }
                 }
             }
 
-            // Botón de búsqueda de artículos
-            if ((uiState.selectedSubgrupos.isNotEmpty() || uiState.isFamiliaTodos) && 
-                uiState.selectedSucursal != null && 
-                uiState.selectedDepartamento != null && 
-                uiState.selectedArea != null && 
-                uiState.selectedDpto != null && 
-                uiState.selectedSeccion != null) {
-                item {
-                    Button(
-                        onClick = { viewModel.loadArticulosLotes() },
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = !uiState.isLoading,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary
-                        )
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Search,
-                            contentDescription = null
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Buscar Productos")
-                    }
-                }
-            }
 
             // Mostrar progreso si está cargando
             if (uiState.isLoading) {
@@ -240,22 +248,20 @@ fun TomaManualScreen(
                 }
             }
 
-            // Mostrar artículos encontrados
+            // Botón Ver Artículos (solo si hay artículos encontrados)
             if (uiState.articulosLotes.isNotEmpty()) {
                 item {
-
-                            Button(
-                                onClick = { viewModel.showArticulosLotesDialog() },
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = null
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Ver Artículos")
-                            }
-
+                    Button(
+                        onClick = { viewModel.showArticulosLotesDialog() },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = null
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Ver Artículos")
+                    }
                 }
             }
 
@@ -274,6 +280,24 @@ fun TomaManualScreen(
                     val horizontalScrollState = rememberScrollState()
                     
                     Column {
+
+                        // Botón de crear toma - ubicado inmediatamente después de la tabla
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(
+                            onClick = { viewModel.showConfirmarTomaDialog() },
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = !uiState.isLoading,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.tertiary
+                            )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = null
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Crear Toma")
+                        }
                         // Cabecera fija de la grilla
                         Card(
                             modifier = Modifier.fillMaxWidth(),
@@ -419,27 +443,7 @@ fun TomaManualScreen(
                             }
                         }
                     }
-                }
-            }
 
-            // Botón de crear toma
-            if (uiState.selectedArticulosLotes.isNotEmpty()) {
-                item {
-                    Button(
-                        onClick = { viewModel.showConfirmarTomaDialog() },
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = !uiState.isLoading,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.tertiary
-                        )
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = null
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Crear Toma")
-                    }
                 }
             }
         }
@@ -577,7 +581,7 @@ fun TomaManualScreen(
         )
     }
 
-    if (uiState.showSubgrupoDialog && !uiState.isFamiliaTodos) {
+    if (uiState.showSubgrupoDialog && !uiState.isFamiliaTodos && !uiState.isGruposTodos) {
         MultiSelectDialog(
             title = "Seleccionar Subgrupos",
             items = uiState.subgrupos,
@@ -607,6 +611,8 @@ fun TomaManualScreen(
             onUpdateInventarioVisible = { inventarioVisible -> viewModel.updateInventarioVisibleMark(inventarioVisible) },
             onDismiss = { viewModel.hideArticulosLotesDialog() },
             inventarioVisible = uiState.inventarioVisible,
+            autoSelectAll = tipoToma?.id == "criterio_seleccion", // Selección automática para toma por criterio
+            disableDeselection = tipoToma?.id == "criterio_seleccion" // Deshabilitar deselección para toma por criterio
          )
     }
 
@@ -716,7 +722,8 @@ fun TomaManualScreen(
                         TextButton(onClick = { 
                             viewModel.hideConfirmarTomaDialog()
                             viewModel.clearSuccessMessage()
-                            navController.navigate("menu_principal")
+                            viewModel.clearAllParameters() // ✅ Limpiar todos los parámetros
+                            onNavigateToHome()
                         }) {
                             Text("Aceptar")
                         }
@@ -744,8 +751,10 @@ fun TomaManualScreen(
     ExitConfirmationDialog(
         showDialog = showExitDialog,
         onDismiss = { showExitDialog = false },
-        navController = navController,
-        route = "menu_principal",
+        onConfirm = { 
+            viewModel.clearAllParameters() // ✅ Limpiar todos los parámetros al salir
+            onNavigateToHome() 
+        },
         title = "Salir de la toma",
         message = "¿Estás seguro de que deseas volver al menu principal?",
         warningMessage = "Los cambios no guardados se perderán.",

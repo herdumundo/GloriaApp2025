@@ -21,6 +21,7 @@ class ArticuloLoteRepository {
         seccion: Int,
         familia: String,
         isFamiliaTodos: Boolean = false,
+        isGruposTodos: Boolean = false, // ✅ Nuevo parámetro para indicar si se seleccionaron todos los grupos
         onProgressUpdate: ((current: Int, total: Int) -> Unit)? = null
     ): Flow<List<ArticuloLote>> = flow {
         Log.d("ArticuloLoteRepository", "🎯 MÉTODO getArticulosLotes() LLAMADO")
@@ -32,7 +33,7 @@ class ArticuloLoteRepository {
         
         try {
             Log.d("ArticuloLoteRepository", "🔄 INICIANDO consulta Oracle...")
-            Log.d("ArticuloLoteRepository", "📊 Parámetros: suc=$sucursal, dep=$deposito, area=$area, dpto=$departamento, secc=$seccion, flia=$familia, isFamiliaTodos=$isFamiliaTodos")
+            Log.d("ArticuloLoteRepository", "📊 Parámetros: suc=$sucursal, dep=$deposito, area=$area, dpto=$departamento, secc=$seccion, flia=$familia, isFamiliaTodos=$isFamiliaTodos, isGruposTodos=$isGruposTodos")
             
             // Obtener conexión a Oracle
             Log.d("ArticuloLoteRepository", "🔌 Obteniendo conexión a Oracle...")
@@ -49,16 +50,19 @@ class ArticuloLoteRepository {
             // Usaremos solo el timeout del statement
             
             // Preparar variables para la consulta
-            val subgruposPlaceholders = if (!isFamiliaTodos) {
+            val subgruposPlaceholders = if (!isFamiliaTodos && !isGruposTodos) {
+                // Solo usar filtro de subgrupos si no es "todas las familias" y no es "todos los grupos"
                 subgruposSeleccionados.joinToString(",") { "'${it.first}#${it.second}'" }
             } else ""
             
-            val gruposCodigos = if (!isFamiliaTodos) {
+            val gruposCodigos = if (!isFamiliaTodos && !isGruposTodos) {
+                // Solo usar filtro de grupos si no es "todas las familias" y no es "todos los grupos"
                 subgruposSeleccionados.map { it.first }.distinct().joinToString(",")
             } else ""
             
-            // Construir la consulta SQL según si es familia todos o no
+            // Construir la consulta SQL según el tipo de selección
             val sql = if (isFamiliaTodos) {
+                // Caso 1: Todas las familias - sin filtros de familia, grupo o subgrupo
                 """
                 SELECT  
                     CONCAT(CONCAT(grup_codigo, '#'),SUGR_CODIGO) as concatID,
@@ -71,7 +75,22 @@ class ArticuloLoteRepository {
                     and dpto_codigo=? and secc_codigo=?
                 ORDER BY flia_desc, GRUP_desc, sugr_desc, art_desc ASC
                 """.trimIndent()
+            } else if (isGruposTodos) {
+                // Caso 2: Todos los grupos de una familia específica - sin filtros de grupo o subgrupo
+                """
+                SELECT  
+                    CONCAT(CONCAT(grup_codigo, '#'),SUGR_CODIGO) as concatID,
+                    TO_NUMBER (arde_cant_act) as cantidad, 
+                    TO_CHAR(arde_fec_vto_lote,'DD-MM-YYYY') as vencimiento, 
+                    flia_codigo, GRUP_CODIGO, GRUP_desc, flia_desc, art_desc, 
+                    arde_lote, art_codigo, ARDE_FEC_VTO_LOTE, sugr_codigo, sugr_desc
+                FROM ADCS.v_web_articulos_clasificacion 
+                WHERE arde_suc=? and arde_dep=? and area_codigo=? 
+                    and dpto_codigo=? and secc_codigo=? and flia_codigo=?
+                ORDER BY flia_desc, GRUP_desc, sugr_desc, art_desc ASC
+                """.trimIndent()
             } else {
+                // Caso 3: Grupos específicos - con filtros de grupo y subgrupo
                 """
                 SELECT  
                     CONCAT(CONCAT(grup_codigo, '#'),SUGR_CODIGO) as concatID,
@@ -100,15 +119,24 @@ class ArticuloLoteRepository {
             Log.d("ArticuloLoteRepository", "⏱️ Timeout configurado: 30 segundos")
             
             if (isFamiliaTodos) {
-                // Consulta sin filtro de grupo/subgrupo ni familia (5 parámetros)
+                // Caso 1: Todas las familias - sin filtros de familia, grupo o subgrupo (5 parámetros)
                 Log.d("ArticuloLoteRepository", "🔢 Configurando 5 parámetros para consulta 'Todas las familias'")
                 statement.setInt(1, sucursal)
                 statement.setInt(2, deposito)
                 statement.setInt(3, area)
                 statement.setInt(4, departamento)
                 statement.setInt(5, seccion)
+            } else if (isGruposTodos) {
+                // Caso 2: Todos los grupos de una familia específica - sin filtros de grupo o subgrupo (6 parámetros)
+                Log.d("ArticuloLoteRepository", "🔢 Configurando 6 parámetros para consulta 'Todos los grupos'")
+                statement.setInt(1, sucursal)
+                statement.setInt(2, deposito)
+                statement.setInt(3, area)
+                statement.setInt(4, departamento)
+                statement.setInt(5, seccion)
+                statement.setString(6, familia)
             } else {
-                // Consulta con filtro de grupo/subgrupo y familia (6 parámetros)
+                // Caso 3: Grupos específicos - con filtros de grupo y subgrupo (6 parámetros)
                 Log.d("ArticuloLoteRepository", "🔢 Configurando 6 parámetros para consulta específica")
                 statement.setInt(1, sucursal)
                 statement.setInt(2, deposito)
@@ -123,12 +151,21 @@ class ArticuloLoteRepository {
             
             // Crear consulta COUNT para obtener el total real
             val sqlCount = if (isFamiliaTodos) {
+                // Caso 1: Todas las familias - sin filtros de familia, grupo o subgrupo
                 """
                 SELECT COUNT(*) as total FROM ADCS.v_web_articulos_clasificacion 
                 WHERE arde_suc=? and arde_dep=? and area_codigo=? 
                 and dpto_codigo=? and secc_codigo=?
                 """.trimIndent()
+            } else if (isGruposTodos) {
+                // Caso 2: Todos los grupos de una familia específica - sin filtros de grupo o subgrupo
+                """
+                SELECT COUNT(*) as total FROM ADCS.v_web_articulos_clasificacion 
+                WHERE arde_suc=? and arde_dep=? and area_codigo=? 
+                and dpto_codigo=? and secc_codigo=? and flia_codigo=?
+                """.trimIndent()
             } else {
+                // Caso 3: Grupos específicos - con filtros de grupo y subgrupo
                 """
                 SELECT COUNT(*) as total FROM ADCS.v_web_articulos_clasificacion 
                 WHERE arde_suc=? and arde_dep=? and area_codigo=? 
@@ -141,12 +178,22 @@ class ArticuloLoteRepository {
             countStatement.setQueryTimeout(30)
             
             if (isFamiliaTodos) {
+                // Caso 1: Todas las familias - sin filtros de familia, grupo o subgrupo (5 parámetros)
                 countStatement.setInt(1, sucursal)
                 countStatement.setInt(2, deposito)
                 countStatement.setInt(3, area)
                 countStatement.setInt(4, departamento)
                 countStatement.setInt(5, seccion)
+            } else if (isGruposTodos) {
+                // Caso 2: Todos los grupos de una familia específica - sin filtros de grupo o subgrupo (6 parámetros)
+                countStatement.setInt(1, sucursal)
+                countStatement.setInt(2, deposito)
+                countStatement.setInt(3, area)
+                countStatement.setInt(4, departamento)
+                countStatement.setInt(5, seccion)
+                countStatement.setString(6, familia)
             } else {
+                // Caso 3: Grupos específicos - con filtros de grupo y subgrupo (6 parámetros)
                 countStatement.setInt(1, sucursal)
                 countStatement.setInt(2, deposito)
                 countStatement.setInt(3, area)
@@ -584,6 +631,7 @@ class ArticuloLoteRepository {
         userdb: String,
         inventarioVisible: Boolean,
         articulosSeleccionados: List<ArticuloLote>,
+        tipoToma: String = "M", // "M" = Manual, "C" = Criterio
         onProgressUpdate: ((current: Int, total: Int) -> Unit)? = null
     ): Pair<Int, Int> {
         var connection: java.sql.Connection? = null
@@ -659,7 +707,7 @@ class ArticuloLoteRepository {
                     WINVE_CONSOLIDADO,
                     WINVE_GRUPO_PARCIAL,
                     WINVE_STOCK_VISIBLE
-                ) VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?, 'M', ?, ?, ?, ?, 'S', 'A', 'S', 'N', '1', '1', ?, 'A', 'N', ?, ?)
+                ) VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?, ?, 'S', 'A', 'S', 'N', '1', '1', ?, 'A', 'N', ?, ?)
             """.trimIndent()
             
             Log.d("ArticuloLoteRepository", "📝 SQL INSERT cabecera preparado:")
@@ -673,19 +721,21 @@ class ArticuloLoteRepository {
             statement.setInt(2, deposito)
             statement.setString(3, idGrupo)
             statement.setString(4, userdb.uppercase())
-            statement.setInt(5, seccion)
-            statement.setInt(6, area)
-            statement.setInt(7, departamento)
-            statement.setString(8, idFamilia)
-            statement.setInt(9, idCabecera)
-            statement.setString(10, gruposParcial)
-            statement.setString(11, if (inventarioVisible) "Y" else "N")
+            statement.setString(5, tipoToma) // ✅ Tipo de toma (M=Manual, C=Criterio)
+            statement.setInt(6, seccion)
+            statement.setInt(7, area)
+            statement.setInt(8, departamento)
+            statement.setString(9, idFamilia)
+            statement.setInt(10, idCabecera)
+            statement.setString(11, gruposParcial)
+            statement.setString(12, if (inventarioVisible) "Y" else "N")
             
             Log.d("ArticuloLoteRepository", "🔢 Parámetros de cabecera configurados:")
             Log.d("ArticuloLoteRepository", "   • Sucursal: $sucursal")
             Log.d("ArticuloLoteRepository", "   • Depósito: $deposito")
             Log.d("ArticuloLoteRepository", "   • Grupo: '$idGrupo'")
             Log.d("ArticuloLoteRepository", "   • Usuario: ${userdb.uppercase()}")
+            Log.d("ArticuloLoteRepository", "   • Tipo de Toma: $tipoToma")
             Log.d("ArticuloLoteRepository", "   • Sección: $seccion")
             Log.d("ArticuloLoteRepository", "   • Área: $area")
             Log.d("ArticuloLoteRepository", "   • Departamento: $departamento")
@@ -839,5 +889,60 @@ class ArticuloLoteRepository {
                 Log.e("ArticuloLoteRepository", "❌ Error al cerrar recursos de transacción completa: ${e.message}")
             }
         }
+    }
+    
+    /**
+     * Consulta todos los grupos disponibles para una familia específica
+     */
+    private fun consultarTodosLosGrupos(
+        connection: java.sql.Connection,
+        area: Int,
+        departamento: Int,
+        seccion: Int,
+        familia: Int
+    ): List<Int> {
+        var statement: PreparedStatement? = null
+        var resultSet: ResultSet? = null
+        val grupos = mutableListOf<Int>()
+        
+        try {
+            Log.d("ArticuloLoteRepository", "🔍 Consultando todos los grupos para familia: $familia")
+            
+            val sql = """
+                SELECT DISTINCT grup_codigo 
+                FROM grupo 
+                WHERE grup_area = ? 
+                AND grup_dpto = ? 
+                AND grup_seccion = ? 
+                AND grup_familia = ?
+                ORDER BY grup_codigo
+            """.trimIndent()
+            
+            statement = connection.prepareStatement(sql)
+            statement.setInt(1, area)
+            statement.setInt(2, departamento)
+            statement.setInt(3, seccion)
+            statement.setInt(4, familia)
+            
+            resultSet = statement.executeQuery()
+            
+            while (resultSet.next()) {
+                grupos.add(resultSet.getInt("grup_codigo"))
+            }
+            
+            Log.d("ArticuloLoteRepository", "✅ Grupos encontrados: ${grupos.size} - $grupos")
+            
+        } catch (e: Exception) {
+            Log.e("ArticuloLoteRepository", "❌ Error consultando grupos: ${e.message}")
+        } finally {
+            try {
+                resultSet?.close()
+                statement?.close()
+            } catch (e: Exception) {
+                Log.e("ArticuloLoteRepository", "Error cerrando recursos de consulta de grupos: ${e.message}")
+            }
+        }
+        
+        return grupos
     }
 }

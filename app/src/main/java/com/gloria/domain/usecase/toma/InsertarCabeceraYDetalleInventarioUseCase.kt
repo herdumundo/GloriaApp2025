@@ -17,6 +17,7 @@ class InsertarCabeceraYDetalleInventarioUseCase @Inject constructor() {
         userdb: String,
         inventarioVisible: Boolean,
         articulosSeleccionados: List<ArticuloLote>,
+        tipoToma: String = "M", // "M" = Manual, "C" = Criterio
         onProgressUpdate: ((current: Int, total: Int) -> Unit)? = null
     ): Pair<Int, Int> {
         val articuloLoteRepository = ArticuloLoteRepository()
@@ -32,6 +33,7 @@ class InsertarCabeceraYDetalleInventarioUseCase @Inject constructor() {
             userdb = userdb,
             inventarioVisible = inventarioVisible,
             articulosSeleccionados = articulosSeleccionados,
+            tipoToma = tipoToma,
             onProgressUpdate = onProgressUpdate
         )
     }
