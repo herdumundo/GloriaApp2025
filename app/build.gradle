@@ -21,10 +21,36 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        debug {
+            // Usar la configuración de debug por defecto
+        }
+        release {
+            // Para desarrollo, usar la misma configuración que debug
+            storeFile file('debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+    }
+
     buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
+            // Deshabilitar Baseline Profiles para evitar errores de instalación
+            buildConfigField "boolean", "ENABLE_BASELINE_PROFILE", "false"
+            // Deshabilitar completamente los Baseline Profiles
+            manifestPlaceholders = [enableBaselineProfile: "false"]
+            // Configuración adicional para evitar Baseline Profiles
+            debuggable false
+            jniDebuggable false
+            renderscriptDebuggable false
+            zipAlignEnabled true
         }
     }
     compileOptions {
@@ -36,6 +62,37 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
+    }
+    
+    // Deshabilitar completamente Baseline Profiles
+    androidComponents {
+        onVariants(selector().withBuildType("release")) { variant ->
+            variant.packaging.resources.excludes.add("META-INF/com.android.tools/r8-from")
+            variant.packaging.resources.excludes.add("baseline-prof.txt")
+            variant.packaging.resources.excludes.add("baseline-prof.mapping")
+            variant.packaging.resources.excludes.add("META-INF/com.android.tools/r8-to")
+            variant.packaging.resources.excludes.add("META-INF/com.android.tools/r8-from")
+            variant.packaging.resources.excludes.add("META-INF/com.android.tools/r8-to")
+        }
+    }
+    
+    // Configuración adicional para deshabilitar Baseline Profiles
+    packagingOptions {
+        resources {
+            excludes += "META-INF/com.android.tools/r8-from"
+            excludes += "META-INF/com.android.tools/r8-to"
+            excludes += "baseline-prof.txt"
+            excludes += "baseline-prof.mapping"
+            excludes += "META-INF/com.android.tools/r8-from"
+            excludes += "META-INF/com.android.tools/r8-to"
+        }
+    }
+    
+    // Deshabilitar Baseline Profiles a nivel de aplicación
+    lint {
+        disable 'BaselineProfile'
+        disable 'BaselineProfileRule'
     }
 }
 
@@ -65,6 +122,9 @@ dependencies {
     
     // JDBC Oracle - Driver local ojdbc5.jar
     implementation files('libs/ojdbc5.jar')
+    
+    // ZXing para escaneo de código de barras
+    implementation 'com.journeyapps:zxing-android-embedded:4.3.0'
     
     testImplementation libs.junit
     androidTestImplementation libs.androidx.junit

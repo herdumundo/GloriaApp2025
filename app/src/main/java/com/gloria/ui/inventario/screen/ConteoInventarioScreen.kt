@@ -1,21 +1,22 @@
 package com.gloria.ui.inventario.screen
 
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -23,7 +24,10 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.gloria.ui.components.ArticuloConteoCard
 import com.gloria.ui.components.ExitConfirmationDialog
+import com.gloria.ui.inventario.PortraitCaptureActivity
 import com.gloria.ui.inventario.viewmodel.ConteoInventarioViewModel
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanOptions
 
 /**
  * Pantalla de Conteo de Inventario
@@ -37,6 +41,17 @@ fun ConteoInventarioScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showExitDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    
+    // Launcher para escaneo de código de barras
+    val barcodeLauncher = rememberLauncherForActivityResult(
+        contract = ScanContract()
+    ) { result ->
+        if (result.contents != null) {
+            // El código de barras escaneado se pone en el campo de búsqueda
+            viewModel.actualizarBusqueda(result.contents)
+        }
+    }
     
     // Manejar el botón atrás
     BackHandler {
@@ -46,6 +61,19 @@ fun ConteoInventarioScreen(
     // Cargar artículos al iniciar la pantalla
     LaunchedEffect(nroInventario) {
         viewModel.cargarArticulosInventario(nroInventario)
+    }
+    
+    // Manejar navegación después de registro exitoso
+    LaunchedEffect(uiState.registroExitoso) {
+        if (uiState.registroExitoso) {
+            // Navegar al menú principal después de un breve delay
+            kotlinx.coroutines.delay(2000) // 2 segundos para mostrar el diálogo de éxito
+            navController.navigate("menu_principal") {
+                popUpTo("menu_principal") { inclusive = true }
+            }
+            // Resetear el estado para futuras navegaciones
+            viewModel.resetearRegistroExitoso()
+        }
     }
     
     Box(
@@ -103,13 +131,28 @@ fun ConteoInventarioScreen(
                         
                         Spacer(modifier = Modifier.width(8.dp))
                         
-                        // Icono de búsqueda
-                        Icon(
-                            imageVector = Icons.Default.Search,
-                            contentDescription = "Buscar producto",
-                            modifier = Modifier.size(24.dp),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
+                        // Botón de escaneo de código de barras
+        IconButton(
+            onClick = { 
+                val options = ScanOptions()
+                options.setDesiredBarcodeFormats(ScanOptions.ALL_CODE_TYPES)
+                options.setPrompt("Escanea un código de barras")
+                options.setCameraId(0)
+                options.setBeepEnabled(true)
+                options.setBarcodeImageEnabled(true)
+                options.setOrientationLocked(true)
+                options.setCaptureActivity(PortraitCaptureActivity::class.java) // Usa la clase personalizada
+
+                barcodeLauncher.launch(options)
+            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = "Escanear código de barras",
+                                modifier = Modifier.size(24.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
                     }
                     
                     // Información de resultados
@@ -463,6 +506,51 @@ fun ConteoInventarioScreen(
                     onClick = { viewModel.cancelarRegistro() }
                 ) {
                     Text("Cancelar")
+                }
+            }
+        )
+    }
+    
+    // Diálogo de éxito después del registro
+    if (uiState.registroExitoso) {
+        AlertDialog(
+            onDismissRequest = { /* No se puede cerrar manualmente */ },
+            title = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = "Éxito",
+                        tint = Color(0xFF4CAF50),
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Registro exitoso",
+                        color = Color(0xFF4CAF50)
+                    )
+                }
+            },
+            text = {
+                Text(
+                    text = "El inventario ha sido registrado exitosamente. Serás redirigido al menú principal.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = { 
+                        navController.navigate("menu_principal") {
+                            popUpTo("menu_principal") { inclusive = true }
+                        }
+                        viewModel.resetearRegistroExitoso()
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF4CAF50)
+                    )
+                ) {
+                    Text("Continuar")
                 }
             }
         )

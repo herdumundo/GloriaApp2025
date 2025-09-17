@@ -57,6 +57,10 @@ import com.gloria.data.repository.InventarioDetalleRepository
 import com.gloria.data.repository.InventarioSincronizacionRepository
 import com.gloria.domain.usecase.toma.GetLoggedUserUseCase
 import com.gloria.domain.usecase.toma.GetSubgruposUseCase
+import com.gloria.domain.usecase.exportacion.GetInventariosPendientesExportarUseCase
+import com.gloria.domain.usecase.exportacion.ExportarConteosRealizadosUseCase
+import com.gloria.domain.usecase.exportacion.ExportarConteosParaVerificacionUseCase
+import com.gloria.data.repository.ExportacionConteosRepository
 import com.gloria.ui.inventario.viewmodel.SincronizacionViewModel
 import dagger.Module
 import dagger.Provides
@@ -453,7 +457,33 @@ object UseCaseModule {
             sincronizarInventariosUseCase, getTotalInventariosLocalesUseCase
         )
     }
+    
+    // ==================== USECASES DE EXPORTACIÓN ====================
+    
+    @Provides
+    @Singleton
+    fun provideGetInventariosPendientesExportarUseCase(
+        articuloTomaRepository: ArticuloTomaRepository
+    ): GetInventariosPendientesExportarUseCase {
+        return GetInventariosPendientesExportarUseCase(articuloTomaRepository)
+    }
+    
 
-
+    
+    @Provides
+    @Singleton
+    fun provideExportarConteosRealizadosUseCase(
+        exportacionConteosRepository: ExportacionConteosRepository
+    ): ExportarConteosRealizadosUseCase {
+        return ExportarConteosRealizadosUseCase(exportacionConteosRepository)
+    }
+    
+    @Provides
+    @Singleton
+    fun provideExportarConteosParaVerificacionUseCase(
+        exportacionConteosRepository: ExportacionConteosRepository
+    ): ExportarConteosParaVerificacionUseCase {
+        return ExportarConteosParaVerificacionUseCase(exportacionConteosRepository)
+    }
 
 }

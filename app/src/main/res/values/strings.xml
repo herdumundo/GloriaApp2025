@@ -1,3 +1,23 @@
 <resources>
     <string name="app_name">appinventario</string>
+    <string name="welcome">Welcome</string>
+    <string name="login_subtitle">Sign in to your account</string>
+    <string name="username">Username</string>
+    <string name="password">Password</string>
+    <string name="confirm_password">Confirm Password</string>
+    <string name="login">Sign In</string>
+    <string name="register">Create Account</string>
+    <string name="logout">Sign Out</string>
+    <string name="back">Back</string>
+    <string name="create_account">Create Account</string>
+    <string name="register_subtitle">Complete the data to create your account</string>
+    <string name="home_welcome">You have successfully signed in!</string>
+    <string name="home_description">This is your main screen. Here you can add the content of your inventory application.</string>
+    <string name="show_password">Show password</string>
+    <string name="hide_password">Hide password</string>
+    <string name="error_passwords_dont_match">Passwords don\'t match</string>
+    <string name="error_password_too_short">Password must be at least 6 characters</string>
+    <string name="error_user_exists">User already exists</string>
+    <string name="error_invalid_credentials">Incorrect username or password</string>
+    <string name="error_complete_fields">Please complete all fields</string>
 </resources>

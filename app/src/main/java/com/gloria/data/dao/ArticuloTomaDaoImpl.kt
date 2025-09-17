@@ -1,6 +1,8 @@
 package com.gloria.data.dao
 
 import com.gloria.data.model.ArticuloToma
+import com.gloria.data.repository.DetalleInventarioExportar
+import com.gloria.domain.usecase.exportacion.InventarioPendienteExportar
 import com.gloria.util.ConnectionOracle
 import javax.inject.Inject
 
@@ -85,6 +87,166 @@ class ArticuloTomaDaoImpl @Inject constructor() : ArticuloTomaDao {
             }
         } catch (e: Exception) {
             throw Exception("Error al obtener los artículos de la toma: ${e.message}")
+        } finally {
+            connection.close()
+        }
+    }
+
+    override suspend fun getInventariosPendientesExportar(
+        idSucursal: String,
+        userLogin: String
+    ): List<InventarioPendienteExportar> {
+        val connection = ConnectionOracle.getConnection() ?: throw Exception("No se pudo conectar a la base de datos")
+        
+        return try {
+            val sql = """
+                SELECT DISTINCT 
+                    winvd_nro_inv,
+                    WINVE_LOGIN_CERRADO_WEB,
+                    winve_dep,
+                    arde_suc,
+                    tipo_toma,
+                    toma_registro,
+                    winve_fec,
+                    winve_sucursal
+                FROM ADCS.STKW002INV 
+                WHERE arde_suc = ? 
+                AND estado IN ('P','F') 
+                AND UPPER(WINVE_LOGIN_CERRADO_WEB) = UPPER(?)
+                ORDER BY winvd_nro_inv ASC
+            """.trimIndent()
+            
+            connection.prepareStatement(sql).use { stmt ->
+                stmt.setString(1, idSucursal)
+                stmt.setString(2, userLogin)
+                stmt.executeQuery().use { rs ->
+                    val result = mutableListOf<InventarioPendienteExportar>()
+                    while (rs.next()) {
+                        result.add(
+                            InventarioPendienteExportar(
+                                winvdNroInv = rs.getInt("winvd_nro_inv"),
+                                winveLoginCerradoWeb = rs.getString("WINVE_LOGIN_CERRADO_WEB") ?: "",
+                                winveDep = rs.getInt("winve_dep"),
+                                ardeSuc = rs.getInt("arde_suc"),
+                                tipoToma = rs.getString("tipo_toma") ?: "",
+                                tomaRegistro = rs.getString("toma_registro") ?: "",
+                                winveFecha = rs.getString("winve_fec") ?: "",
+                                winveSucursal = rs.getString("winve_sucursal") ?: ""
+                            )
+                        )
+                    }
+                    result
+                }
+            }
+        } catch (e: Exception) {
+            throw Exception("Error al obtener inventarios pendientes de exportar: ${e.message}")
+        } finally {
+            connection.close()
+        }
+    }
+
+    override suspend fun getDetallesInventario(nroInventario: Int): List<DetalleInventarioExportar> {
+        val connection = ConnectionOracle.getConnection() ?: throw Exception("No se pudo conectar a la base de datos")
+        
+        return try {
+            val sql = """
+                SELECT 
+                    winvd_nro_inv,
+                    winvd_lote,
+                    winvd_art,
+                    TO_CHAR(winvd_fec_vto, 'DD/MM/YYYY') as winvd_fec_vto,
+                    winvd_area,
+                    winvd_dpto,
+                    winvd_secc,
+                    winvd_flia,
+                    winvd_grupo,
+                    winvd_cant_act,
+                    winvd_cant_inv,
+                    winvd_secu,
+                    winve_dep,
+                    winve_suc
+                FROM ADCS.STKW002INV
+                WHERE winvd_nro_inv = ?
+                ORDER BY winvd_secu ASC
+            """.trimIndent()
+            
+            connection.prepareStatement(sql).use { stmt ->
+                stmt.setInt(1, nroInventario)
+                stmt.executeQuery().use { rs ->
+                    val result = mutableListOf<DetalleInventarioExportar>()
+                    while (rs.next()) {
+                        result.add(
+                            DetalleInventarioExportar(
+                                winvdNroInv = rs.getInt("winvd_nro_inv"),
+                                winvdLote = rs.getString("winvd_lote") ?: "",
+                                winvdArt = rs.getString("winvd_art") ?: "",
+                                winvdFecVto = rs.getString("winvd_fec_vto") ?: "",
+                                winvdArea = rs.getString("winvd_area") ?: "",
+                                winvdDpto = rs.getString("winvd_dpto") ?: "",
+                                winvdSecc = rs.getString("winvd_secc") ?: "",
+                                winvdFlia = rs.getString("winvd_flia") ?: "",
+                                winvdGrupo = rs.getString("winvd_grupo") ?: "",
+                                winvdCantAct = rs.getString("winvd_cant_act") ?: "",
+                                winvdCantInv = rs.getString("winvd_cant_inv") ?: "",
+                                winvdSecu = rs.getInt("winvd_secu"),
+                                winveDep = rs.getInt("winve_dep"),
+                                winveSuc = rs.getInt("winve_suc")
+                            )
+                        )
+                    }
+                    result
+                }
+            }
+        } catch (e: Exception) {
+            throw Exception("Error al obtener detalles del inventario: ${e.message}")
+        } finally {
+            connection.close()
+        }
+    }
+
+    override suspend fun marcarInventarioComoAnulado(nroInventario: Int) {
+        val connection = ConnectionOracle.getConnection() ?: throw Exception("No se pudo conectar a la base de datos")
+        
+        try {
+            val sql = """
+                UPDATE ADCS.STKW002INV 
+                SET estado = 'E'
+                WHERE winvd_nro_inv = ?
+            """.trimIndent()
+            
+            connection.prepareStatement(sql).use { stmt ->
+                stmt.setInt(1, nroInventario)
+                val rowsAffected = stmt.executeUpdate()
+                if (rowsAffected == 0) {
+                    throw Exception("No se encontró el inventario con número: $nroInventario")
+                }
+            }
+        } catch (e: Exception) {
+            throw Exception("Error al marcar inventario como anulado: ${e.message}")
+        } finally {
+            connection.close()
+        }
+    }
+
+    override suspend fun marcarInventarioComoCerrado(nroInventario: Int) {
+        val connection = ConnectionOracle.getConnection() ?: throw Exception("No se pudo conectar a la base de datos")
+        
+        try {
+            val sql = """
+                UPDATE ADCS.STKW002INV 
+                SET estado = 'C'
+                WHERE winvd_nro_inv = ?
+            """.trimIndent()
+            
+            connection.prepareStatement(sql).use { stmt ->
+                stmt.setInt(1, nroInventario)
+                val rowsAffected = stmt.executeUpdate()
+                if (rowsAffected == 0) {
+                    throw Exception("No se encontró el inventario con número: $nroInventario")
+                }
+            }
+        } catch (e: Exception) {
+            throw Exception("Error al marcar inventario como cerrado: ${e.message}")
         } finally {
             connection.close()
         }

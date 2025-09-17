@@ -6,6 +6,12 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     
+    <!-- Permiso para escaneo de código de barras -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    
+    <!-- Declarar que la app usa cámara como hardware -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    
     <application
         android:name=".InventarioApplication"
         android:allowBackup="true"
@@ -28,6 +34,13 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        
+        <!-- Actividad personalizada para escáner de código de barras en orientación vertical -->
+        <activity
+            android:name=".ui.inventario.PortraitCaptureActivity"
+            android:screenOrientation="portrait"
+            android:exported="false"
+            android:theme="@style/Theme.Appinventario" />
     </application>
 
 </manifest>

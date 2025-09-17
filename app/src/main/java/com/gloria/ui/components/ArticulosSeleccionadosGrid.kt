@@ -147,7 +147,10 @@ fun ArticulosSeleccionadosGrid(
                 modifier = Modifier.heightIn(max = 300.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                items(articulos) { articulo ->
+                items(
+                    items = articulos,
+                    key = { "${it.artCodigo}_${it.ardeLote}" }
+                ) { articulo ->
                     ArticuloGridRow(
                         articulo = articulo,
                         onRemove = { onRemoveArticulo(articulo) },

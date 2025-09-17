@@ -29,7 +29,8 @@ data class ConteoInventarioState(
     val cantidadesContadas: Map<String, Int> = emptyMap(), // ID -> cantidad contada
     val showAlertNoContados: Boolean = false,
     val showConfirmRegistro: Boolean = false, // Para confirmar registro sin contar todo
-    val estadosConteo: Map<String, EstadoConteo> = emptyMap() // Estado de conteo por artículo
+    val estadosConteo: Map<String, EstadoConteo> = emptyMap(), // Estado de conteo por artículo
+    val registroExitoso: Boolean = false // Indica si el registro fue exitoso
 )
 
 data class EstadoConteo(
@@ -353,12 +354,11 @@ class ConteoInventarioViewModel @Inject constructor(
                 
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    errorMessage = null
+                    errorMessage = null,
+                    registroExitoso = true
                 )
                 
                 Log.d("LogConteo", "=== REGISTRO COMPLETADO EXITOSAMENTE ===")
-                
-                // TODO: Mostrar mensaje de éxito o navegar a otra pantalla
                 
             } catch (e: Exception) {
                 Log.e("ConteoInventarioVM", "Error al registrar inventario", e)
@@ -375,6 +375,13 @@ class ConteoInventarioViewModel @Inject constructor(
      */
     fun cerrarAlertNoContados() {
         _uiState.value = _uiState.value.copy(showAlertNoContados = false)
+    }
+    
+    /**
+     * Resetea el estado de registro exitoso
+     */
+    fun resetearRegistroExitoso() {
+        _uiState.value = _uiState.value.copy(registroExitoso = false)
     }
     
     /**

@@ -1,5 +1,6 @@
 package com.gloria.data.repository
 
+import android.util.Log
 import com.gloria.data.dao.InventarioDetalleDao
 import com.gloria.data.entity.InventarioDetalle
 import com.gloria.data.model.InventarioSincronizacion
@@ -14,10 +15,12 @@ import java.sql.ResultSet
 import java.sql.Statement
 import java.text.SimpleDateFormat
 import javax.inject.Inject
+import javax.inject.Singleton
 
 /**
  * Repositorio para la sincronización de inventarios desde Oracle a Room
  */
+@Singleton
 class InventarioSincronizacionRepository @Inject constructor(
     private val inventarioDetalleDao: InventarioDetalleDao
 ) {
@@ -45,42 +48,38 @@ class InventarioSincronizacionRepository @Inject constructor(
                 return@flow
             }
             
-            // 🗄️ Limpiar tabla local antes de insertar
-            onProgressUpdate("🧹 Limpiando tabla local...", 0, inventariosOracle.size)
-            inventarioDetalleDao.deleteAllInventariosDetalle()
-            
-            // 💾 Insertar inventarios en Room
-            val totalInsertados = insertarInventariosEnRoom(inventariosOracle, onProgressUpdate)
+            // 🗑️ Limpiar solo inventarios sin conteo (estado 'P' o 'A')
+            onProgressUpdate("🗑️ Limpiando inventarios sin conteo...", 0, inventariosOracle.size)
+            inventarioDetalleDao.deleteInventariosDetalleByMultiplesCriterios(estado = "A")
+
+            // 💾 Insertar nuevos inventarios en Room
+            onProgressUpdate("💾 Insertando inventarios en base local...", 0, inventariosOracle.size)
+            val inventariosInsertados = insertarInventariosEnRoom(inventariosOracle, onProgressUpdate)
             
             // ✅ Sincronización completada
-            onProgressUpdate("✅ Sincronización completada exitosamente", totalInsertados, totalInsertados)
-            emit(Result.success(totalInsertados))
+            onProgressUpdate("✅ Sincronización completada exitosamente", inventariosInsertados, inventariosOracle.size)
+            emit(Result.success(inventariosInsertados))
             
         } catch (e: Exception) {
-            // 💥 Error en sincronización
-            onProgressUpdate("💥 Error en sincronización: ${e.message}", 0, 0)
+            Log.e("InventarioSincronizacion", "Error en sincronización: ${e.message}", e)
+            onProgressUpdate("❌ Error en sincronización: ${e.message}", 0, 0)
             emit(Result.failure(e))
         }
     }
     
     /**
-     * Obtiene inventarios desde Oracle usando el query de sincronización
+     * Obtiene inventarios desde Oracle
      */
     private suspend fun obtenerInventariosDesdeOracle(
         onProgressUpdate: (String, Int, Int) -> Unit
     ): List<InventarioSincronizacion> = withContext(Dispatchers.IO) {
-        
         var connection: Connection? = null
-        var statement: Statement? = null
-        var resultSet: ResultSet? = null
+        val inventarios = mutableListOf<InventarioSincronizacion>()
         
         try {
-            // 🔌 Conectar a Oracle
-            connection = ConnectionOracle.getConnection()
-            statement = connection?.createStatement()
+            connection = ConnectionOracle.getConnection() ?: throw Exception("No se pudo conectar a la base de datos")
             
-            // ⏱️ Configurar timeout
-            statement?.queryTimeout = 30
+            onProgressUpdate("🔍 Consultando inventarios en Oracle...", 0, 0)
             
             // 📝 Query de sincronización
             val sqlQuery = """
@@ -154,78 +153,68 @@ class InventarioSincronizacionRepository @Inject constructor(
                     c.WINVE_STOCK_VISIBLE, b.WINVD_CANT_ACT
             """.trimIndent()
             
-            // 🚀 Ejecutar query
-            onProgressUpdate("🔍 Consultando inventarios en Oracle...", 0, 0)
-            resultSet = statement?.executeQuery(sqlQuery)
+            val statement = connection.createStatement()
+            val resultSet = statement.executeQuery(sqlQuery)
             
-            // 📊 Procesar resultados
-            val inventarios = mutableListOf<InventarioSincronizacion>()
-            var contador = 0
-            
-            while (resultSet!!.next()) {
+            while (resultSet.next()) {
                 val inventario = InventarioSincronizacion(
-                    toma = resultSet!!.getString("toma") ?: "A",
-                    invd_cant_inv = resultSet!!.getInt("invd_cant_inv"),
-                    ART_DESC = resultSet!!.getString("ART_DESC") ?: "",
-                    ARDE_SUC = resultSet!!.getInt("ARDE_SUC"),
-                    winvd_nro_inv = resultSet!!.getInt("winvd_nro_inv"),
-                    winvd_art = resultSet!!.getString("winvd_art") ?: "",
-                    winvd_lote = resultSet!!.getString("winvd_lote") ?: "",
-                    winvd_fec_vto = resultSet!!.getString("winvd_fec_vto") ?: "",
-                    winvd_area = resultSet!!.getInt("winvd_area"),
-                    winvd_dpto = resultSet!!.getInt("winvd_dpto"),
-                    winvd_secc = resultSet!!.getInt("winvd_secc"),
-                    winvd_flia = resultSet!!.getInt("winvd_flia"),
-                    winvd_grupo = resultSet!!.getInt("winvd_grupo"),
-                    winvd_cant_act = resultSet!!.getInt("winvd_cant_act"),
-                    winve_fec = resultSet!!.getString("winve_fec") ?: "",
-                    dpto_desc = resultSet!!.getString("dpto_desc") ?: "",
-                    secc_desc = resultSet!!.getString("secc_desc") ?: "",
-                    flia_desc = resultSet!!.getString("flia_desc") ?: "",
-                    grup_desc = resultSet!!.getString("grup_desc") ?: "",
-                    area_desc = resultSet!!.getString("area_desc") ?: "",
-                    sugr_codigo = resultSet!!.getInt("sugr_codigo"),
-                    winvd_secu = resultSet!!.getInt("winvd_secu"),
-                    tipo_toma = resultSet!!.getString("tipo_toma") ?: "MANUAL",
-                    winve_login = resultSet!!.getString("winve_login") ?: "",
-                    winvd_consolidado = resultSet!!.getString("winvd_consolidado") ?: "",
-                    desc_grupo_parcial = resultSet!!.getString("desc_grupo_parcial") ?: "",
-                    desc_familia = resultSet!!.getString("desc_familia") ?: "",
-                    winve_dep = resultSet!!.getString("winve_dep") ?: "",
-                    winve_suc = resultSet!!.getString("winve_suc") ?: "",
-                    coba_codigo_barra = resultSet!!.getString("coba_codigo_barra") ?: "",
-                    caja = resultSet!!.getInt("caja"),
-                    GRUESA = resultSet!!.getInt("GRUESA"),
-                    UNID_IND = resultSet!!.getInt("UNID_IND"),
-                    SUC_DESC = resultSet!!.getString("SUC_DESC") ?: "",
-                    DEP_DESC = resultSet!!.getString("DEP_DESC") ?: "",
-                    WINVE_STOCK_VISIBLE = resultSet!!.getString("WINVE_STOCK_VISIBLE") ?: "N"
+                    toma = resultSet.getString("toma") ?: "A",
+                    invd_cant_inv = resultSet.getInt("invd_cant_inv"),
+                    ART_DESC = resultSet.getString("ART_DESC") ?: "",
+                    ARDE_SUC = resultSet.getInt("ARDE_SUC"),
+                    winvd_nro_inv = resultSet.getInt("winvd_nro_inv"),
+                    winvd_art = resultSet.getString("winvd_art") ?: "",
+                    winvd_lote = resultSet.getString("winvd_lote") ?: "",
+                    winvd_fec_vto = resultSet.getString("winvd_fec_vto") ?: "",
+                    winvd_area = resultSet.getInt("winvd_area"),
+                    winvd_dpto = resultSet.getInt("winvd_dpto"),
+                    winvd_secc = resultSet.getInt("winvd_secc"),
+                    winvd_flia = resultSet.getInt("winvd_flia"),
+                    winvd_grupo = resultSet.getInt("winvd_grupo"),
+                    winvd_cant_act = resultSet.getInt("winvd_cant_act"),
+                    winve_fec = resultSet.getString("winve_fec") ?: "",
+                    dpto_desc = resultSet.getString("dpto_desc") ?: "",
+                    secc_desc = resultSet.getString("secc_desc") ?: "",
+                    flia_desc = resultSet.getString("flia_desc") ?: "",
+                    grup_desc = resultSet.getString("grup_desc") ?: "",
+                    area_desc = resultSet.getString("area_desc") ?: "",
+                    sugr_codigo = resultSet.getInt("sugr_codigo"),
+                    winvd_secu = resultSet.getInt("winvd_secu"),
+                    tipo_toma = resultSet.getString("tipo_toma") ?: "MANUAL",
+                    winve_login = resultSet.getString("winve_login") ?: "",
+                    winvd_consolidado = resultSet.getString("winvd_consolidado") ?: "",
+                    desc_grupo_parcial = resultSet.getString("desc_grupo_parcial") ?: "",
+                    desc_familia = resultSet.getString("desc_familia") ?: "",
+                    winve_dep = resultSet.getString("winve_dep") ?: "",
+                    winve_suc = resultSet.getString("winve_suc") ?: "",
+                    coba_codigo_barra = resultSet.getString("coba_codigo_barra") ?: "",
+                    caja = resultSet.getInt("caja"),
+                    GRUESA = resultSet.getInt("GRUESA"),
+                    UNID_IND = resultSet.getInt("UNID_IND"),
+                    SUC_DESC = resultSet.getString("SUC_DESC") ?: "",
+                    DEP_DESC = resultSet.getString("DEP_DESC") ?: "",
+                    WINVE_STOCK_VISIBLE = resultSet.getString("WINVE_STOCK_VISIBLE") ?: "N"
                 )
-                
                 inventarios.add(inventario)
-                contador++
-                
-                // 📊 Actualizar progreso cada 100 registros
-                if (contador % 100 == 0) {
-                    onProgressUpdate("📊 Procesando inventarios... ($contador registros)", contador, 0)
-                }
             }
             
-            onProgressUpdate("✅ Inventarios obtenidos desde Oracle: $contador registros", contador, 0)
-            inventarios
+            resultSet.close()
+            statement.close()
+            
+            onProgressUpdate("📊 Inventarios obtenidos: ${inventarios.size}", inventarios.size, 0)
             
         } catch (e: Exception) {
-            throw Exception("Error al obtener inventarios desde Oracle: ${e.message}")
+            Log.e("InventarioSincronizacion", "Error al obtener inventarios desde Oracle: ${e.message}", e)
+            throw e
         } finally {
-            // 🧹 Cerrar recursos
-            resultSet?.close()
-            statement?.close()
             connection?.close()
         }
+        
+        inventarios
     }
     
     /**
-     * Inserta inventarios en la base de datos local Room
+     * Inserta inventarios en Room
      */
     private suspend fun insertarInventariosEnRoom(
         inventarios: List<InventarioSincronizacion>,
@@ -338,7 +327,7 @@ class InventarioSincronizacionRepository @Inject constructor(
     suspend fun getTotalInventariosLocales(): Int {
         return inventarioDetalleDao.getTotalInventariosDetalle()
     }
-    
+
     /**
      * Limpia todos los inventarios locales
      */

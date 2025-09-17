@@ -64,10 +64,11 @@ class AuthViewModel @Inject constructor(
         }
     }
     
-      fun login(username: String, password: String) {
+    fun login(username: String, password: String) {
+        // Establecer loading inmediatamente, antes del launch
+        _state.value = _state.value.copy(isLoading = true, errorMessage = null)
+        
         viewModelScope.launch {
-            _state.value = _state.value.copy(isLoading = true, errorMessage = null)
-            
             if (username.isBlank() || password.isBlank()) {
                 _state.value = _state.value.copy(
                     isLoading = false,
@@ -76,7 +77,7 @@ class AuthViewModel @Inject constructor(
                 return@launch
             }
             
-            // Usar el caso de uso para autenticar
+            // Usar el caso de uso para autenticar (es suspend)
             when (val result = loginUseCase(username, password)) {
                 is AuthResult.Success -> {
                     // Obtener sucursales del usuario

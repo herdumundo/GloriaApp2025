@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -28,11 +29,11 @@ import com.gloria.ui.components.SelectionCardWithAction
 import com.gloria.ui.components.MultiSelectDialog
 import com.gloria.ui.components.MultiSelectionCard
 import com.gloria.ui.components.SingleSelectWithAllDialog
-import com.gloria.ui.components.CompactSingleSelectDialog
-import com.gloria.ui.components.SelectableItem
+import com.gloria.ui.components.GenericSelectionDialog
 import com.gloria.ui.components.ArticulosEncontradosDialog
 import com.gloria.domain.model.TipoToma
 import com.gloria.ui.components.ExitConfirmationDialog
+import com.gloria.ui.components.SelectableItem
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -450,90 +451,100 @@ fun TomaManualScreen(
 
     // Diálogos
     if (uiState.showSucursalDialog) {
-        CompactSingleSelectDialog(
+        GenericSelectionDialog(
             title = "Seleccionar Sucursal",
             items = uiState.sucursales,
             selectedItem = uiState.selectedSucursal,
             onItemSelected = { sucursal -> viewModel.onSucursalSelected(sucursal) },
-            onConfirm = { viewModel.hideSucursalDialog() },
             onDismiss = { viewModel.hideSucursalDialog() },
-            itemToSelectableItem = { sucursal ->
-                SelectableItem(
-                    id = sucursal.sucCodigo.toString(),
-                    title = sucursal.sucDesc,
-                    subtitle = "Código: ${sucursal.sucCodigo}"
+            itemToDisplayText = { sucursal -> sucursal.sucDesc },
+            itemToSubtitle = { sucursal -> "Código: ${sucursal.sucCodigo}" },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.LocationOn,
+                    contentDescription = "Sucursal",
+                    modifier = Modifier.size(24.dp),
+                    tint = MaterialTheme.colorScheme.primary
                 )
             }
         )
     }
 
     if (uiState.showDepartamentoDialog) {
-        CompactSingleSelectDialog(
+        GenericSelectionDialog(
             title = "Seleccionar Depósito",
             items = uiState.departamentos,
             selectedItem = uiState.selectedDepartamento,
             onItemSelected = { departamento -> viewModel.onDepartamentoSelected(departamento) },
-            onConfirm = { viewModel.hideDepartamentoDialog() },
             onDismiss = { viewModel.hideDepartamentoDialog() },
-            itemToSelectableItem = { departamento ->
-                SelectableItem(
-                    id = departamento.depCodigo.toString(),
-                    title = departamento.depDesc,
-                    subtitle = "Código: ${departamento.depCodigo}"
+            itemToDisplayText = { departamento -> departamento.depDesc },
+            itemToSubtitle = { departamento -> "Código: ${departamento.depCodigo}" },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.LocationOn,
+                    contentDescription = "Depósito",
+                    modifier = Modifier.size(24.dp),
+                    tint = MaterialTheme.colorScheme.primary
                 )
             }
         )
     }
 
     if (uiState.showAreaDialog) {
-        CompactSingleSelectDialog(
+        GenericSelectionDialog(
             title = "Seleccionar Área",
             items = uiState.areas,
             selectedItem = uiState.selectedArea,
             onItemSelected = { area -> viewModel.onAreaSelected(area) },
-            onConfirm = { viewModel.hideAreaDialog() },
             onDismiss = { viewModel.hideAreaDialog() },
-            itemToSelectableItem = { area ->
-                SelectableItem(
-                    id = area.areaCodigo.toString(),
-                    title = area.areaDesc,
-                    subtitle = "Código: ${area.areaCodigo}"
+            itemToDisplayText = { area -> area.areaDesc },
+            itemToSubtitle = { area -> "Código: ${area.areaCodigo}" },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.LocationOn,
+                    contentDescription = "Área",
+                    modifier = Modifier.size(24.dp),
+                    tint = MaterialTheme.colorScheme.primary
                 )
             }
         )
     }
 
     if (uiState.showDptoDialog) {
-        CompactSingleSelectDialog(
+        GenericSelectionDialog(
             title = "Seleccionar Departamento Interno",
             items = uiState.dptos,
             selectedItem = uiState.selectedDpto,
             onItemSelected = { dpto -> viewModel.onDptoSelected(dpto) },
-            onConfirm = { viewModel.hideDptoDialog() },
             onDismiss = { viewModel.hideDptoDialog() },
-            itemToSelectableItem = { dpto ->
-                SelectableItem(
-                    id = dpto.dptoCodigo.toString(),
-                    title = dpto.dptoDesc,
-                    subtitle = "Código: ${dpto.dptoCodigo}"
+            itemToDisplayText = { dpto -> dpto.dptoDesc },
+            itemToSubtitle = { dpto -> "Código: ${dpto.dptoCodigo}" },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.LocationOn,
+                    contentDescription = "Departamento",
+                    modifier = Modifier.size(24.dp),
+                    tint = MaterialTheme.colorScheme.primary
                 )
             }
         )
     }
 
     if (uiState.showSeccionDialog) {
-        CompactSingleSelectDialog(
+        GenericSelectionDialog(
             title = "Seleccionar Sección",
             items = uiState.secciones,
             selectedItem = uiState.selectedSeccion,
             onItemSelected = { seccion -> viewModel.onSeccionSelected(seccion) },
-            onConfirm = { viewModel.hideSeccionDialog() },
             onDismiss = { viewModel.hideSeccionDialog() },
-            itemToSelectableItem = { seccion ->
-                SelectableItem(
-                    id = seccion.seccCodigo.toString(),
-                    title = seccion.seccDesc,
-                    subtitle = "Código: ${seccion.seccCodigo}"
+            itemToDisplayText = { seccion -> seccion.seccDesc },
+            itemToSubtitle = { seccion -> "Código: ${seccion.seccCodigo}" },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.LocationOn,
+                    contentDescription = "Sección",
+                    modifier = Modifier.size(24.dp),
+                    tint = MaterialTheme.colorScheme.primary
                 )
             }
         )
