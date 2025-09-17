@@ -541,4 +541,24 @@ interface InventarioDetalleDao {
         numeroInventario: Int,
         estado: String
     )
+    
+    /**
+     * Marca un inventario como anulado (estado = 'E')
+     */
+    @Query("""
+        UPDATE STKW002INV 
+        SET estado = 'E'
+        WHERE winvd_nro_inv = :numeroInventario
+    """)
+    suspend fun marcarInventarioComoAnulado(numeroInventario: Int)
+    
+    /**
+     * Marca un inventario como cerrado (estado = 'C')
+     */
+    @Query("""
+        UPDATE STKW002INV 
+        SET estado = 'C'
+        WHERE winvd_nro_inv = :numeroInventario
+    """)
+    suspend fun marcarInventarioComoCerrado(numeroInventario: Int)
 }

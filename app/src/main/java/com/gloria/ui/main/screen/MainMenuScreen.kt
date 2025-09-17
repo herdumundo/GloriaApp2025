@@ -44,6 +44,8 @@ import com.gloria.data.AppDatabase
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.launch
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.gloria.ui.exportaciones.screen.ExportacionesScreen
+import com.gloria.ui.exportaciones.viewmodel.ExportacionesViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -335,9 +337,19 @@ fun MainMenuScreen(
                             }
                         )
                     }
-                    "exportar_inventario" -> ExportarInventarioScreen()
-                    "exportar_parcial" -> ExportarParcialScreen()
-                    "sincronizar_datos" -> {
+                    "exportar_inventario" ->
+                    {
+                        ExportacionesScreen(
+                            viewModel = hiltViewModel(),
+                            navController = navController
+                        )
+                    }
+
+
+
+
+
+                     "sincronizar_datos" -> {
                         val sincronizacionViewModel: SincronizacionViewModel = hiltViewModel()
                         SincronizarDatosScreen(
                             sincronizacionViewModel = sincronizacionViewModel

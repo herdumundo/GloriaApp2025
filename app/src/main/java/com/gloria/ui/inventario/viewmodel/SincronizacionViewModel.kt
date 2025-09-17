@@ -145,7 +145,7 @@ class SincronizacionViewModel @Inject constructor(
             )
             
             try {
-                val result = sincronizarInventariosUseCase { message, current, total ->
+                sincronizarInventariosUseCase { message, current, total ->
                     _uiState.value = _uiState.value.copy(
                         inventariosProgressMessage = message,
                         inventariosProgressCurrent = current,
