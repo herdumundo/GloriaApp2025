@@ -50,6 +50,12 @@ object MenuItems {
             title = "Sincronizar Datos",
             icon = Icons.Default.Refresh,
             route = "sincronizar_datos"
+        ),
+        MenuItem(
+            id = "informe_conteos_pendientes",
+            title = "Informe de Conteos Pendientes",
+            icon = Icons.Default.ExitToApp,
+            route = "informe_conteos_pendientes"
         )
     )
 }

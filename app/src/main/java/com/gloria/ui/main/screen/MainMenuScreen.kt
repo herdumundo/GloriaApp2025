@@ -28,6 +28,8 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.gloria.domain.model.MenuItems
 import com.gloria.ui.inventario.screen.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import com.gloria.ui.inventario.screen.ConteoInventarioScreen
 import com.gloria.ui.inventario.screen.ArticulosTomaScreen
 import com.gloria.ui.theme.ThemeManager
@@ -46,6 +48,12 @@ import kotlinx.coroutines.launch
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.gloria.ui.exportaciones.screen.ExportacionesScreen
 import com.gloria.ui.exportaciones.viewmodel.ExportacionesViewModel
+import com.gloria.ui.informe.screen.InformeConteosPendientesScreen
+import com.gloria.util.ConnectionOracle
+import android.util.Log
+
+// Variable global para controlar sincronización automática (solo una vez por sesión)
+private var hasAutoSyncedGlobally = false
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -69,12 +77,42 @@ fun MainMenuScreen(
     // ViewModel para sincronización
     val sincronizacionViewModel: SincronizacionViewModel = hiltViewModel()
 
-
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     
     // Observar estado de sincronización
     val syncState by sincronizacionViewModel.uiState.collectAsState()
+    
+    // Sincronización automática al cargar la pantalla por primera vez (solo una vez por sesión)
+    LaunchedEffect(Unit) {
+        if (!hasAutoSyncedGlobally) {
+            hasAutoSyncedGlobally = true
+            Log.d("PROCESO_LOGIN", "🔄 Primera vez en MainMenuScreen, iniciando sincronización automática")
+            
+            // Verificar conexión a la base de datos antes de sincronizar
+            val connection = withContext(Dispatchers.IO) {
+                Log.d("PROCESO_LOGIN", "🔄 Verificando conexión en hilo IO: ${Thread.currentThread().name}")
+                val conn = ConnectionOracle.getConnection()
+                if (conn != null) {
+                    Log.d("PROCESO_LOGIN", "✅ Conexión encontrada, cerrando conexión de verificación")
+                    conn.close()
+                }
+                conn
+            }
+            
+            if (connection != null) {
+                // Hay conexión, proceder con la sincronización
+                Log.d("PROCESO_LOGIN", "✅ Conexión verificada exitosamente, iniciando sincronización automática")
+                showSyncDialog = true
+                sincronizacionViewModel.sincronizarDatos()
+            } else {
+                // No hay conexión, no mostrar diálogo de sincronización
+                Log.d("PROCESO_LOGIN", "❌ No hay conexión a la base de datos, omitiendo sincronización automática")
+            }
+        } else {
+            Log.d("PROCESO_LOGIN", "⏭️ Ya se sincronizó automáticamente en esta sesión, omitiendo")
+        }
+    }
     
     LaunchedEffect(syncState) {
         if (syncState.isLoading) {
@@ -84,8 +122,7 @@ fun MainMenuScreen(
         } else if (syncState.isSuccess) {
             isSyncing = false
             syncSuccess = true
-            // Después del éxito, mostrar el diálogo de selección de tipo de toma
-            showTipoTomaDialog = true
+            // Solo cerrar el diálogo de sincronización, NO mostrar diálogo de tipo de toma
             showSyncDialog = false
             // Limpiar el estado de éxito del ViewModel
             sincronizacionViewModel.clearSuccess()
@@ -115,9 +152,8 @@ fun MainMenuScreen(
                     onItemClick = { itemId ->
                         selectedMenuItem = itemId
                         if (itemId == "registro_toma") {
-                            // Primero sincronizar datos maestros, luego mostrar diálogo de tipo de toma
-                            showSyncDialog = true
-                            sincronizacionViewModel.sincronizarDatos()
+                            // Mostrar directamente el diálogo de tipo de toma sin sincronización automática
+                            showTipoTomaDialog = true
                         }
                         scope.launch { 
                             drawerState.close() 
@@ -308,9 +344,8 @@ fun MainMenuScreen(
                                 onCardClick = { itemId ->
                                     selectedMenuItem = itemId
                                     if (itemId == "registro_toma") {
-                                        // Primero sincronizar datos maestros, luego mostrar diálogo de tipo de toma
-                                        showSyncDialog = true
-                                        sincronizacionViewModel.sincronizarDatos()
+                                        // Mostrar directamente el diálogo de tipo de toma sin sincronización automática
+                                        showTipoTomaDialog = true
                                     }
                                 }
                             )
@@ -353,6 +388,11 @@ fun MainMenuScreen(
                         val sincronizacionViewModel: SincronizacionViewModel = hiltViewModel()
                         SincronizarDatosScreen(
                             sincronizacionViewModel = sincronizacionViewModel
+                        )
+                    }
+                    "informe_conteos_pendientes" -> {
+                        InformeConteosPendientesScreen(
+                            navController = navController
                         )
                     }
                     "articulos_toma" -> {
@@ -698,6 +738,7 @@ private fun getScreenTitle(selectedMenuItem: String, selectedTipoToma: TipoToma?
         "exportar_inventario" -> "Exportar Inventario"
         "exportar_parcial" -> "Exportar Inventario Parcial"
         "sincronizar_datos" -> "Sincronizar Datos"
+        "informe_conteos_pendientes" -> "Informe de Conteos Pendientes"
         "articulos_toma" -> "Artículos de Toma"
         "menu_principal" -> "Sistema de Inventario"
         else -> "Sistema de Inventario"

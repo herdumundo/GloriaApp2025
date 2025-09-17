@@ -29,22 +29,23 @@ fun SincronizarDatosScreen(
     sincronizacionViewModel: SincronizacionViewModel
 ) {
     val uiState by sincronizacionViewModel.uiState.collectAsState()
-    
+
     val configuration = LocalConfiguration.current
     val screenHeight = configuration.screenHeightDp.dp
     val isSmallScreen = screenHeight < 600.dp
-    
+
     // Padding adaptativo según el tamaño de pantalla
     val horizontalPadding = if (isSmallScreen) 12.dp else 16.dp
     val verticalPadding = if (isSmallScreen) 8.dp else 16.dp
-    
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = horizontalPadding, vertical = verticalPadding),
         verticalArrangement = Arrangement.spacedBy(if (isSmallScreen) 8.dp else 16.dp)
-    ) {
+    )
+    {
         // Estado de sincronización
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -81,8 +82,8 @@ fun SincronizarDatosScreen(
                 Column {
                     Text(
                         text = "Estado de Sincronización",
-                        style = if (isSmallScreen) MaterialTheme.typography.titleSmall 
-                               else MaterialTheme.typography.titleMedium,
+                        style = if (isSmallScreen) MaterialTheme.typography.titleSmall
+                        else MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
@@ -95,7 +96,7 @@ fun SincronizarDatosScreen(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    
+
                     if (uiState.syncedItemsCount > 0) {
                         Text(
                             text = "Elementos sincronizados: ${uiState.syncedItemsCount}",
@@ -103,7 +104,7 @@ fun SincronizarDatosScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    
+
                     if (uiState.inventariosCount > 0) {
                         Text(
                             text = "Inventarios sincronizados: ${uiState.inventariosCount}",
@@ -111,7 +112,7 @@ fun SincronizarDatosScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    
+
                     uiState.lastSyncTimestamp?.let { timestamp ->
                         val dateFormat = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
                         val lastSync = Date(timestamp)
@@ -124,12 +125,13 @@ fun SincronizarDatosScreen(
                 }
             }
         }
-        
+
         // Opciones de sincronización
         Column(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(if (isSmallScreen) 12.dp else 16.dp)
-        ) {
+        )
+        {
             // Primera fila: Subir y Descargar datos maestros
             if (isSmallScreen) {
                 // En pantallas pequeñas, mostrar en columna
@@ -137,90 +139,176 @@ fun SincronizarDatosScreen(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(if (isSmallScreen) 8.dp else 12.dp)
                 ) {
-                    // Subir datos
+                    // Sincronizar inventarios
                     Card(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(if (isSmallScreen) 200.dp else 220.dp),
                         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                     ) {
                         Column(
-                            modifier = Modifier.padding(if (isSmallScreen) 12.dp else 16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
+                            modifier = Modifier
+                                .padding(if (isSmallScreen) 12.dp else 16.dp)
+                                .fillMaxHeight(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Send,
-                                contentDescription = "Subir datos",
-                                modifier = Modifier.size(if (isSmallScreen) 36.dp else 48.dp),
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                            Spacer(modifier = Modifier.height(if (isSmallScreen) 6.dp else 8.dp))
-                            Text(
-                                text = "Subir Datos",
-                                style = if (isSmallScreen) MaterialTheme.typography.titleSmall 
-                                       else MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                textAlign = TextAlign.Center
-                            )
-                            Text(
-                                text = "Enviar inventarios locales al servidor",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center
-                            )
-                            Spacer(modifier = Modifier.height(if (isSmallScreen) 8.dp else 12.dp))
-                            Button(
-                                onClick = { /* TODO: Subir datos */ },
-                                modifier = Modifier.fillMaxWidth()
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                Text("Subir")
+                                Icon(
+                                    imageVector = Icons.Default.Refresh,
+                                    contentDescription = "Sincronizar inventarios",
+                                    modifier = Modifier.size(if (isSmallScreen) 36.dp else 48.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(modifier = Modifier.height(if (isSmallScreen) 6.dp else 8.dp))
+                                Text(
+                                    text = "Sincronizar Inventarios",
+                                    style = if (isSmallScreen) MaterialTheme.typography.titleSmall
+                                    else MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    textAlign = TextAlign.Center
+                                )
+                                Text(
+                                    text = "Descargar inventarios existentes desde Oracle",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                            Button(
+                                onClick = {
+                                    sincronizacionViewModel.sincronizarInventarios()
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(if (isSmallScreen) 44.dp else 48.dp),
+                                enabled = !uiState.isSincronizandoInventarios
+                            ) {
+                                if (uiState.isSincronizandoInventarios) {
+                                    Row(
+                                        horizontalArrangement = Arrangement.Center,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(20.dp),
+                                            color = MaterialTheme.colorScheme.onPrimary,
+                                            strokeWidth = 2.dp
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = "Sincronizando...",
+                                            color = MaterialTheme.colorScheme.onPrimary,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
+                                } else {
+                                    Row(
+                                        horizontalArrangement = Arrangement.Center,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Refresh,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(20.dp),
+                                            tint = MaterialTheme.colorScheme.onPrimary
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = "Sincronizar",
+                                            color = MaterialTheme.colorScheme.onPrimary,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
-                    
+
                     // Descargar datos maestros
                     Card(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(if (isSmallScreen) 200.dp else 220.dp),
                         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                     ) {
                         Column(
-                            modifier = Modifier.padding(if (isSmallScreen) 12.dp else 16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
+                            modifier = Modifier
+                                .padding(if (isSmallScreen) 12.dp else 16.dp)
+                                .fillMaxHeight(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Refresh,
-                                contentDescription = "Descargar datos maestros",
-                                modifier = Modifier.size(if (isSmallScreen) 36.dp else 48.dp),
-                                tint = MaterialTheme.colorScheme.secondary
-                            )
-                            Spacer(modifier = Modifier.height(if (isSmallScreen) 6.dp else 8.dp))
-                            Text(
-                                text = "Datos Maestros",
-                                style = if (isSmallScreen) MaterialTheme.typography.titleSmall 
-                                       else MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                textAlign = TextAlign.Center
-                            )
-                            Text(
-                                text = "Actualizar catálogo desde el servidor",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center
-                            )
-                            Spacer(modifier = Modifier.height(if (isSmallScreen) 8.dp else 12.dp))
-                            OutlinedButton(
-                                onClick = { 
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Refresh,
+                                    contentDescription = "Descargar datos maestros",
+                                    modifier = Modifier.size(if (isSmallScreen) 36.dp else 48.dp),
+                                    tint = MaterialTheme.colorScheme.secondary
+                                )
+                                Spacer(modifier = Modifier.height(if (isSmallScreen) 6.dp else 8.dp))
+                                Text(
+                                    text = "Datos Maestros",
+                                    style = if (isSmallScreen) MaterialTheme.typography.titleSmall
+                                    else MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    textAlign = TextAlign.Center
+                                )
+                                Text(
+                                    text = "Descargar datos maestros",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                            Button(
+                                onClick = {
                                     sincronizacionViewModel.sincronizarDatos()
                                 },
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(if (isSmallScreen) 44.dp else 48.dp),
                                 enabled = !uiState.isLoading
                             ) {
                                 if (uiState.isLoading) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(16.dp),
-                                        strokeWidth = 2.dp
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Row(
+                                        horizontalArrangement = Arrangement.Center,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(20.dp),
+                                            color = MaterialTheme.colorScheme.onPrimary,
+                                            strokeWidth = 2.dp
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = "Sincronizando...",
+                                            color = MaterialTheme.colorScheme.onPrimary,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
+                                } else {
+                                    Row(
+                                        horizontalArrangement = Arrangement.Center,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Refresh,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(20.dp),
+                                            tint = MaterialTheme.colorScheme.onPrimary
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = "Descargar",
+                                            color = MaterialTheme.colorScheme.onPrimary,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
                                 }
-                                Text("Descargar")
                             }
                         }
                     }
@@ -231,277 +319,311 @@ fun SincronizarDatosScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Subir datos
+                    // Sincronizar inventarios
                     Card(
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(220.dp),
                         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                     ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Send,
-                            contentDescription = "Subir datos",
-                            modifier = Modifier.size(48.dp),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "Subir Datos",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            textAlign = TextAlign.Center
-                        )
-                        Text(
-                            text = "Enviar inventarios locales al servidor",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Button(
-                            onClick = { /* TODO: Subir datos */ },
-                            modifier = Modifier.fillMaxWidth()
+                        Column(
+                            modifier = Modifier
+                                .padding(16.dp)
+                                .fillMaxHeight(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text("Subir")
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Refresh,
+                                    contentDescription = "Sincronizar inventarios",
+                                    modifier = Modifier.size(48.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "Sincronizar Inventarios",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    textAlign = TextAlign.Center
+                                )
+                                Text(
+                                    text = "Descargar inventarios existentes",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Button(
+                                    onClick = {
+                                        sincronizacionViewModel.sincronizarInventarios()
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(48.dp),
+                                    enabled = !uiState.isSincronizandoInventarios
+                                ) {
+                                    if (uiState.isSincronizandoInventarios) {
+                                        Row(
+                                            horizontalArrangement = Arrangement.Center,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            CircularProgressIndicator(
+                                                modifier = Modifier.size(20.dp),
+                                                color = MaterialTheme.colorScheme.onPrimary,
+                                                strokeWidth = 2.dp
+                                            )
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text(
+                                                text = "Sincronizando...",
+                                                color = MaterialTheme.colorScheme.onPrimary,
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                        }
+                                    } else {
+                                        Row(
+                                            horizontalArrangement = Arrangement.Center,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Refresh,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(20.dp),
+                                                tint = MaterialTheme.colorScheme.onPrimary
+                                            )
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text(
+                                                text = "Sincronizar",
+                                                color = MaterialTheme.colorScheme.onPrimary,
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
-                    }
-                    
+
                     // Descargar datos maestros
                     Card(
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(220.dp),
                         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                     ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = "Descargar datos maestros",
-                            modifier = Modifier.size(48.dp),
-                            tint = MaterialTheme.colorScheme.secondary
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "Datos Maestros",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            textAlign = TextAlign.Center
-                        )
-                        Text(
-                            text = "Actualizar catálogo desde el servidor",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        OutlinedButton(
-                            onClick = { 
-                                sincronizacionViewModel.sincronizarDatos()
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            enabled = !uiState.isLoading
+                        Column(
+                            modifier = Modifier
+                                .padding(16.dp)
+                                .fillMaxHeight(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.SpaceBetween
                         ) {
-                            if (uiState.isLoading) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(16.dp),
-                                    strokeWidth = 2.dp
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Refresh,
+                                    contentDescription = "Descargar datos maestros",
+                                    modifier = Modifier.size(48.dp),
+                                    tint = MaterialTheme.colorScheme.secondary
                                 )
-                                Spacer(modifier = Modifier.width(8.dp))
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "Datos Maestros",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    textAlign = TextAlign.Center
+                                )
+                                Text(
+                                    text = "Descargar datos maestros",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center
+                                )
                             }
-                            Text("Descargar")
+                            Button(
+                                onClick = {
+                                    sincronizacionViewModel.sincronizarDatos()
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(48.dp),
+                                enabled = !uiState.isLoading
+                            ) {
+                                if (uiState.isLoading) {
+                                    Row(
+                                        horizontalArrangement = Arrangement.Center,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(20.dp),
+                                            color = MaterialTheme.colorScheme.onPrimary,
+                                            strokeWidth = 2.dp
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = "Sincronizando...",
+                                            color = MaterialTheme.colorScheme.onPrimary,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
+                                } else {
+                                    Row(
+                                        horizontalArrangement = Arrangement.Center,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Refresh,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(20.dp),
+                                            tint = MaterialTheme.colorScheme.onPrimary
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = "Descargar",
+                                            color = MaterialTheme.colorScheme.onPrimary,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }
             }
-            
-            // Segunda fila: Sincronizar inventarios
+
+            // Mensaje de error
+            if (uiState.errorMessage != null) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier.padding(if (isSmallScreen) 12.dp else 16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Warning,
+                            contentDescription = "Error",
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                        Spacer(modifier = Modifier.width(if (isSmallScreen) 8.dp else 12.dp))
+                        Column {
+                            Text(
+                                text = "Error en la sincronización",
+                                style = if (isSmallScreen) MaterialTheme.typography.titleSmall
+                                else MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                            Text(
+                                text = uiState.errorMessage ?: "",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            TextButton(
+                                onClick = { sincronizacionViewModel.clearError() }
+                            ) {
+                                Text("Cerrar")
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Sincronización completa
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-            ) {
+            )
+            {
                 Column(
-                    modifier = Modifier.padding(if (isSmallScreen) 12.dp else 16.dp),
+                    modifier = Modifier.padding(if (isSmallScreen) 16.dp else 24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Refresh,
-                        contentDescription = "Sincronizar inventarios",
-                        modifier = Modifier.size(if (isSmallScreen) 36.dp else 48.dp),
-                        tint = MaterialTheme.colorScheme.tertiary
-                    )
-                    Spacer(modifier = Modifier.height(if (isSmallScreen) 6.dp else 8.dp))
                     Text(
-                        text = "Sincronizar Inventarios",
-                        style = if (isSmallScreen) MaterialTheme.typography.titleSmall 
-                               else MaterialTheme.typography.titleMedium,
+                        text = "Sincronización Completa",
+                        style = if (isSmallScreen) MaterialTheme.typography.titleLarge
+                        else MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center
                     )
+
+
+                    Spacer(modifier = Modifier.height(if (isSmallScreen) 6.dp else 8.dp))
+
                     Text(
-                        text = "Descargar inventarios existentes desde Oracle",
-                        style = MaterialTheme.typography.bodySmall,
+                        text = "• Descarga datos maestros\n• Descarga datos maestros",
+                        style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
+                        lineHeight = MaterialTheme.typography.bodyMedium.lineHeight * 1.5
                     )
-                    
-                    // Progreso de sincronización de inventarios
-                    if (uiState.isSincronizandoInventarios) {
-                        Spacer(modifier = Modifier.height(12.dp))
-                        LinearProgressIndicator(
-                            progress = if (uiState.inventariosProgressTotal > 0) {
-                                uiState.inventariosProgressCurrent.toFloat() / uiState.inventariosProgressTotal.toFloat()
-                            } else 0f,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = uiState.inventariosProgressMessage,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            textAlign = TextAlign.Center
-                        )
-                        if (uiState.inventariosProgressTotal > 0) {
-                            Text(
-                                text = "${uiState.inventariosProgressCurrent}/${uiState.inventariosProgressTotal}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center
-                            )
-                        }
-                    }
-                    
-                    Spacer(modifier = Modifier.height(12.dp))
-                    OutlinedButton(
-                        onClick = { 
+
+                    Spacer(modifier = Modifier.height(if (isSmallScreen) 16.dp else 24.dp))
+
+                    Button(
+                        onClick = {
+                            // Ejecutar ambas sincronizaciones
+                            sincronizacionViewModel.sincronizarDatos()
                             sincronizacionViewModel.sincronizarInventarios()
                         },
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = !uiState.isSincronizandoInventarios
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(if (isSmallScreen) 44.dp else 48.dp),
+                        enabled = !uiState.isLoading && !uiState.isSincronizandoInventarios
                     ) {
-                        if (uiState.isSincronizandoInventarios) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(16.dp),
-                                strokeWidth = 2.dp
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                        }
-                        Text(if (uiState.isSincronizandoInventarios) "Sincronizando..." else "Sincronizar")
-                    }
-                }
-            }
-        }
-        
-        // Mensaje de error
-        if (uiState.errorMessage != null) {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)
-                )
-            ) {
-                Row(
-                    modifier = Modifier.padding(if (isSmallScreen) 12.dp else 16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Warning,
-                        contentDescription = "Error",
-                        tint = MaterialTheme.colorScheme.error
-                    )
-                    Spacer(modifier = Modifier.width(if (isSmallScreen) 8.dp else 12.dp))
-                    Column {
-                        Text(
-                            text = "Error en la sincronización",
-                            style = if (isSmallScreen) MaterialTheme.typography.titleSmall 
-                                   else MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.error
-                        )
-                        Text(
-                            text = uiState.errorMessage ?: "",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onErrorContainer
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        TextButton(
-                            onClick = { sincronizacionViewModel.clearError() }
-                        ) {
-                            Text("Cerrar")
+                        if (uiState.isLoading && uiState.isSincronizandoInventarios) {
+                            Row(
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    color = MaterialTheme.colorScheme.onPrimary,
+                                    strokeWidth = 2.dp
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Sincronizando Todo...",
+                                    color = MaterialTheme.colorScheme.onPrimary,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        } else {
+                            Row(
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Refresh,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp),
+                                    tint = MaterialTheme.colorScheme.onPrimary
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Sincronizar Todo",
+                                    color = MaterialTheme.colorScheme.onPrimary,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
                         }
                     }
                 }
             }
-        }
-        
-        // Sincronización completa
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-        ) {
-            Column(
-                modifier = Modifier.padding(if (isSmallScreen) 16.dp else 24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = "Sincronización Completa",
-                    style = if (isSmallScreen) MaterialTheme.typography.titleLarge 
-                           else MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center
-                )
-                
-                Spacer(modifier = Modifier.height(if (isSmallScreen) 8.dp else 12.dp))
-                
-                Text(
-                    text = "Realiza una sincronización bidireccional completa:",
-                    style = if (isSmallScreen) MaterialTheme.typography.bodyMedium 
-                           else MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center
-                )
-                
-                Spacer(modifier = Modifier.height(if (isSmallScreen) 6.dp else 8.dp))
-                
-                Text(
-                    text = "• Subir inventarios locales\n• Descargar catálogo actualizado\n• Verificar consistencia de datos\n• Resolver conflictos automáticamente",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    lineHeight = MaterialTheme.typography.bodyMedium.lineHeight * 1.5
-                )
-                
-                Spacer(modifier = Modifier.height(if (isSmallScreen) 16.dp else 24.dp))
-                
-                Button(
-                    onClick = { 
-                        sincronizacionViewModel.sincronizarDatos()
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(if (isSmallScreen) 44.dp else 48.dp),
-                    enabled = !uiState.isLoading
-                ) {
-                    if (uiState.isLoading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(16.dp),
-                            strokeWidth = 2.dp,
-                            color = MaterialTheme.colorScheme.onPrimary
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                    }
-                    Text("Sincronizar Todo")
-                }
-            }
-        }
-        
+
         // Espacio adicional para asegurar scroll en pantallas pequeñas
         if (isSmallScreen) {
             Spacer(modifier = Modifier.height(24.dp))
         }
-        }}}
+    }
+    }}
+ 
 
 

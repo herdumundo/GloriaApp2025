@@ -149,7 +149,7 @@ class AuthViewModel @Inject constructor(
                 selectedSucursal = sucursal,
                 showSucursalDialog = false,
                 isLoggedIn = true,
-                currentUser = sucursal.descripcion // Usar la descripción de la sucursal como usuario
+                currentUser = sucursal.descripcion
             )
         }
     }

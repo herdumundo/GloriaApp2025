@@ -7,6 +7,8 @@ import com.gloria.data.entity.LoggedUser
 import com.gloria.util.ConnectionOracle
 import com.gloria.util.Controles
 import com.gloria.util.Variables
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.ResultSet
@@ -21,37 +23,38 @@ class AuthRepository(
     /**
      * Autentica un usuario usando la base de datos Oracle
      */
-    suspend fun authenticateUser(username: String, password: String): AuthResult {
+    suspend fun authenticateUser(username: String, password: String): AuthResult = withContext(Dispatchers.IO) {
         var connection: Connection? = null
         var statement: PreparedStatement? = null
         var resultSet: ResultSet? = null
         
-        Log.d("AuthRepository", "=== INICIANDO authenticateUser ===")
-        Log.d("AuthRepository", "Username: $username")
-        Log.d("AuthRepository", "Password: ${password.take(3)}***")
+        Log.d("PROCESO_LOGIN", "=== INICIANDO authenticateUser ===")
+        Log.d("PROCESO_LOGIN", "Username: $username")
+        Log.d("PROCESO_LOGIN", "Password: ${password.take(3)}***")
+        Log.d("PROCESO_LOGIN", "🔄 Ejecutando en hilo IO: ${Thread.currentThread().name}")
         
         try {
             // Establecer las credenciales para la conexión
             Variables.userdb = username
             Variables.passdb = password
-            Log.d("AuthRepository", "Credenciales establecidas en Variables")
+            Log.d("PROCESO_LOGIN", "Credenciales establecidas en Variables")
             
             // Obtener conexión
-            Log.d("AuthRepository", "Intentando obtener conexión Oracle...")
+            Log.d("PROCESO_LOGIN", "Intentando obtener conexión Oracle...")
             connection = ConnectionOracle.getConnection()
             
             if (connection == null) {
-                Log.e("AuthRepository", "❌ CONEXIÓN FALLIDA - connection es null")
-                Log.e("AuthRepository", "Controles.resBD: ${Controles.resBD}")
-                Log.e("AuthRepository", "Controles.mensajeLogin: ${Controles.mensajeLogin}")
-                return when (Controles.resBD) {
+                Log.e("PROCESO_LOGIN", "❌ CONEXIÓN FALLIDA - connection es null")
+                Log.e("PROCESO_LOGIN", "Controles.resBD: ${Controles.resBD}")
+                Log.e("PROCESO_LOGIN", "Controles.mensajeLogin: ${Controles.mensajeLogin}")
+                return@withContext when (Controles.resBD) {
                     Controles.ERROR_RED -> AuthResult.NetworkError(Controles.mensajeLogin)
                     Controles.ERROR_CREDENCIALES -> AuthResult.InvalidCredentials(Controles.mensajeLogin)
                     else -> AuthResult.Error("Error de conexión desconocido")
                 }
             }
             
-            Log.d("AuthRepository", "✅ CONEXIÓN EXITOSA - Usuario autenticado correctamente")
+            Log.d("PROCESO_LOGIN", "✅ CONEXIÓN EXITOSA - Usuario autenticado correctamente")
             
             // Guardar el usuario logueado en la base de datos local
             try {
@@ -61,29 +64,29 @@ class AuthRepository(
                     password = password,
                     loginTimestamp = System.currentTimeMillis()
                 )
-                Log.d("AuthRepository", "💾 Guardando usuario en base de datos local...")
+                Log.d("PROCESO_LOGIN", "💾 Guardando usuario en base de datos local...")
                 loggedUserRepository.insertLoggedUser(loggedUser)
-                Log.d("AuthRepository", "✅ Usuario guardado: $username")
+                Log.d("PROCESO_LOGIN", "✅ Usuario guardado: $username")
             } catch (e: Exception) {
-                Log.e("AuthRepository", "❌ Error al guardar usuario: ${e.message}")
+                Log.e("PROCESO_LOGIN", "❌ Error al guardar usuario: ${e.message}")
             }
             
             // Si llegamos aquí, la conexión fue exitosa
-            return AuthResult.Success(username)
+            return@withContext AuthResult.Success(username)
             
         } catch (e: Exception) {
-            Log.e("AuthRepository", "❌ ERROR en authenticateUser: ${e.message}")
-            Log.e("AuthRepository", "Stack trace: ${e.stackTraceToString()}")
-            return AuthResult.Error("Error durante la autenticación: ${e.message}")
+            Log.e("PROCESO_LOGIN", "❌ ERROR en authenticateUser: ${e.message}")
+            Log.e("PROCESO_LOGIN", "Stack trace: ${e.stackTraceToString()}")
+            return@withContext AuthResult.Error("Error durante la autenticación: ${e.message}")
         } finally {
             // Cerrar recursos
             try {
                 resultSet?.close()
                 statement?.close()
                 connection?.close()
-                Log.d("AuthRepository", "🔒 Recursos cerrados correctamente")
+                Log.d("PROCESO_LOGIN", "🔒 Recursos cerrados correctamente")
             } catch (e: Exception) {
-                Log.e("AuthRepository", "Error al cerrar recursos: ${e.message}")
+                Log.e("PROCESO_LOGIN", "Error al cerrar recursos: ${e.message}")
             }
         }
     }
@@ -92,22 +95,22 @@ class AuthRepository(
      * Registra un nuevo usuario en la base de datos
      */
     @SuppressLint("SuspiciousIndentation")
-    fun registerUser(username: String, password: String): AuthResult {
+    suspend fun registerUser(username: String, password: String): AuthResult = withContext(Dispatchers.IO) {
         var connection: Connection? = null
         var statement: PreparedStatement? = null
         
         try {
             // Primero verificar si el usuario ya existe
             if (userExists(username)) {
-                return AuthResult.Error("El usuario ya existe")
+                return@withContext AuthResult.Error("El usuario ya existe")
             }
             
             // Aquí puedes implementar la lógica para insertar el usuario
             // Por ahora, solo verificamos que la conexión funcione
             connection = ConnectionOracle.getConnection()
             
-                        if (connection == null) {
-                return when (Controles.resBD) {
+            if (connection == null) {
+                return@withContext when (Controles.resBD) {
                     Controles.ERROR_RED -> AuthResult.NetworkError(Controles.mensajeLogin)
                     Controles.ERROR_CREDENCIALES -> AuthResult.InvalidCredentials(Controles.mensajeLogin)
                     else -> AuthResult.Error("Error de conexión desconocido")
@@ -116,10 +119,10 @@ class AuthRepository(
             
             // TODO: Implementar INSERT INTO usuarios (username, password) VALUES (?, ?)
             // Por ahora simulamos el registro exitoso
-            return AuthResult.Success(username)
+            return@withContext AuthResult.Success(username)
             
         } catch (e: Exception) {
-            return AuthResult.Error("Error durante el registro: ${e.message}")
+            return@withContext AuthResult.Error("Error durante el registro: ${e.message}")
         } finally {
             try {
                 statement?.close()
@@ -133,7 +136,7 @@ class AuthRepository(
     /**
      * Prueba la conexión a Oracle con credenciales específicas
      */
-    fun testConnection(testUsername: String, testPassword: String): AuthResult {
+    suspend fun testConnection(testUsername: String, testPassword: String): AuthResult = withContext(Dispatchers.IO) {
         try {
             // Establecer las credenciales para la prueba
             Variables.userdb = testUsername
@@ -143,7 +146,7 @@ class AuthRepository(
             val connection = ConnectionOracle.getConnection()
             
             if (connection == null) {
-                return when (Controles.resBD) {
+                return@withContext when (Controles.resBD) {
                     Controles.ERROR_RED -> AuthResult.NetworkError(Controles.mensajeLogin)
                     Controles.ERROR_CREDENCIALES -> AuthResult.InvalidCredentials(Controles.mensajeLogin)
                     else -> AuthResult.Error("Error de conexión desconocido")
@@ -152,10 +155,10 @@ class AuthRepository(
             
             // Si llegamos aquí, la conexión fue exitosa
             connection.close()
-            return AuthResult.Success("Conexión exitosa a Oracle")
+            return@withContext AuthResult.Success("Conexión exitosa a Oracle")
             
         } catch (e: Exception) {
-            return AuthResult.Error("Error durante la prueba de conexión: ${e.message}")
+            return@withContext AuthResult.Error("Error durante la prueba de conexión: ${e.message}")
         }
     }
     
@@ -184,7 +187,7 @@ class AuthRepository(
     /**
      * Verifica si un usuario ya existe
      */
-    private fun userExists(username: String): Boolean {
+    private suspend fun userExists(username: String): Boolean = withContext(Dispatchers.IO) {
         var connection: Connection? = null
         var statement: PreparedStatement? = null
         var resultSet: ResultSet? = null
@@ -197,15 +200,15 @@ class AuthRepository(
             connection = ConnectionOracle.getConnection()
             
             if (connection == null) {
-                return false
+                return@withContext false
             }
             
             // TODO: Implementar SELECT COUNT(*) FROM usuarios WHERE username = ?
             // Por ahora simulamos que no existe
-            return false
+            return@withContext false
             
         } catch (e: Exception) {
-            return false
+            return@withContext false
         } finally {
             try {
                 resultSet?.close()

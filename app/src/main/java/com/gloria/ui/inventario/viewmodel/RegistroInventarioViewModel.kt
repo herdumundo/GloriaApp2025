@@ -1,9 +1,11 @@
 package com.gloria.ui.inventario.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gloria.domain.usecase.inventario.GetInventariosCardsUseCase
 import com.gloria.domain.usecase.auth.GetLoggedUserSyncUseCase
+import com.gloria.domain.usecase.sincronizacion.SincronizarInventariosUseCase
 import com.gloria.data.entity.LoggedUser
 import com.gloria.data.model.InventarioCard
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -21,7 +23,9 @@ data class RegistroInventarioState(
     val inventarios: List<InventarioCard> = emptyList(),
     val errorMessage: String? = null,
     val usuarioLogueado: String = "",
-    val sucursalLogueada: Int = 1
+    val sucursalLogueada: Int = 1,
+    val isSincronizando: Boolean = false,
+    val syncMessage: String = ""
 )
 
 /**
@@ -30,7 +34,8 @@ data class RegistroInventarioState(
 @HiltViewModel
 class RegistroInventarioViewModel @Inject constructor(
     private val getInventariosCardsUseCase: GetInventariosCardsUseCase,
-    private val getLoggedUserSyncUseCase: GetLoggedUserSyncUseCase
+    private val getLoggedUserSyncUseCase: GetLoggedUserSyncUseCase,
+    private val sincronizarInventariosUseCase: SincronizarInventariosUseCase
 ) : ViewModel() {
     
     private val _uiState = MutableStateFlow(RegistroInventarioState())
@@ -107,9 +112,56 @@ class RegistroInventarioViewModel @Inject constructor(
     }
     
     /**
-     * Refresca los inventarios
+     * Refresca los inventarios sincronizando desde Oracle
      */
     fun refreshInventarios() {
-        cargarInventarios()
+        viewModelScope.launch {
+            Log.d("PROCESO_LOGIN", "=== INICIANDO refreshInventarios ===")
+            Log.d("PROCESO_LOGIN", "🔄 Estableciendo isSincronizando = true")
+            
+            _uiState.value = _uiState.value.copy(
+                isSincronizando = true,
+                syncMessage = "🔄 Sincronizando inventarios desde Oracle..."
+            )
+            
+            Log.d("PROCESO_LOGIN", "✅ Estado actualizado: isSincronizando = ${_uiState.value.isSincronizando}")
+            
+            try {
+                Log.d("PROCESO_LOGIN", "🔍 Llamando a sincronizarInventariosUseCase...")
+                sincronizarInventariosUseCase { message, current, total ->
+                    Log.d("PROCESO_LOGIN", "📊 Progreso: $message")
+                    _uiState.value = _uiState.value.copy(
+                        syncMessage = message
+                    )
+                }.collect { result ->
+                    Log.d("PROCESO_LOGIN", "📋 Resultado recibido: ${result.isSuccess}")
+                    if (result.isSuccess) {
+                        val totalInventarios = result.getOrNull() ?: 0
+                        Log.d("PROCESO_LOGIN", "✅ Sincronización exitosa: $totalInventarios inventarios")
+                        _uiState.value = _uiState.value.copy(
+                            isSincronizando = false,
+                            syncMessage = "✅ Sincronización completada"
+                        )
+                        // Recargar inventarios después de la sincronización exitosa
+                        cargarInventarios()
+                    } else {
+                        val error = result.exceptionOrNull()?.message ?: "Error desconocido"
+                        Log.e("PROCESO_LOGIN", "❌ Error en sincronización: $error")
+                        _uiState.value = _uiState.value.copy(
+                            isSincronizando = false,
+                            syncMessage = "❌ Error en sincronización",
+                            errorMessage = error
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("PROCESO_LOGIN", "💥 Exception en refreshInventarios: ${e.message}", e)
+                _uiState.value = _uiState.value.copy(
+                    isSincronizando = false,
+                    syncMessage = "❌ Error en sincronización",
+                    errorMessage = e.message ?: "Error desconocido"
+                )
+            }
+        }
     }
 }

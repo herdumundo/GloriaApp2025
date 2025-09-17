@@ -60,7 +60,14 @@ import com.gloria.domain.usecase.toma.GetSubgruposUseCase
 import com.gloria.domain.usecase.exportacion.GetInventariosPendientesExportarUseCase
 import com.gloria.domain.usecase.exportacion.ExportarConteosRealizadosUseCase
 import com.gloria.domain.usecase.exportacion.ExportarConteosParaVerificacionUseCase
+import com.gloria.domain.usecase.enviarconteo.EnviarConteoVerificacionUseCase
 import com.gloria.data.repository.ExportacionConteosRepository
+import com.gloria.data.repository.EnviarConteoRepository
+import com.gloria.data.api.EnviarConteoVerificacionApi
+import com.gloria.domain.usecase.conteopendiente.GetConteosPendientesByDateUseCase
+import com.gloria.data.repository.ConteoPendienteRepository
+import com.gloria.data.api.ConteoPendienteApi
+import retrofit2.Retrofit
 import com.gloria.ui.inventario.viewmodel.SincronizacionViewModel
 import dagger.Module
 import dagger.Provides
@@ -472,6 +479,15 @@ object UseCaseModule {
     
     @Provides
     @Singleton
+    fun provideExportacionConteosRepository(
+        inventarioDetalleDao: InventarioDetalleDao,
+        enviarConteoVerificacionUseCase: EnviarConteoVerificacionUseCase
+    ): ExportacionConteosRepository {
+        return ExportacionConteosRepository(inventarioDetalleDao, enviarConteoVerificacionUseCase)
+    }
+    
+    @Provides
+    @Singleton
     fun provideExportarConteosRealizadosUseCase(
         exportacionConteosRepository: ExportacionConteosRepository
     ): ExportarConteosRealizadosUseCase {
@@ -484,6 +500,58 @@ object UseCaseModule {
         exportacionConteosRepository: ExportacionConteosRepository
     ): ExportarConteosParaVerificacionUseCase {
         return ExportarConteosParaVerificacionUseCase(exportacionConteosRepository)
+    }
+    
+    // ==================== PROVIDERS PARA ENVÍO DE CONTEO ====================
+    
+    @Provides
+    @Singleton
+    fun provideEnviarConteoVerificacionApi(
+        @DefaultRetrofit retrofit: Retrofit
+    ): EnviarConteoVerificacionApi {
+        return retrofit.create(EnviarConteoVerificacionApi::class.java)
+    }
+    
+    @Provides
+    @Singleton
+    fun provideEnviarConteoRepository(
+        enviarConteoVerificacionApi: EnviarConteoVerificacionApi
+    ): EnviarConteoRepository {
+        return EnviarConteoRepository(enviarConteoVerificacionApi)
+    }
+    
+    @Provides
+    @Singleton
+    fun provideEnviarConteoVerificacionUseCase(
+        enviarConteoRepository: EnviarConteoRepository
+    ): EnviarConteoVerificacionUseCase {
+        return EnviarConteoVerificacionUseCase(enviarConteoRepository)
+    }
+    
+    // ==================== PROVIDERS PARA CONTEOS PENDIENTES ====================
+    
+    @Provides
+    @Singleton
+    fun provideConteoPendienteApi(
+        @DefaultRetrofit retrofit: Retrofit
+    ): ConteoPendienteApi {
+        return retrofit.create(ConteoPendienteApi::class.java)
+    }
+    
+    @Provides
+    @Singleton
+    fun provideConteoPendienteRepository(
+        conteoPendienteApi: ConteoPendienteApi
+    ): ConteoPendienteRepository {
+        return ConteoPendienteRepository(conteoPendienteApi)
+    }
+    
+    @Provides
+    @Singleton
+    fun provideGetConteosPendientesByDateUseCase(
+        conteoPendienteRepository: ConteoPendienteRepository
+    ): GetConteosPendientesByDateUseCase {
+        return GetConteosPendientesByDateUseCase(conteoPendienteRepository)
     }
 
 }

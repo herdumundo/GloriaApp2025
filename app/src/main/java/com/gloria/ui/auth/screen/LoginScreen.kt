@@ -519,3 +519,60 @@ fun ErrorDialog(
         modifier = Modifier.padding(16.dp)
     )
 }
+
+@Composable
+fun SyncDialog(
+    syncMessage: String,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = { /* No se puede cancelar */ },
+        title = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(24.dp),
+                    strokeWidth = 3.dp,
+                    color = Color(0xFF8B0000)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = "Sincronizando Datos Maestros",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    color = Color(0xFF8B0000)
+                )
+            }
+        },
+        text = {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = syncMessage,
+                    fontSize = 16.sp,
+                    textAlign = TextAlign.Center,
+                    color = Color(0xFF666666),
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "Se están sincronizando los datos maestros desde Oracle",
+                    fontSize = 14.sp,
+                    textAlign = TextAlign.Center,
+                    color = Color(0xFF888888)
+                )
+            }
+        },
+        confirmButton = {
+            // No hay botón de confirmación durante la sincronización
+        },
+        containerColor = Color.White,
+        shape = RoundedCornerShape(20.dp),
+        modifier = Modifier.padding(16.dp)
+    )
+}

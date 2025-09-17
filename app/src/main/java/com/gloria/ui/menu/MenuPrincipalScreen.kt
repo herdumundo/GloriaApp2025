@@ -38,6 +38,7 @@ import com.gloria.ui.inventario.screen.RegistroInventarioScreen
 import com.gloria.ui.inventario.screen.SincronizarDatosScreen
 import com.gloria.ui.inventario.screen.TomaCriterioScreen
 import com.gloria.ui.inventario.screen.TomaManualScreen
+import com.gloria.ui.informe.screen.InformeConteosPendientesScreen
 import com.gloria.ui.inventario.viewmodel.ConteoInventarioViewModel
 import com.gloria.ui.inventario.viewmodel.RegistroInventarioViewModel
 import com.gloria.ui.inventario.viewmodel.SincronizacionViewModel
@@ -125,6 +126,9 @@ fun MenuPrincipalScreen(
                             }
                             "sincronizar_datos" -> {
                                 currentScreen = "sincronizar_datos"
+                            }
+                            "informe_conteos_pendientes" -> {
+                                currentScreen = "informe_conteos_pendientes"
                             }
                             else -> {
                                 currentScreen = "main"
@@ -364,6 +368,11 @@ fun MenuPrincipalScreen(
                         ConteoInventarioScreen(
                             nroInventario = nroInventarioSeleccionado,
                             viewModel = conteoViewModel,
+                            navController = navController
+                        )
+                    }
+                    "informe_conteos_pendientes" -> {
+                        InformeConteosPendientesScreen(
                             navController = navController
                         )
                     }
@@ -722,6 +731,7 @@ private fun getScreenTitle(selectedMenuItem: String): String {
         "exportar_inventario" -> "Exportar Inventario"
         "exportar_parcial" -> "Exportar Inventario Parcial"
         "sincronizar_datos" -> "Sincronizar Datos"
+        "informe_conteos_pendientes" -> "Informe de Conteos Pendientes"
         else -> "Sistema de Inventario"
     }
 }

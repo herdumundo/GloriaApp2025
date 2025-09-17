@@ -1,14 +1,23 @@
 package com.gloria.data.dao
 
+import android.util.Log
 import com.gloria.data.model.CancelacionToma
 import com.gloria.util.ConnectionOracle
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 class CancelacionTomaDaoImpl @Inject constructor() : CancelacionTomaDao {
     override suspend fun getCancelacionesToma(userLogin: String): List<CancelacionToma> {
-        val connection = ConnectionOracle.getConnection() ?: throw Exception("No se pudo conectar a la base de datos")
-        
-        return try {
+        return withContext(Dispatchers.IO) {
+            Log.d("PROCESO_LOGIN", "=== INICIANDO getCancelacionesToma ===")
+            Log.d("PROCESO_LOGIN", "🔄 Hilo actual: ${Thread.currentThread().name}")
+            Log.d("PROCESO_LOGIN", "👤 UserLogin: $userLogin")
+            
+            val connection = ConnectionOracle.getConnection() ?: throw Exception("No se pudo conectar a la base de datos")
+            
+            try {
+                Log.d("PROCESO_LOGIN", "✅ Conexión obtenida exitosamente")
             val sql = """
                 SELECT 
                     NVL(NVL(grup_desc,WINVE_GRUPO_PARCIAL),'TODOS') AS desc_grupos,
@@ -73,20 +82,25 @@ class CancelacionTomaDaoImpl @Inject constructor() : CancelacionTomaDao {
                             )
                         )
                     }
+                    Log.d("PROCESO_LOGIN", "📊 Resultados obtenidos: ${result.size} cancelaciones")
                     result
                 }
             }
-        } catch (e: Exception) {
-            throw Exception("Error al obtener las tomas para cancelar: ${e.message}")
-        } finally {
-            connection.close()
+            } catch (e: Exception) {
+                Log.e("PROCESO_LOGIN", "❌ Error en getCancelacionesToma: ${e.message}")
+                throw Exception("Error al obtener las tomas para cancelar: ${e.message}")
+            } finally {
+                connection.close()
+                Log.d("PROCESO_LOGIN", "🔚 Finalizando getCancelacionesToma")
+            }
         }
     }
 
     override suspend fun cancelarTomaParcial(nroToma: Int, secuencias: List<String>): Int {
-        val connection = ConnectionOracle.getConnection() ?: throw Exception("No se pudo conectar a la base de datos")
-        
-        return try {
+        return withContext(Dispatchers.IO) {
+            val connection = ConnectionOracle.getConnection() ?: throw Exception("No se pudo conectar a la base de datos")
+            
+            try {
             val secuenciasDelimitadasPorComas = secuencias.joinToString(",")
             val sql = "DELETE FROM WEB_INVENTARIO_DET WHERE WINVd_NRO_inv = ? AND WINVD_SECU IN ($secuenciasDelimitadasPorComas)"
             
@@ -94,17 +108,19 @@ class CancelacionTomaDaoImpl @Inject constructor() : CancelacionTomaDao {
                 stmt.setInt(1, nroToma)
                 stmt.executeUpdate()
             }
-        } catch (e: Exception) {
-            throw Exception("Error al cancelar la toma parcialmente: ${e.message}")
-        } finally {
-            connection.close()
+            } catch (e: Exception) {
+                throw Exception("Error al cancelar la toma parcialmente: ${e.message}")
+            } finally {
+                connection.close()
+            }
         }
     }
 
     override suspend fun cancelarTomaTotal(nroToma: Int, userLogin: String): Int {
-        val connection = ConnectionOracle.getConnection() ?: throw Exception("No se pudo conectar a la base de datos")
-        
-        return try {
+        return withContext(Dispatchers.IO) {
+            val connection = ConnectionOracle.getConnection() ?: throw Exception("No se pudo conectar a la base de datos")
+            
+            try {
             val sql = """
                 UPDATE WEB_INVENTARIO 
                 SET WINVE_ESTADO_WEB = 'E',
@@ -118,10 +134,11 @@ class CancelacionTomaDaoImpl @Inject constructor() : CancelacionTomaDao {
                 stmt.setInt(2, nroToma)
                 stmt.executeUpdate()
             }
-        } catch (e: Exception) {
-            throw Exception("Error al cancelar la toma totalmente: ${e.message}")
-        } finally {
-            connection.close()
+            } catch (e: Exception) {
+                throw Exception("Error al cancelar la toma totalmente: ${e.message}")
+            } finally {
+                connection.close()
+            }
         }
     }
 }

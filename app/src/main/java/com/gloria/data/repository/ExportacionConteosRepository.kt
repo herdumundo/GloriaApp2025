@@ -5,6 +5,8 @@ import com.gloria.data.dao.ArticuloTomaDao
 import com.gloria.data.dao.InventarioDetalleDao
 import com.gloria.data.repository.InventarioSincronizacionRepository
 import com.gloria.domain.usecase.exportacion.InventarioPendienteExportar
+import com.gloria.domain.usecase.enviarconteo.EnviarConteoVerificacionUseCase
+import com.gloria.data.mapper.ConteoRequestMapper
 import com.gloria.util.ConnectionOracle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -20,6 +22,7 @@ import javax.inject.Singleton
 @Singleton
 class ExportacionConteosRepository @Inject constructor(
      private val inventarioDetalleDao: InventarioDetalleDao,
+     private val enviarConteoVerificacionUseCase: EnviarConteoVerificacionUseCase
  ) {
     
     /**
@@ -307,30 +310,39 @@ class ExportacionConteosRepository @Inject constructor(
     }
     
     /**
-     * Exporta un inventario solo para verificación (sin cambiar estados)
+     * Exporta un inventario solo para verificación usando la API STKW002INV
+     * Envía los datos sin cambiar estados en SQLite
      */
     private suspend fun exportarInventarioParaVerificacion(inventario: InventarioPendienteExportar) {
         Log.d("EXPORTACIONES_LOG", "🔍 [VERIFICAR] Obteniendo detalles del inventario #${inventario.winvdNroInv} desde SQLite...")
         val detalles = obtenerDetallesInventarioDesdeSQLite(inventario.winvdNroInv)
         
-        if (inventario.tomaRegistro == "R") {
-            // Para reinventario, solo actualizar cantidades sin cerrar
-             actualizarInventarioReinventario(
-                numeroInventario = inventario.winvdNroInv,
-                detalles = detalles )
-            } else {
-                // Para inventario nuevo, insertar datos pero no cerrar
-                val idCabeceraStk = generarIdCabeceraStk()
-                
-                // Insertar cabecera y detalles para verificación (sin cerrar inventario)
-                insertarInventarioParaVerificacion(
-                    idCabecera = idCabeceraStk,
-                    inventario = inventario,
-                    detalles = detalles
-                )
-                
-                // NO cerrar el inventario - mantener estado para verificación
+        // Convertir detalles a ConteoRequest usando el mapper
+        val conteoRequests = ConteoRequestMapper.toConteoRequestListFromDetalleExportar(detalles)
+        
+        Log.d("EXPORTACIONES_LOG", "🔍 [VERIFICAR] Enviando ${conteoRequests.size} registros a la API STKW002INV...")
+        
+        // Enviar a la API usando el use case
+        val resultado = enviarConteoVerificacionUseCase(conteoRequests)
+        
+        resultado.fold(
+            onSuccess = { response ->
+                Log.d("EXPORTACIONES_LOG", "✅ [VERIFICAR] API respondió exitosamente:")
+                Log.d("EXPORTACIONES_LOG", "📈 Success: ${response.success}")
+                Log.d("EXPORTACIONES_LOG", "💬 Message: ${response.message}")
+                Log.d("EXPORTACIONES_LOG", "🔢 Code: ${response.code}")
+                Log.d("EXPORTACIONES_LOG", "📊 Registros Insertados: ${response.registrosInsertados}")
+                Log.d("EXPORTACIONES_LOG", "⏱️ Tiempo (ms): ${response.tiempoMs}")
+                Log.d("EXPORTACIONES_LOG", "🔧 Method: ${response.method}")
+                if (response.winvdNroInvList?.isNotEmpty() == true) {
+                    Log.d("EXPORTACIONES_LOG", "📋 Inventarios procesados: ${response.winvdNroInvList}")
+                }
+            },
+            onFailure = { error ->
+                Log.e("EXPORTACIONES_LOG", "❌ [VERIFICAR] Error en API: ${error.message}")
+                throw error
             }
+        )
         
         // NO cambiar estado en SQLite - mantener para verificación
     }
@@ -524,7 +536,29 @@ class ExportacionConteosRepository @Inject constructor(
                     winvdCantInv = detalle.winvd_cant_inv.toString(),
                     winvdSecu = detalle.winvd_secu,
                     winveDep = detalle.winve_dep.toIntOrNull() ?: 0,
-                    winveSuc = detalle.ARDE_SUC
+                    winveSuc = detalle.ARDE_SUC,
+                    caja = detalle.caja,
+                    gruesa = detalle.GRUESA,
+                    unidInd = detalle.UNID_IND,
+                    artDesc = detalle.art_desc,
+                    areaDesc = detalle.area_desc,
+                    dptoDesc = detalle.dpto_desc,
+                    seccDesc = detalle.secc_desc,
+                    fliaDesc = detalle.flia_desc,
+                    grupDesc = detalle.grup_desc,
+                    winvdSubgr = detalle.winvd_subgr,
+                    estado = detalle.estado,
+                    winveLoginCerradoWeb = detalle.WINVE_LOGIN_CERRADO_WEB,
+                    tipoToma = detalle.tipo_toma,
+                    winveLogin = detalle.winve_login,
+                    winvdConsolidado = detalle.winvd_consolidado,
+                    descGrupoParcial = detalle.desc_grupo_parcial,
+                    descFamilia = detalle.desc_familia,
+                    winveFec = detalle.winve_fec,
+                    tomaRegistro = detalle.toma_registro,
+                    codBarra = detalle.cod_barra,
+                    sucursal = detalle.sucursal,
+                    deposito = detalle.deposito
                 )
             }
         

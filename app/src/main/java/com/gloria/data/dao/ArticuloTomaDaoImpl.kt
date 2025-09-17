@@ -1,16 +1,25 @@
 package com.gloria.data.dao
 
+import android.util.Log
 import com.gloria.data.model.ArticuloToma
 import com.gloria.data.repository.DetalleInventarioExportar
 import com.gloria.domain.usecase.exportacion.InventarioPendienteExportar
 import com.gloria.util.ConnectionOracle
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 class ArticuloTomaDaoImpl @Inject constructor() : ArticuloTomaDao {
     override suspend fun getArticulosToma(nroToma: Int): List<ArticuloToma> {
-        val connection = ConnectionOracle.getConnection() ?: throw Exception("No se pudo conectar a la base de datos")
-        
-        return try {
+        return withContext(Dispatchers.IO) {
+            Log.d("PROCESO_LOGIN", "=== INICIANDO getArticulosToma ===")
+            Log.d("PROCESO_LOGIN", "🔄 Hilo actual: ${Thread.currentThread().name}")
+            Log.d("PROCESO_LOGIN", "🔢 NroToma: $nroToma")
+            
+            val connection = ConnectionOracle.getConnection() ?: throw Exception("No se pudo conectar a la base de datos")
+            
+            try {
+                Log.d("PROCESO_LOGIN", "✅ Conexión obtenida exitosamente")
             val sql = """
                 SELECT DISTINCT
                     b.WINVD_SECU,
@@ -82,13 +91,17 @@ class ArticuloTomaDaoImpl @Inject constructor() : ArticuloTomaDao {
                         )
                     )
                     }
+                    Log.d("PROCESO_LOGIN", "📊 Resultados obtenidos: ${result.size} artículos")
                     result
                 }
             }
-        } catch (e: Exception) {
-            throw Exception("Error al obtener los artículos de la toma: ${e.message}")
-        } finally {
-            connection.close()
+            } catch (e: Exception) {
+                Log.e("PROCESO_LOGIN", "❌ Error en getArticulosToma: ${e.message}")
+                throw Exception("Error al obtener los artículos de la toma: ${e.message}")
+            } finally {
+                connection.close()
+                Log.d("PROCESO_LOGIN", "🔚 Finalizando getArticulosToma")
+            }
         }
     }
 
@@ -96,9 +109,10 @@ class ArticuloTomaDaoImpl @Inject constructor() : ArticuloTomaDao {
         idSucursal: String,
         userLogin: String
     ): List<InventarioPendienteExportar> {
-        val connection = ConnectionOracle.getConnection() ?: throw Exception("No se pudo conectar a la base de datos")
-        
-        return try {
+        return withContext(Dispatchers.IO) {
+            val connection = ConnectionOracle.getConnection() ?: throw Exception("No se pudo conectar a la base de datos")
+            
+            try {
             val sql = """
                 SELECT DISTINCT 
                     winvd_nro_inv,
@@ -138,17 +152,19 @@ class ArticuloTomaDaoImpl @Inject constructor() : ArticuloTomaDao {
                     result
                 }
             }
-        } catch (e: Exception) {
-            throw Exception("Error al obtener inventarios pendientes de exportar: ${e.message}")
-        } finally {
-            connection.close()
+            } catch (e: Exception) {
+                throw Exception("Error al obtener inventarios pendientes de exportar: ${e.message}")
+            } finally {
+                connection.close()
+            }
         }
     }
 
     override suspend fun getDetallesInventario(nroInventario: Int): List<DetalleInventarioExportar> {
-        val connection = ConnectionOracle.getConnection() ?: throw Exception("No se pudo conectar a la base de datos")
-        
-        return try {
+        return withContext(Dispatchers.IO) {
+            val connection = ConnectionOracle.getConnection() ?: throw Exception("No se pudo conectar a la base de datos")
+            
+            try {
             val sql = """
                 SELECT 
                     winvd_nro_inv,
@@ -164,7 +180,29 @@ class ArticuloTomaDaoImpl @Inject constructor() : ArticuloTomaDao {
                     winvd_cant_inv,
                     winvd_secu,
                     winve_dep,
-                    winve_suc
+                    winve_suc,
+                    caja,
+                    gruesa,
+                    unid_ind,
+                    art_desc,
+                    area_desc,
+                    dpto_desc,
+                    secc_desc,
+                    flia_desc,
+                    grup_desc,
+                    winvd_subgr,
+                    estado,
+                    WINVE_LOGIN_CERRADO_WEB,
+                    tipo_toma,
+                    winve_login,
+                    winvd_consolidado,
+                    desc_grupo_parcial,
+                    desc_familia,
+                    winve_fec,
+                    toma_registro,
+                    cod_barra,
+                    sucursal,
+                    deposito
                 FROM ADCS.STKW002INV
                 WHERE winvd_nro_inv = ?
                 ORDER BY winvd_secu ASC
@@ -190,24 +228,48 @@ class ArticuloTomaDaoImpl @Inject constructor() : ArticuloTomaDao {
                                 winvdCantInv = rs.getString("winvd_cant_inv") ?: "",
                                 winvdSecu = rs.getInt("winvd_secu"),
                                 winveDep = rs.getInt("winve_dep"),
-                                winveSuc = rs.getInt("winve_suc")
+                                winveSuc = rs.getInt("winve_suc"),
+                                caja = rs.getInt("caja"),
+                                gruesa = rs.getInt("gruesa"),
+                                unidInd = rs.getInt("unid_ind"),
+                                artDesc = rs.getString("art_desc") ?: "",
+                                areaDesc = rs.getString("area_desc") ?: "",
+                                dptoDesc = rs.getString("dpto_desc") ?: "",
+                                seccDesc = rs.getString("secc_desc") ?: "",
+                                fliaDesc = rs.getString("flia_desc") ?: "",
+                                grupDesc = rs.getString("grup_desc") ?: "",
+                                winvdSubgr = rs.getInt("winvd_subgr"),
+                                estado = rs.getString("estado") ?: "",
+                                winveLoginCerradoWeb = rs.getString("WINVE_LOGIN_CERRADO_WEB") ?: "",
+                                tipoToma = rs.getString("tipo_toma") ?: "",
+                                winveLogin = rs.getString("winve_login") ?: "",
+                                winvdConsolidado = rs.getString("winvd_consolidado") ?: "",
+                                descGrupoParcial = rs.getString("desc_grupo_parcial") ?: "",
+                                descFamilia = rs.getString("desc_familia") ?: "",
+                                winveFec = rs.getString("winve_fec") ?: "",
+                                tomaRegistro = rs.getString("toma_registro") ?: "",
+                                codBarra = rs.getString("cod_barra") ?: "",
+                                sucursal = rs.getString("sucursal") ?: "",
+                                deposito = rs.getString("deposito") ?: ""
                             )
                         )
                     }
                     result
                 }
             }
-        } catch (e: Exception) {
-            throw Exception("Error al obtener detalles del inventario: ${e.message}")
-        } finally {
-            connection.close()
+            } catch (e: Exception) {
+                throw Exception("Error al obtener detalles del inventario: ${e.message}")
+            } finally {
+                connection.close()
+            }
         }
     }
 
     override suspend fun marcarInventarioComoAnulado(nroInventario: Int) {
-        val connection = ConnectionOracle.getConnection() ?: throw Exception("No se pudo conectar a la base de datos")
-        
-        try {
+        withContext(Dispatchers.IO) {
+            val connection = ConnectionOracle.getConnection() ?: throw Exception("No se pudo conectar a la base de datos")
+            
+            try {
             val sql = """
                 UPDATE ADCS.STKW002INV 
                 SET estado = 'E'
@@ -221,17 +283,19 @@ class ArticuloTomaDaoImpl @Inject constructor() : ArticuloTomaDao {
                     throw Exception("No se encontró el inventario con número: $nroInventario")
                 }
             }
-        } catch (e: Exception) {
-            throw Exception("Error al marcar inventario como anulado: ${e.message}")
-        } finally {
-            connection.close()
+            } catch (e: Exception) {
+                throw Exception("Error al marcar inventario como anulado: ${e.message}")
+            } finally {
+                connection.close()
+            }
         }
     }
 
     override suspend fun marcarInventarioComoCerrado(nroInventario: Int) {
-        val connection = ConnectionOracle.getConnection() ?: throw Exception("No se pudo conectar a la base de datos")
-        
-        try {
+        withContext(Dispatchers.IO) {
+            val connection = ConnectionOracle.getConnection() ?: throw Exception("No se pudo conectar a la base de datos")
+            
+            try {
             val sql = """
                 UPDATE ADCS.STKW002INV 
                 SET estado = 'C'
@@ -245,10 +309,11 @@ class ArticuloTomaDaoImpl @Inject constructor() : ArticuloTomaDao {
                     throw Exception("No se encontró el inventario con número: $nroInventario")
                 }
             }
-        } catch (e: Exception) {
-            throw Exception("Error al marcar inventario como cerrado: ${e.message}")
-        } finally {
-            connection.close()
+            } catch (e: Exception) {
+                throw Exception("Error al marcar inventario como cerrado: ${e.message}")
+            } finally {
+                connection.close()
+            }
         }
     }
 }

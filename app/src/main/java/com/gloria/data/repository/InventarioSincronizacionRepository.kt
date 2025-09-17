@@ -34,7 +34,8 @@ class InventarioSincronizacionRepository @Inject constructor(
         onProgressUpdate: (String, Int, Int) -> Unit
     ): Flow<Result<Int>> = flow {
         try {
-            emit(Result.success(0))
+            Log.d("PROCESO_LOGIN", "=== INICIANDO sincronizarInventarios ===")
+            Log.d("PROCESO_LOGIN", "🔄 Ejecutando en hilo: ${Thread.currentThread().name}")
             
             // 🚀 Iniciando sincronización
             onProgressUpdate("🔄 Iniciando sincronización de inventarios...", 0, 0)
@@ -73,11 +74,16 @@ class InventarioSincronizacionRepository @Inject constructor(
     private suspend fun obtenerInventariosDesdeOracle(
         onProgressUpdate: (String, Int, Int) -> Unit
     ): List<InventarioSincronizacion> = withContext(Dispatchers.IO) {
+        Log.d("PROCESO_LOGIN", "=== INICIANDO obtenerInventariosDesdeOracle ===")
+        Log.d("PROCESO_LOGIN", "🔄 Ejecutando en hilo IO: ${Thread.currentThread().name}")
+        
         var connection: Connection? = null
         val inventarios = mutableListOf<InventarioSincronizacion>()
         
         try {
+            Log.d("PROCESO_LOGIN", "🔍 Obteniendo conexión Oracle para inventarios...")
             connection = ConnectionOracle.getConnection() ?: throw Exception("No se pudo conectar a la base de datos")
+            Log.d("PROCESO_LOGIN", "✅ Conexión Oracle obtenida para inventarios")
             
             onProgressUpdate("🔍 Consultando inventarios en Oracle...", 0, 0)
             
@@ -219,7 +225,10 @@ class InventarioSincronizacionRepository @Inject constructor(
     private suspend fun insertarInventariosEnRoom(
         inventarios: List<InventarioSincronizacion>,
         onProgressUpdate: (String, Int, Int) -> Unit
-    ): Int {
+    ): Int = withContext(Dispatchers.IO) {
+        Log.d("PROCESO_LOGIN", "=== INICIANDO insertarInventariosEnRoom ===")
+        Log.d("PROCESO_LOGIN", "🔄 Ejecutando en hilo IO: ${Thread.currentThread().name}")
+        Log.d("PROCESO_LOGIN", "📊 Total inventarios a insertar: ${inventarios.size}")
         
         val inventariosRoom = inventarios.map { oracle ->
             InventarioDetalle(
@@ -282,7 +291,8 @@ class InventarioSincronizacionRepository @Inject constructor(
             }
         }
         
-        return totalInsertados
+        Log.d("PROCESO_LOGIN", "✅ Inventarios insertados exitosamente: $totalInsertados")
+        totalInsertados
     }
     
     /**
