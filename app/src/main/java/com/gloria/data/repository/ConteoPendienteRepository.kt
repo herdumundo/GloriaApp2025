@@ -29,13 +29,19 @@ class ConteoPendienteRepository @Inject constructor(
                 val response = conteoPendienteApi.getConteosPendientesByDate(fecha)
                 
                 Log.d("CONTEO_PENDIENTE_LOG", "✅ [REPOSITORY] Respuesta recibida exitosamente")
+                Log.d("CONTEO_PENDIENTE_LOG", "📊 [REPOSITORY] Total inventarios: ${response.totalInventories}")
                 Log.d("CONTEO_PENDIENTE_LOG", "📊 [REPOSITORY] Total registros: ${response.totalRecords}")
                 Log.d("CONTEO_PENDIENTE_LOG", "📅 [REPOSITORY] Fecha consultada: ${response.date}")
-                Log.d("CONTEO_PENDIENTE_LOG", "🏢 [REPOSITORY] Sucursal: ${response.header.sucursal}")
-                Log.d("CONTEO_PENDIENTE_LOG", "📦 [REPOSITORY] Depósito: ${response.header.deposito}")
-                Log.d("CONTEO_PENDIENTE_LOG", "👤 [REPOSITORY] Usuario: ${response.header.winveLogin}")
-                Log.d("CONTEO_PENDIENTE_LOG", "🔢 [REPOSITORY] Inventario #${response.header.winvdNroInv}")
-                Log.d("CONTEO_PENDIENTE_LOG", "📋 [REPOSITORY] Detalles encontrados: ${response.details.size}")
+                Log.d("CONTEO_PENDIENTE_LOG", "📋 [REPOSITORY] Inventarios encontrados: ${response.inventories.size}")
+                
+                // Log de cada inventario
+                response.inventories.forEachIndexed { index, inventario ->
+                    Log.d("CONTEO_PENDIENTE_LOG", "📦 [REPOSITORY] Inventario ${index + 1}: #${inventario.header.winvdNroInv}")
+                    Log.d("CONTEO_PENDIENTE_LOG", "   - Usuario: ${inventario.header.winveLogin}")
+                    Log.d("CONTEO_PENDIENTE_LOG", "   - Sucursal: ${inventario.header.sucursal}")
+                    Log.d("CONTEO_PENDIENTE_LOG", "   - Depósito: ${inventario.header.deposito}")
+                    Log.d("CONTEO_PENDIENTE_LOG", "   - Registros: ${inventario.totalRecords}")
+                }
                 
                 Result.success(response)
                 

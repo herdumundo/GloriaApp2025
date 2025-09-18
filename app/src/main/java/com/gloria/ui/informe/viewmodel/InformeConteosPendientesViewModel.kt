@@ -3,6 +3,7 @@ package com.gloria.ui.informe.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gloria.data.model.ConteoPendienteResponse
+import com.gloria.data.model.InventarioConteo
 import com.gloria.domain.usecase.conteopendiente.GetConteosPendientesByDateUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,7 +24,7 @@ data class InformeConteosPendientesState(
     val conteosPendientes: ConteoPendienteResponse? = null,
     val errorMessage: String? = null,
     val mostrarDetalle: Boolean = false,
-    val detalleSeleccionado: ConteoPendienteResponse? = null
+    val detalleSeleccionado: InventarioConteo? = null
 )
 
 /**
@@ -76,19 +77,19 @@ class InformeConteosPendientesViewModel @Inject constructor(
     }
 
     /**
-     * Muestra el detalle de un conteo específico
+     * Muestra el detalle de un inventario específico
      */
-    fun mostrarDetalleConteo(conteo: ConteoPendienteResponse) {
+    fun mostrarDetalleInventario(inventario: InventarioConteo) {
         _uiState.value = _uiState.value.copy(
             mostrarDetalle = true,
-            detalleSeleccionado = conteo
+            detalleSeleccionado = inventario
         )
     }
 
     /**
-     * Oculta el detalle del conteo
+     * Oculta el detalle del inventario
      */
-    fun ocultarDetalleConteo() {
+    fun ocultarDetalleInventario() {
         _uiState.value = _uiState.value.copy(
             mostrarDetalle = false,
             detalleSeleccionado = null

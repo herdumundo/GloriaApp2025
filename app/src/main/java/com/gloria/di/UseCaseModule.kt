@@ -68,7 +68,6 @@ import com.gloria.domain.usecase.conteopendiente.GetConteosPendientesByDateUseCa
 import com.gloria.data.repository.ConteoPendienteRepository
 import com.gloria.data.api.ConteoPendienteApi
 import retrofit2.Retrofit
-import com.gloria.ui.inventario.viewmodel.SincronizacionViewModel
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -451,19 +450,6 @@ object UseCaseModule {
         return InventarioDetalleRepository(inventarioDetalleDao)
     }
 
-    @Provides
-    @Singleton
-    fun provideSincronizacionViewModel(
-        sincronizarDatosUseCase: SincronizarDatosUseCase,
-        getEstadisticasSincronizacionUseCase: GetEstadisticasSincronizacionUseCase,
-        sincronizarInventariosUseCase: SincronizarInventariosUseCase,
-        getTotalInventariosLocalesUseCase: GetTotalInventariosLocalesUseCase
-    ): SincronizacionViewModel {
-        return SincronizacionViewModel(
-            sincronizarDatosUseCase, getEstadisticasSincronizacionUseCase,
-            sincronizarInventariosUseCase, getTotalInventariosLocalesUseCase
-        )
-    }
     
     // ==================== USECASES DE EXPORTACIÓN ====================
     

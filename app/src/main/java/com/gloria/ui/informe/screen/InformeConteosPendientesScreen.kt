@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.gloria.data.model.ConteoPendienteResponse
+import com.gloria.data.model.InventarioConteo
 import com.gloria.ui.informe.viewmodel.InformeConteosPendientesViewModel
 import java.text.SimpleDateFormat
 import java.util.*
@@ -36,18 +37,7 @@ fun InformeConteosPendientesScreen(
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        // Título
-        Text(
-            text = "Informe de Conteos Pendientes",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center
-        )
-        
-        Spacer(modifier = Modifier.height(24.dp))
-        
+         
         // Campo de fecha y botón buscar
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -169,7 +159,7 @@ fun InformeConteosPendientesScreen(
                 // Mostrar resultados
                 ConteosPendientesResultados(
                     conteosPendientes = uiState.conteosPendientes!!,
-                    onDetalleClick = { viewModel.mostrarDetalleConteo(it) }
+                    onDetalleClick = { viewModel.mostrarDetalleInventario(it) }
                 )
             }
             
@@ -236,9 +226,9 @@ fun InformeConteosPendientesScreen(
     
     // Diálogo de detalle
     if (uiState.mostrarDetalle && uiState.detalleSeleccionado != null) {
-        DetalleConteoDialog(
-            conteo = uiState.detalleSeleccionado!!,
-            onDismiss = { viewModel.ocultarDetalleConteo() }
+        DetalleInventarioDialog(
+            inventario = uiState.detalleSeleccionado!!,
+            onDismiss = { viewModel.ocultarDetalleInventario() }
         )
     }
 }
@@ -246,196 +236,301 @@ fun InformeConteosPendientesScreen(
 @Composable
 fun ConteosPendientesResultados(
     conteosPendientes: ConteoPendienteResponse,
-    onDetalleClick: (ConteoPendienteResponse) -> Unit
+    onDetalleClick: (InventarioConteo) -> Unit
 ) {
-    Column {
-        // Información general
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer
+    // Lista scrolleable de inventarios
+    LazyColumn(
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        items(conteosPendientes.inventories) { inventario ->
+            InventarioCard(
+                inventario = inventario,
+                onDetalleClick = { onDetalleClick(inventario) }
             )
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp)
-            ) {
-                Text(
-                    text = "Información del Conteo",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = "Inventario:",
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                    Text(
-                        text = "#${conteosPendientes.header.winvdNroInv}",
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                }
-                
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = "Usuario:",
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                    Text(
-                        text = conteosPendientes.header.winveLogin,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                }
-                
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = "Sucursal:",
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                    Text(
-                        text = conteosPendientes.header.sucursal,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                }
-                
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = "Total Registros:",
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                    Text(
-                        text = "${conteosPendientes.totalRecords}",
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                }
-            }
-        }
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        // Botón para ver detalle
-        Button(
-            onClick = { onDetalleClick(conteosPendientes) },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Icon(Icons.Default.List, contentDescription = null)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Ver Detalle Completo")
         }
     }
 }
 
 @Composable
-fun DetalleConteoDialog(
-    conteo: ConteoPendienteResponse,
+fun InventarioCard(
+    inventario: InventarioConteo,
+    onDetalleClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Inventario #${inventario.header.winvdNroInv}",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    
+                    Spacer(modifier = Modifier.height(4.dp))
+                    
+                    Text(
+                        text = "Usuario: ${inventario.header.winveLogin}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    
+                    Text(
+                        text = "Sucursal: ${inventario.header.sucursal}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    
+                    Text(
+                        text = "Registros: ${inventario.totalRecords}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                
+                Button(
+                    onClick = onDetalleClick,
+                    modifier = Modifier.height(40.dp)
+                ) {
+                    Icon(Icons.Default.List, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Ver Detalle", style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun DetalleInventarioDialog(
+    inventario: InventarioConteo,
     onDismiss: () -> Unit
 ) {
+    var textoBusqueda by remember { mutableStateOf("") }
+    val detallesFiltrados = remember(textoBusqueda, inventario.details) {
+        if (textoBusqueda.isBlank()) {
+            inventario.details
+        } else {
+            inventario.details.filter { detalle ->
+                detalle.artDesc.contains(textoBusqueda, ignoreCase = true) ||
+                detalle.winvdArt.contains(textoBusqueda, ignoreCase = true) ||
+                detalle.winvdLote.contains(textoBusqueda, ignoreCase = true) ||
+                detalle.fliaDesc.contains(textoBusqueda, ignoreCase = true) ||
+                detalle.grupDesc.contains(textoBusqueda, ignoreCase = true) ||
+                detalle.codBarra.contains(textoBusqueda, ignoreCase = true) ||
+                detalle.winvdCantAct.toString().contains(textoBusqueda, ignoreCase = true) ||
+                detalle.winvdCantInv.toString().contains(textoBusqueda, ignoreCase = true)
+            }
+        }
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text("Detalle del Conteo #${conteo.header.winvdNroInv}")
+            Column {
+                Text("Detalle del Inventario #${inventario.header.winvdNroInv}")
+                Text(
+                    text = "Total: ${detallesFiltrados.size} de ${inventario.details.size} productos",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         },
         text = {
-            LazyColumn(
-                modifier = Modifier.heightIn(max = 400.dp)
-            ) {
-                items(conteo.details) { detalle ->
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant
-                        )
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(12.dp)
-                        ) {
-                            Text(
-                                text = detalle.artDesc,
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold
-                            )
-                            
-                            Spacer(modifier = Modifier.height(4.dp))
-                            
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text(
-                                    text = "Artículo:",
-                                    fontWeight = FontWeight.Medium,
-                                    style = MaterialTheme.typography.bodySmall
-                                )
-                                Text(
-                                    text = detalle.winvdArt,
-                                    style = MaterialTheme.typography.bodySmall
-                                )
+            Column {
+                // Campo de búsqueda
+                OutlinedTextField(
+                    value = textoBusqueda,
+                    onValueChange = { textoBusqueda = it },
+                    label = { Text("Buscar productos...") },
+                    leadingIcon = {
+                        Icon(Icons.Default.Search, contentDescription = "Buscar")
+                    },
+                    trailingIcon = {
+                        if (textoBusqueda.isNotEmpty()) {
+                            IconButton(onClick = { textoBusqueda = "" }) {
+                                Icon(Icons.Default.Clear, contentDescription = "Limpiar")
                             }
-                            
-                            Row(
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                // Lista de productos filtrados
+                LazyColumn(
+                    modifier = Modifier.heightIn(max = 400.dp)
+                ) {
+                    if (detallesFiltrados.isEmpty() && textoBusqueda.isNotEmpty()) {
+                        item {
+                            Card(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                                )
                             ) {
-                                Text(
-                                    text = "Cant. Actual:",
-                                    fontWeight = FontWeight.Medium,
-                                    style = MaterialTheme.typography.bodySmall
-                                )
-                                Text(
-                                    text = "${detalle.winvdCantAct}",
-                                    style = MaterialTheme.typography.bodySmall
-                                )
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Icon(
+                                        Icons.Default.Search,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(48.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        text = "No se encontraron productos",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Text(
+                                        text = "Intenta con otros términos de búsqueda",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                             }
-                            
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
+                        }
+                    } else {
+                        items(detallesFiltrados) { detalle ->
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                                )
                             ) {
-                                Text(
-                                    text = "Cant. Inventario:",
-                                    fontWeight = FontWeight.Medium,
-                                    style = MaterialTheme.typography.bodySmall
-                                )
-                                Text(
-                                    text = "${detalle.winvdCantInv}",
-                                    style = MaterialTheme.typography.bodySmall
-                                )
-                            }
-                            
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text(
-                                    text = "Lote:",
-                                    fontWeight = FontWeight.Medium,
-                                    style = MaterialTheme.typography.bodySmall
-                                )
-                                Text(
-                                    text = detalle.winvdLote,
-                                    style = MaterialTheme.typography.bodySmall
-                                )
+                                Column(
+                                    modifier = Modifier.padding(12.dp)
+                                ) {
+                                    Text(
+                                        text = detalle.artDesc,
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(
+                                            text = "Artículo:",
+                                            fontWeight = FontWeight.Medium,
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                        Text(
+                                            text = detalle.winvdArt,
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                    }
+                                    
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(
+                                            text = "Cant. Actual:",
+                                            fontWeight = FontWeight.Medium,
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                        Text(
+                                            text = "${detalle.winvdCantAct}",
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                    }
+                                    
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(
+                                            text = "Cant. Inventario:",
+                                            fontWeight = FontWeight.Medium,
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                        Text(
+                                            text = "${detalle.winvdCantInv}",
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                    }
+                                    
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(
+                                            text = "Lote:",
+                                            fontWeight = FontWeight.Medium,
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                        Text(
+                                            text = detalle.winvdLote,
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                    }
+                                    
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(
+                                            text = "Familia:",
+                                            fontWeight = FontWeight.Medium,
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                        Text(
+                                            text = detalle.fliaDesc,
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                    }
+                                    
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(
+                                            text = "Grupo:",
+                                            fontWeight = FontWeight.Medium,
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                        Text(
+                                            text = detalle.grupDesc,
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                    }
+                                    
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(
+                                            text = "Código Barras:",
+                                            fontWeight = FontWeight.Medium,
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                        Text(
+                                            text = detalle.codBarra,
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                    }
+                                }
                             }
                         }
                     }

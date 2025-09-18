@@ -10,10 +10,10 @@ import retrofit2.http.Path
 interface ConteoPendienteApi {
     
     /**
-     * Obtiene conteos pendientes agrupados por fecha
+     * Obtiene conteos pendientes agrupados por inventario individual
      * @param fecha Fecha en formato YYYY-MM-DD
-     * @return Respuesta con cabecera y detalles del conteo
+     * @return Respuesta con lista de inventarios, cada uno con su cabecera y detalles
      */
-    @GET("api/stkw002inv/by-date-grouped/{fecha}")
+    @GET("api/stkw002inv/by-date-grouped-by-inventory/{fecha}")
     suspend fun getConteosPendientesByDate(@Path("fecha") fecha: String): ConteoPendienteResponse
 }

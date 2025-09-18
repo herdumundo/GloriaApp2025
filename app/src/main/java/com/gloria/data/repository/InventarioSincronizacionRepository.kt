@@ -7,6 +7,7 @@ import com.gloria.data.model.InventarioSincronizacion
 import com.gloria.util.ConnectionOracle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.withContext
 import java.sql.Connection
@@ -49,9 +50,11 @@ class InventarioSincronizacionRepository @Inject constructor(
                 return@flow
             }
             
-            // 🗑️ Limpiar solo inventarios sin conteo (estado 'P' o 'A')
+            // 🗑️ Limpiar solo inventarios sin conteo (estado 'A' únicamente)
             onProgressUpdate("🗑️ Limpiando inventarios sin conteo...", 0, inventariosOracle.size)
+            Log.d("PROCESO_LOGIN", "🗑️ Eliminando inventarios con estado 'A' (sin conteo)...")
             inventarioDetalleDao.deleteInventariosDetalleByMultiplesCriterios(estado = "A")
+            Log.d("PROCESO_LOGIN", "✅ Limpieza de inventarios sin conteo completada")
 
             // 💾 Insertar nuevos inventarios en Room
             onProgressUpdate("💾 Insertando inventarios en base local...", 0, inventariosOracle.size)
@@ -273,7 +276,7 @@ class InventarioSincronizacionRepository @Inject constructor(
             )
         }
         
-        // 💾 Insertar en lotes para mejor performance
+        // 💾 Insertar inventarios usando estrategia IGNORE para evitar duplicados
         val loteSize = 100
         var totalInsertados = 0
         
@@ -281,8 +284,11 @@ class InventarioSincronizacionRepository @Inject constructor(
             val lote = inventariosRoom.subList(i, minOf(i + loteSize, inventariosRoom.size))
             
             try {
-                val ids = inventarioDetalleDao.insertInventariosDetalle(lote)
+                // Usar insertInventariosDetalleIgnore para evitar duplicados
+                val ids = inventarioDetalleDao.insertInventariosDetalleIgnore(lote)
                 totalInsertados += ids.size
+                
+                Log.d("PROCESO_LOGIN", "✅ Procesados ${ids.size} inventarios del lote ${i/loteSize + 1} (${lote.size} total)")
                 
                 onProgressUpdate("💾 Insertando en Room... ($totalInsertados/${inventariosRoom.size})", totalInsertados, inventariosRoom.size)
                 

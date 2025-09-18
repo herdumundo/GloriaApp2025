@@ -352,6 +352,12 @@ interface InventarioDetalleDao {
     suspend fun insertInventarioDetalle(inventarioDetalle: InventarioDetalle): Long
     
     /**
+     * Inserta múltiples inventarios detalle con estrategia IGNORE para evitar duplicados
+     */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertInventariosDetalleIgnore(inventariosDetalle: List<InventarioDetalle>): List<Long>
+    
+    /**
      * Inserta múltiples inventarios detalle
      */
     @Insert(onConflict = OnConflictStrategy.REPLACE)

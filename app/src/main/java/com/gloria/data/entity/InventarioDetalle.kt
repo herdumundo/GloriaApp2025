@@ -7,7 +7,12 @@ import androidx.room.PrimaryKey
  * Entidad para la tabla STKW002INV que almacena el detalle de inventarios
  * Esta tabla es idéntica a la estructura Oracle proporcionada
  */
-@Entity(tableName = "STKW002INV")
+@Entity(
+    tableName = "STKW002INV",
+    indices = [
+        androidx.room.Index(value = ["winvd_nro_inv", "winvd_secu"], unique = true)
+    ]
+)
 data class InventarioDetalle(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
