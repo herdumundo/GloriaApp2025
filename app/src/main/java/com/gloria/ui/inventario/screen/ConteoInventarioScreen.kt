@@ -5,6 +5,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Clear
@@ -93,7 +94,30 @@ fun ConteoInventarioScreen(
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp)
-                ) {
+                ) {// Botón REGISTRAR
+                    Button(
+                        onClick = {
+                            viewModel.validarRegistro()
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(36.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF8B0000) // Rojo oscuro
+                        ),
+                        shape = RoundedCornerShape(6.dp),
+                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
+                    ) {
+                        Text(
+                            text = "REGISTRAR",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
+                    
+                    Spacer(modifier = Modifier.height(12.dp))
+
                     // Campo de búsqueda
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -129,8 +153,7 @@ fun ConteoInventarioScreen(
                             }
                         )
                         
-                        Spacer(modifier = Modifier.width(8.dp))
-                        
+
                         // Botón de escaneo de código de barras
         IconButton(
             onClick = { 
@@ -178,44 +201,12 @@ fun ConteoInventarioScreen(
                             }
                         }
                     }
-                    
-                    Spacer(modifier = Modifier.height(12.dp))
-                    
-                    // Botón REGISTRAR
-                    Button(
-                        onClick = { 
-                            viewModel.validarRegistro()
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF8B0000) // Rojo oscuro
-                        )
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "REGISTRAR",
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
                 }
             }
-            
-            // Título de la sección
-            Text(
-                text = "Ingrese las cantidades",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-            )
+
             
             when {
-                uiState.isLoading -> {
+                uiState.isLoading || uiState.isRegistrando -> {
                     // Estado de carga
                     Box(
                         modifier = Modifier.fillMaxSize(),
@@ -230,7 +221,7 @@ fun ConteoInventarioScreen(
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                             Text(
-                                text = "Cargando artículos...",
+                                text = if (uiState.isRegistrando) "Procesando conteo..." else "Cargando artículos...",
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -361,37 +352,6 @@ fun ConteoInventarioScreen(
                     }
                 }
             }
-            
-            // Barra de resumen en la parte inferior
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                )
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = "Total de artículos: ${uiState.totalArticulos}",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    
-                    Text(
-                        text = "Cantidad total: ${uiState.cantidadTotal}",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-        }
     }
     
     // Alerta de productos no contados

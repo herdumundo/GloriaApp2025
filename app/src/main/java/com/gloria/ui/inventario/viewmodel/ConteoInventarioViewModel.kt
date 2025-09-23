@@ -12,6 +12,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import javax.inject.Inject
 
 /**
@@ -19,6 +22,7 @@ import javax.inject.Inject
  */
 data class ConteoInventarioState(
     val isLoading: Boolean = false,
+    val isRegistrando: Boolean = false, // Estado específico para el registro
     val articulos: List<ArticuloInventario> = emptyList(),
     val errorMessage: String? = null,
     val nroInventario: Int = 0,
@@ -37,7 +41,9 @@ data class EstadoConteo(
     val totalAcumulado: Int = 0,
     val cajasInput: String = "0",
     val unidadesInput: String = "0",
-    val haSidoContado: Boolean = false
+    val haSidoContado: Boolean = false,
+    val ultimaCantidadCajas: String = "0",
+    val ultimaCantidadUnidades: String = "0"
 )
 
 /**
@@ -82,7 +88,9 @@ class ConteoInventarioViewModel @Inject constructor(
                                 totalAcumulado = articulo.winvdCantInv,
                                 cajasInput = "0",
                                 unidadesInput = "0",
-                                haSidoContado = true
+                                haSidoContado = true,
+                                ultimaCantidadCajas = "0",
+                                ultimaCantidadUnidades = "0"
                             )
                         } else {
                             // Inicializar estado de conteo vacío
@@ -90,7 +98,9 @@ class ConteoInventarioViewModel @Inject constructor(
                                 totalAcumulado = 0,
                                 cajasInput = "0",
                                 unidadesInput = "0",
-                                haSidoContado = false
+                                haSidoContado = false,
+                                ultimaCantidadCajas = "0",
+                                ultimaCantidadUnidades = "0"
                             )
                         }
                     }
@@ -299,7 +309,10 @@ class ConteoInventarioViewModel @Inject constructor(
     fun procesarRegistro() {
         viewModelScope.launch {
             try {
-                _uiState.value = _uiState.value.copy(isLoading = true)
+                _uiState.value = _uiState.value.copy(isRegistrando = true)
+                
+                // Pequeño delay para asegurar que la UI muestre el loading
+                delay(100)
                 
                 val articulosFiltrados = getArticulosFiltrados()
                 val nroInventario = _uiState.value.nroInventario
@@ -313,47 +326,49 @@ class ConteoInventarioViewModel @Inject constructor(
                 // Hacer una copia del mapa para evitar modificaciones durante el proceso
                 val cantidadesContadasSnapshot = _uiState.value.cantidadesContadas.toMap()
                 Log.d("LogConteo", "Snapshot de cantidades: $cantidadesContadasSnapshot")
+                Log.d("LogConteo", "Total artículos a procesar: ${articulosFiltrados.size}")
                 
-                // Actualizar cada artículo en la base de datos
-                articulosFiltrados.forEach { articulo ->
-                    val claveCompuesta = "${articulo.winvdSecu}_${nroInventario}"
-                    
-                    Log.d("LogConteo", "Procesando artículo ${articulo.winvdSecu}")
-                    Log.d("LogConteo", "Clave compuesta: $claveCompuesta")
-                    Log.d("LogConteo", "Claves del snapshot: ${cantidadesContadasSnapshot.keys}")
-                    Log.d("LogConteo", "¿Tiene cantidad?: ${cantidadesContadasSnapshot.containsKey(claveCompuesta)}")
-                    Log.d("LogConteo", "Cantidad directa: ${cantidadesContadasSnapshot[claveCompuesta]}")
-                    
-                    val cantidadInventario = if (cantidadesContadasSnapshot.containsKey(claveCompuesta)) {
-                        // Si tiene cantidad en el snapshot, usar esa cantidad
-                        val cantidad = cantidadesContadasSnapshot[claveCompuesta] ?: 0
-                        Log.d("LogConteo", "Artículo ${articulo.winvdSecu} contado con cantidad: $cantidad")
-                        cantidad
-                    } else {
-                        // Si no tiene cantidad en el mapa, poner cero
-                        Log.d("LogConteo", "Artículo ${articulo.winvdSecu} NO contado, cantidad: 0")
-                        0
-                    }
-                    
-                    Log.d("LogConteo", "Actualizando BD - Inventario: $nroInventario, Secuencia: ${articulo.winvdSecu}, Cantidad: $cantidadInventario")
-                    
-                    // Actualizar en la base de datos
-                    actualizarCantidadInventarioUseCase(
+                // Actualizar cada artículo en la base de datos (en hilo de fondo)
+                withContext(Dispatchers.IO) {
+                    // Primero, actualizar el estado de todos los artículos a "P"
+                    Log.d("LogConteo", "Actualizando estado de todos los artículos a 'P'")
+                    actualizarEstadoInventarioUseCase(
                         numeroInventario = nroInventario,
-                        secuencia = articulo.winvdSecu,
-                        cantidad = cantidadInventario,
                         estado = "P"
                     )
+                    
+                    // Luego, actualizar solo las cantidades de los artículos contados
+                    var contador = 0
+                    val totalContados = cantidadesContadasSnapshot.size
+                    
+                    if (totalContados > 0) {
+                        Log.d("LogConteo", "Actualizando cantidades de $totalContados artículos contados")
+                        
+                        cantidadesContadasSnapshot.forEach { (clave, cantidad) ->
+                            // Extraer secuencia de la clave "secuencia_inventario"
+                            val secuencia = clave.split("_").first().toIntOrNull()
+                            
+                            if (secuencia != null && cantidad > 0) {
+                                actualizarCantidadInventarioUseCase(
+                                    numeroInventario = nroInventario,
+                                    secuencia = secuencia,
+                                    cantidad = cantidad,
+                                    estado = "P"
+                                )
+                                
+                                contador++
+                                if (contador % 10 == 0 || contador == totalContados) {
+                                    Log.d("LogConteo", "Actualizados $contador de $totalContados artículos contados")
+                                }
+                            }
+                        }
+                    } else {
+                        Log.d("LogConteo", "No hay artículos contados para actualizar")
+                    }
                 }
                 
-                // Actualizar estado del inventario principal a "P"
-                actualizarEstadoInventarioUseCase(
-                    numeroInventario = nroInventario,
-                    estado = "P"
-                )
-                
                 _uiState.value = _uiState.value.copy(
-                    isLoading = false,
+                    isRegistrando = false,
                     errorMessage = null,
                     registroExitoso = true
                 )
@@ -363,7 +378,7 @@ class ConteoInventarioViewModel @Inject constructor(
             } catch (e: Exception) {
                 Log.e("ConteoInventarioVM", "Error al registrar inventario", e)
                 _uiState.value = _uiState.value.copy(
-                    isLoading = false,
+                    isRegistrando = false,
                     errorMessage = "Error al registrar inventario: ${e.message}"
                 )
             }

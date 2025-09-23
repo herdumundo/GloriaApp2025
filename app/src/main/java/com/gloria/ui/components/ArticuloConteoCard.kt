@@ -44,6 +44,10 @@ fun ArticuloConteoCard(
     var ultimoValorIngresado by remember { mutableStateOf(estadoConteo.totalAcumulado) }
     var haSidoContado by remember { mutableStateOf(estadoConteo.haSidoContado) }
     
+    // Variables para recordar las últimas cantidades ingresadas (desde el estado del ViewModel)
+    var ultimaCantidadCajas by remember { mutableStateOf(estadoConteo.ultimaCantidadCajas) }
+    var ultimaCantidadUnidades by remember { mutableStateOf(estadoConteo.ultimaCantidadUnidades) }
+    
     // Sincronizar con el estado del ViewModel cuando cambie
     LaunchedEffect(estadoConteo) {
         cajasInput = estadoConteo.cajasInput
@@ -51,6 +55,8 @@ fun ArticuloConteoCard(
         totalAcumulado = estadoConteo.totalAcumulado
         ultimoValorIngresado = estadoConteo.totalAcumulado
         haSidoContado = estadoConteo.haSidoContado
+        ultimaCantidadCajas = estadoConteo.ultimaCantidadCajas
+        ultimaCantidadUnidades = estadoConteo.ultimaCantidadUnidades
     }
     
     // Calcular total automáticamente
@@ -98,13 +104,26 @@ fun ArticuloConteoCard(
                 
                 Spacer(modifier = Modifier.height(2.dp))
                 
-                // Código de barras
-                Text(
-                    text = "Código: ${articulo.codBarra}",
-                    fontSize = 10.sp,
-                    fontFamily = FontFamily.Monospace,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                // Código de barras y Lote en la misma línea
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    // Código de barras
+                    Text(
+                        text = "Código: ${articulo.codBarra}",
+                        fontSize = 10.sp,
+                        fontFamily = FontFamily.Monospace,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    
+                    // Lote alineado a la derecha
+                    Text(
+                        text = "Lote: ${articulo.winvdLote}",
+                        fontSize = 10.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
                 
                 Spacer(modifier = Modifier.height(6.dp))
                 
@@ -133,9 +152,9 @@ fun ArticuloConteoCard(
                         modifier = Modifier.weight(1f)
                     )
                     
-                    // Lote y Vencimiento
+                    // Vencimiento
                     Text(
-                        text = "Lote: ${articulo.winvdLote} | Vto: ${articulo.winvdFecVto}",
+                        text = "Vto: ${articulo.winvdFecVto}",
                         fontSize = 9.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
@@ -145,8 +164,7 @@ fun ArticuloConteoCard(
                 }
             }
             
-            Spacer(modifier = Modifier.height(8.dp))
-            
+
             // Campos de entrada para conteo
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -197,6 +215,16 @@ fun ArticuloConteoCard(
                             unfocusedIndicatorColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
                         )
                     )
+                    
+                    // Mostrar última cantidad ingresada
+                    if (ultimaCantidadCajas != "0") {
+                        Text(
+                            text = "Último: $ultimaCantidadCajas",
+                            fontSize = 9.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 2.dp)
+                        )
+                    }
                 }
                 
                 // Campo de unidades
@@ -244,6 +272,16 @@ fun ArticuloConteoCard(
                             unfocusedIndicatorColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
                         )
                     )
+                    
+                    // Mostrar última cantidad ingresada
+                    if (ultimaCantidadUnidades != "0") {
+                        Text(
+                            text = "Último: $ultimaCantidadUnidades",
+                            fontSize = 9.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 2.dp)
+                        )
+                    }
                 }
             }
             
@@ -278,6 +316,10 @@ fun ArticuloConteoCard(
                 // Botón Contar
                 Button(
                     onClick = {
+                        // Guardar las últimas cantidades ingresadas antes de limpiar
+                        ultimaCantidadCajas = cajasInput
+                        ultimaCantidadUnidades = unidadesInput
+                        
                         // Agregar al total acumulado (ya incluye la cantidad base si existe)
                         totalAcumulado += totalCalculado
                         // Guardar como último valor ingresado
@@ -297,7 +339,9 @@ fun ArticuloConteoCard(
                             totalAcumulado = totalAcumulado,
                             cajasInput = "0",
                             unidadesInput = "0",
-                            haSidoContado = true
+                            haSidoContado = true,
+                            ultimaCantidadCajas = ultimaCantidadCajas,
+                            ultimaCantidadUnidades = ultimaCantidadUnidades
                         )
                         onEstadoConteoChanged(nuevoEstado)
                         
@@ -311,14 +355,18 @@ fun ArticuloConteoCard(
                         onCajasChanged(0)
                         onUnidadesChanged(0)
                     },
+                    modifier = Modifier
+                        .height(28.dp)
+                        .width(60.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = if (haSidoContado) Color(0xFF2E7D32) else Color(0xFF830000)
                     ),
-                    shape = RoundedCornerShape(8.dp)
+                    shape = RoundedCornerShape(6.dp),
+                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
                 ) {
                     Text(
-                        text = if (haSidoContado) "CONTAR MÁS" else "CONTAR",
-                        fontSize = 12.sp,
+                        text = if (haSidoContado) "Contar +" else "Contar",
+                        fontSize = 9.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onPrimary
                     )

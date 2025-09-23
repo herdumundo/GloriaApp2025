@@ -170,12 +170,6 @@ fun SincronizarDatosScreen(
                                     fontWeight = FontWeight.Bold,
                                     textAlign = TextAlign.Center
                                 )
-                                Text(
-                                    text = "Descargar inventarios existentes desde Oracle",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    textAlign = TextAlign.Center
-                                )
                             }
                             Button(
                                 onClick = {
