@@ -2,10 +2,12 @@ package com.gloria.domain.usecase.toma
 
 import com.gloria.data.repository.LoggedUserRepository
 import com.gloria.data.repository.ArticuloLoteRepository
+import com.gloria.domain.usecase.AuthSessionUseCase
 import javax.inject.Inject
 
 class InsertarCabeceraInventarioUseCase @Inject constructor(
-    private val loggedUserRepository: LoggedUserRepository
+    private val loggedUserRepository: LoggedUserRepository,
+    private val authSessionUseCase: AuthSessionUseCase
 ) {
     suspend operator fun invoke(
         sucursal: Int,
@@ -19,7 +21,7 @@ class InsertarCabeceraInventarioUseCase @Inject constructor(
         userdb: String,
         inventarioVisible: Boolean
     ): Int {
-        val articuloLoteRepository = ArticuloLoteRepository()
+        val articuloLoteRepository = ArticuloLoteRepository(authSessionUseCase)
         return articuloLoteRepository.insertarCabeceraInventario(
             sucursal = sucursal,
             deposito = deposito,

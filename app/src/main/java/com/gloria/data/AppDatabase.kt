@@ -38,7 +38,7 @@ import com.gloria.data.entity.InventarioDetalle
         Subgrupo::class,
         InventarioDetalle::class
     ],
-    version = 6,
+    version = 8,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.gloria.domain.usecase.GetSucursalesUseCase
 import com.gloria.domain.usecase.exportacion.ExportarConteosRealizadosUseCase
 import com.gloria.domain.usecase.exportacion.ExportarConteosParaVerificacionUseCase
+import com.gloria.domain.usecase.AuthSessionUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,7 +17,8 @@ import javax.inject.Inject
 class ExportacionesViewModel @Inject constructor(
     private val exportarConteosRealizadosUseCase: ExportarConteosRealizadosUseCase,
     private val exportarConteosParaVerificacionUseCase: ExportarConteosParaVerificacionUseCase,
-    private val getSucursalesUseCase: GetSucursalesUseCase
+    private val getSucursalesUseCase: GetSucursalesUseCase,
+    private val authSessionUseCase: AuthSessionUseCase
 ) : ViewModel() {
     
     private val _uiState = MutableStateFlow(ExportacionesState())
@@ -30,11 +32,19 @@ class ExportacionesViewModel @Inject constructor(
                     mensajeProgreso = "Exportando conteos realizados..."
                 )
                 
-                // Obtener sucursal actual del usuario
-                val sucursales = getSucursalesUseCase()
-                // TODO: Obtener sucursal y usuario actual del sistema
-                val idSucursal = "1" // Hardcoded por ahora
-                val userLogin = "admin" // Hardcoded por ahora
+                // Obtener credenciales del usuario logueado
+                val loggedUser = authSessionUseCase.getCurrentUser()
+                if (loggedUser == null) {
+                    _uiState.value = _uiState.value.copy(
+                        isExportando = false,
+                        mensajeResultado = "No hay usuario logueado",
+                        exportacionExitosa = false
+                    )
+                    return@launch
+                }
+                
+                val idSucursal = loggedUser.sucursalId?.toString() ?: "1"
+                val userLogin = loggedUser.username
                 
                 val resultado = exportarConteosRealizadosUseCase(
                     idSucursal = idSucursal,
@@ -75,11 +85,19 @@ class ExportacionesViewModel @Inject constructor(
                     mensajeProgreso = "Enviando conteos para verificación..."
                 )
                 
-                // Obtener sucursal actual del usuario
-                val sucursales = getSucursalesUseCase()
-                // TODO: Obtener sucursal y usuario actual del sistema
-                val idSucursal = "1" // Hardcoded por ahora
-                val userLogin = "admin" // Hardcoded por ahora
+                // Obtener credenciales del usuario logueado
+                val loggedUser = authSessionUseCase.getCurrentUser()
+                if (loggedUser == null) {
+                    _uiState.value = _uiState.value.copy(
+                        isExportando = false,
+                        mensajeResultado = "No hay usuario logueado",
+                        exportacionExitosa = false
+                    )
+                    return@launch
+                }
+                
+                val idSucursal = loggedUser.sucursalId?.toString() ?: "1"
+                val userLogin = loggedUser.username
                 
                 val resultado = exportarConteosParaVerificacionUseCase(
                     idSucursal = idSucursal,

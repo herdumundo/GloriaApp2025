@@ -37,12 +37,13 @@ android {
 
     buildTypes {
         debug {
-            buildConfigField "String", "BASE_URL", "\"http://192.168.6.104:8081/backend-gloria/\""
+         //   buildConfigField "String", "BASE_URL", "\"http://192.168.6.111:8081/backend-gloria/\""
+            buildConfigField "String", "BASE_URL", "\"http://190.128.196.166:9001/backend-gloria/\""
 
             signingConfig signingConfigs.debug
         }
         release {
-            buildConfigField "String", "BASE_URL", "\"http://192.168.6.104:8081/backend-gloria/\""
+            buildConfigField "String", "BASE_URL", "\"http://190.128.196.166:9001/backend-gloria/\""
 
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'

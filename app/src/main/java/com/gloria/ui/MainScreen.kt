@@ -3,6 +3,7 @@ package com.gloria.ui
 import androidx.compose.runtime.*
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
+import android.util.Log
 import com.gloria.navigation.AppNavigation
 import com.gloria.ui.auth.viewmodel.AuthEvent
 import com.gloria.ui.auth.viewmodel.AuthState
@@ -14,7 +15,14 @@ fun MainScreen(
     authViewModel: AuthViewModel,
     navController: NavHostController = rememberNavController()
 ) {
+    Log.d("MainScreen", "MainScreen iniciado")
     val authState by authViewModel.state.collectAsState()
+    
+    // Reiniciar el estado de autenticación cuando se abre la app
+    LaunchedEffect(Unit) {
+        Log.d("MainScreen", "Reiniciando estado de autenticación")
+        authViewModel.resetAuthState()
+    }
     
     LaunchedEffect(authState.errorMessage) {
         if (authState.errorMessage != null) {
@@ -24,14 +32,13 @@ fun MainScreen(
         }
     }
     
-    // Navegar automáticamente según el estado de autenticación
+    // NO navegar automáticamente - dejar que SplashScreen controle la navegación inicial
+    // Solo navegar después de que el usuario haya hecho login exitoso
     LaunchedEffect(authState.isLoggedIn) {
-        if (authState.isLoggedIn) {
+        // Solo navegar si ya estamos en login y el usuario se logueó exitosamente
+        val currentRoute = navController.currentDestination?.route
+        if (currentRoute == "login" && authState.isLoggedIn) {
             navController.navigate("menu_principal") {
-                popUpTo("login") { inclusive = true }
-            }
-        } else {
-            navController.navigate("login") {
                 popUpTo("login") { inclusive = true }
             }
         }

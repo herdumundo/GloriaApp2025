@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">appinventario</string>
+    <string name="app_name">App Inventario</string>
     <string name="welcome">Welcome</string>
     <string name="login_subtitle">Sign in to your account</string>
     <string name="username">Username</string>

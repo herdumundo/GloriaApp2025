@@ -1,7 +1,10 @@
 package com.gloria.ui.main.screen
 
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
@@ -10,10 +13,15 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.gloria.R
 import java.time.LocalDate
 
 @Composable
@@ -49,13 +57,7 @@ fun HomeScreen(
                     .padding(if (isSmallScreen) 12.dp else 16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = Icons.Default.Person,
-                    contentDescription = "Usuario",
-                    modifier = Modifier.size(if (isSmallScreen) 36.dp else 48.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-                
+
                 Column(
                     modifier = Modifier
                         .weight(1f)

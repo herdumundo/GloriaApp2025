@@ -34,7 +34,12 @@ class EnviarConteoRepository @Inject constructor(
                 }
                 
                 Log.d("ENVIAR_CONTEO_LOG", "🌐 Enviando conteos al endpoint...")
-                val response = enviarConteoVerificacionApi.enviar(conteos)
+                
+                // Token fijo sin vencimiento
+                val token = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIzMTUwOWQzYy0yZWZlLTQ3OTItOGYxMS02ZjEzNDRlMzBiZWYiLCJpYXQiOjE3NTg1NzExNDYsImlzcyI6Imdsb3JpYS1zeXN0ZW0ifQ._6XaXZUCCbRHQ6JJJ_bqDgRyVvs_ORwA_RIrmufqPlE"
+                Log.d("ENVIAR_CONTEO_LOG", "🔑 Usando token: ${token.take(20)}...")
+                
+                val response = enviarConteoVerificacionApi.enviar(conteos, token)
                 
                 Log.d("ENVIAR_CONTEO_LOG", "✅ Respuesta recibida del servidor")
                 Log.d("ENVIAR_CONTEO_LOG", "📈 Success: ${response.success}")

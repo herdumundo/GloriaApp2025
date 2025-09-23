@@ -1,6 +1,7 @@
 package com.gloria.ui.main.screen
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -26,6 +27,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.gloria.R
 import com.gloria.domain.model.MenuItems
 import com.gloria.ui.inventario.screen.*
 import kotlinx.coroutines.Dispatchers
@@ -51,6 +53,7 @@ import com.gloria.ui.exportaciones.viewmodel.ExportacionesViewModel
 import com.gloria.ui.informe.screen.InformeConteosPendientesScreen
 import com.gloria.util.ConnectionOracle
 import android.util.Log
+import com.gloria.BuildConfig
 
 // Variable global para controlar sincronización automática (solo una vez por sesión)
 private var hasAutoSyncedGlobally = false
@@ -61,7 +64,8 @@ fun MainMenuScreen(
     navController: NavHostController,
     username: String,
     sucursal: String,
-    onLogoutClick: () -> Unit
+    onLogoutClick: () -> Unit,
+    authViewModel: com.gloria.ui.auth.viewmodel.AuthViewModel
 ) {
     var selectedMenuItem by remember { mutableStateOf("registro_toma") }
     var showTipoTomaDialog by remember { mutableStateOf(false) }
@@ -92,12 +96,32 @@ fun MainMenuScreen(
             // Verificar conexión a la base de datos antes de sincronizar
             val connection = withContext(Dispatchers.IO) {
                 Log.d("PROCESO_LOGIN", "🔄 Verificando conexión en hilo IO: ${Thread.currentThread().name}")
-                val conn = ConnectionOracle.getConnection()
-                if (conn != null) {
-                    Log.d("PROCESO_LOGIN", "✅ Conexión encontrada, cerrando conexión de verificación")
-                    conn.close()
+                
+                try {
+                    // Intentar usar credenciales del usuario logueado
+                    val authState = authViewModel.state.value
+                    if (authState.currentUser != null && authState.tempPassword != null) {
+                        Log.d("PROCESO_LOGIN", "🔍 Usando credenciales del AuthViewModel")
+                        val conn = ConnectionOracle.getConnection(authState.currentUser, authState.tempPassword)
+                        if (conn != null) {
+                            Log.d("PROCESO_LOGIN", "✅ Conexión encontrada, cerrando conexión de verificación")
+                            conn.close()
+                        }
+                        return@withContext conn
+                    } else {
+                        Log.d("PROCESO_LOGIN", "🔍 No hay credenciales en AuthViewModel, intentando método sin parámetros")
+                        val conn = ConnectionOracle.getConnection()
+                        if (conn != null) {
+                            Log.d("PROCESO_LOGIN", "✅ Conexión encontrada, cerrando conexión de verificación")
+                            conn.close()
+                        }
+                        return@withContext conn
+                    }
+                } catch (e: Exception) {
+                    Log.w("PROCESO_LOGIN", "⚠️ No se pudo verificar conexión: ${e.message}")
+                    Log.d("PROCESO_LOGIN", "🔄 Continuando sin verificación de conexión")
+                    return@withContext null
                 }
-                conn
             }
             
             if (connection != null) {
@@ -159,7 +183,8 @@ fun MainMenuScreen(
                             drawerState.close() 
                         }
                     },
-                    onLogout = onLogoutClick
+                    onLogout = onLogoutClick,
+                    authViewModel = authViewModel
                 )
             }
         }
@@ -277,7 +302,7 @@ fun MainMenuScreen(
                                 overflow = TextOverflow.Ellipsis
                             )
                             Text(
-                                text = "Sistema de Inventario",
+                                text = "App ${BuildConfig.VERSION_NAME}",
                                 fontSize = 10.sp,
                                 color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.6f),
                                 maxLines = 1,
@@ -440,7 +465,8 @@ private fun NavigationDrawerContent(
     sucursal: String,
     selectedItem: String,
     onItemClick: (String) -> Unit,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    authViewModel: com.gloria.ui.auth.viewmodel.AuthViewModel
 ) {
     Column(
         modifier = Modifier.fillMaxSize()
@@ -480,7 +506,7 @@ private fun NavigationDrawerContent(
         HorizontalDivider()
         
         // Toggle de modo oscuro
-        ThemeToggleItem()
+        ThemeToggleItem(authViewModel)
         
         HorizontalDivider()
         
@@ -540,11 +566,11 @@ private fun DrawerHeader(
                     .background(Color.White.copy(alpha = 0.2f)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Default.Person,
-                    contentDescription = "Usuario",
-                    modifier = Modifier.size(40.dp),
-                    tint = MaterialTheme.colorScheme.onPrimary
+                Image(
+                    painter = painterResource(id = R.drawable.dgbann),
+                    contentDescription = "Logo Distribuidora Gloria",
+                    modifier = Modifier.size( 100.dp),
+                    contentScale = ContentScale.Crop
                 )
             }
             
@@ -567,7 +593,7 @@ private fun DrawerHeader(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            
+
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
@@ -595,28 +621,7 @@ private fun HomeContent(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // Icono principal
-        Box(
-            modifier = Modifier
-                .size(120.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primaryContainer),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.Person,
-                contentDescription = "Sistema de Inventario",
-                modifier = Modifier.size(60.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
-        }
-        8
-        Spacer(modifier = Modifier.height(32.dp))
-        
 
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
         Card(
             modifier = Modifier.fillMaxWidth(),
             elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
@@ -638,7 +643,7 @@ private fun HomeContent(
                 
                 InfoRow("Usuario", username)
                 InfoRow("Sucursal", sucursal)
-                InfoRow("Sistema", "Inventario v1.0")
+                InfoRow("Sistema", "App ${BuildConfig.VERSION_NAME}")
                 
                 Spacer(modifier = Modifier.height(16.dp))
                 
@@ -678,13 +683,19 @@ private fun InfoRow(label: String, value: String) {
 }
 
 @Composable
-private fun ThemeToggleItem() {
-    val isDarkTheme = ThemeManager.isDarkTheme
+private fun ThemeToggleItem(
+    authViewModel: com.gloria.ui.auth.viewmodel.AuthViewModel
+) {
+    val authState by authViewModel.state.collectAsState()
+    val isDarkTheme = authState.modoDark
     
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable  { ThemeManager.toggleTheme() }
+            .clickable { 
+                authViewModel.updateModoDark(!isDarkTheme)
+                ThemeManager.updateTheme(!isDarkTheme)
+            }
             .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
@@ -706,7 +717,10 @@ private fun ThemeToggleItem() {
         
         Switch(
             checked = isDarkTheme,
-            onCheckedChange = { ThemeManager.toggleTheme() },
+            onCheckedChange = { 
+                authViewModel.updateModoDark(it)
+                ThemeManager.updateTheme(it)
+            },
             colors = SwitchDefaults.colors(
                 checkedThumbColor = MaterialTheme.colorScheme.primary,
                 checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,

@@ -3,11 +3,13 @@ package com.gloria.data.repository
 import android.util.Log
 import com.gloria.data.dao.ArticuloTomaDao
 import com.gloria.data.dao.InventarioDetalleDao
+import com.gloria.data.dao.LoggedUserDao
 import com.gloria.data.repository.InventarioSincronizacionRepository
 import com.gloria.domain.usecase.exportacion.InventarioPendienteExportar
 import com.gloria.domain.usecase.enviarconteo.EnviarConteoVerificacionUseCase
 import com.gloria.data.mapper.ConteoRequestMapper
 import com.gloria.util.ConnectionOracle
+import com.gloria.util.Variables
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
@@ -22,7 +24,8 @@ import javax.inject.Singleton
 @Singleton
 class ExportacionConteosRepository @Inject constructor(
      private val inventarioDetalleDao: InventarioDetalleDao,
-     private val enviarConteoVerificacionUseCase: EnviarConteoVerificacionUseCase
+     private val enviarConteoVerificacionUseCase: EnviarConteoVerificacionUseCase,
+     private val loggedUserDao: LoggedUserDao
  ) {
     
     /**
@@ -148,13 +151,56 @@ class ExportacionConteosRepository @Inject constructor(
     }
     
     /**
+     * Obtiene una conexión a Oracle usando las credenciales del usuario logueado
+     */
+    private suspend fun obtenerConexionOracle(): Connection = withContext(Dispatchers.IO) {
+        Log.d("EXPORTACIONES_LOG", "🔍 [CONEXION] Iniciando obtención de conexión Oracle...")
+        
+        val loggedUser = loggedUserDao.getCurrentUserSync()
+        Log.d("EXPORTACIONES_LOG", "🔍 [CONEXION] Usuario logueado obtenido: ${loggedUser != null}")
+        
+        if (loggedUser == null) {
+            Log.e("EXPORTACIONES_LOG", "❌ [CONEXION] No hay usuario logueado")
+            throw Exception("No hay usuario logueado")
+        }
+        
+        Log.d("EXPORTACIONES_LOG", "🔍 [CONEXION] Usuario: ${loggedUser.username}")
+        Log.d("EXPORTACIONES_LOG", "🔍 [CONEXION] Password: ${loggedUser.password.take(3)}***")
+        
+        // Validar que las credenciales no sean null o vacías
+        if (loggedUser.username.isNullOrBlank()) {
+            Log.e("EXPORTACIONES_LOG", "❌ [CONEXION] Username es null o vacío")
+            throw Exception("Username es null o vacío")
+        }
+        
+        if (loggedUser.password.isNullOrBlank()) {
+            Log.e("EXPORTACIONES_LOG", "❌ [CONEXION] Password es null o vacío")
+            throw Exception("Password es null o vacío")
+        }
+        
+        Log.d("EXPORTACIONES_LOG", "🔍 [CONEXION] Credenciales validadas, llamando a ConnectionOracle.getConnection()...")
+        Log.d("EXPORTACIONES_LOG", "🔍 [CONEXION] Username final: '${loggedUser.username}'")
+        Log.d("EXPORTACIONES_LOG", "🔍 [CONEXION] Password final: '${loggedUser.password.take(3)}***'")
+        
+        // Configurar variables globales como respaldo
+        Variables.userdb = loggedUser.username
+        Variables.passdb = loggedUser.password
+        Log.d("EXPORTACIONES_LOG", "🔍 [CONEXION] Variables globales configuradas")
+        
+        val connection = ConnectionOracle.getConnection(loggedUser.username, loggedUser.password)
+        Log.d("EXPORTACIONES_LOG", "🔍 [CONEXION] Resultado de getConnection(): ${connection != null}")
+        
+        return@withContext connection ?: throw Exception("No se pudo conectar a la base de datos")
+    }
+    
+    /**
      * Genera un nuevo ID para la cabecera STK
      */
-    private suspend fun generarIdCabeceraStk(): Int {
-        var connection: java.sql.Connection? = null
+    private suspend fun generarIdCabeceraStk(): Int = withContext(Dispatchers.IO) {
+        var connection: Connection? = null
         
         try {
-            connection = ConnectionOracle.getConnection() ?: throw Exception("No se pudo conectar a la base de datos")
+            connection = obtenerConexionOracle()
             
             val sql = "SELECT SEQ_STK_CARGA_INV.NEXTVAL    FROM   DUAL"
             val statement = connection.createStatement()
@@ -165,7 +211,7 @@ class ExportacionConteosRepository @Inject constructor(
             resultSet.close()
             statement.close()
             
-            return id
+            return@withContext id
             
         } catch (e: Exception) {
             Log.e("EXPORTACIONES_LOG", "Error al generar ID cabecera STK: ${e.message}")
@@ -183,17 +229,27 @@ class ExportacionConteosRepository @Inject constructor(
         idCabecera: Int,
         inventario: InventarioPendienteExportar,
         detalles: List<DetalleInventarioExportar>
-    ) {
-        var connection: java.sql.Connection? = null
+    ) = withContext(Dispatchers.IO) {
+        var connection: Connection? = null
         
         try {
-            connection = ConnectionOracle.getConnection() ?: throw Exception("No se pudo conectar a la base de datos")
+            Log.d("EXPORTACIONES_LOG", "🔍 [TRANSACCION] Obteniendo conexión Oracle...")
+            connection = obtenerConexionOracle()
+            Log.d("EXPORTACIONES_LOG", "🔍 [TRANSACCION] Conexión obtenida exitosamente")
             connection.autoCommit = false
             
             Log.d("EXPORTACIONES_LOG", "🔍 [TRANSACCION] Iniciando transacción única para inventario #${inventario.winvdNroInv}")
             
             // 1. Insertar cabecera STK
             Log.d("EXPORTACIONES_LOG", "🔍 [TRANSACCION] Insertando cabecera STK...")
+            Log.d("EXPORTACIONES_LOG", "🔍 [TRANSACCION] Datos del inventario:")
+            Log.d("EXPORTACIONES_LOG", "🔍 [TRANSACCION] - idCabecera: $idCabecera")
+            Log.d("EXPORTACIONES_LOG", "🔍 [TRANSACCION] - winvdNroInv: ${inventario.winvdNroInv}")
+            Log.d("EXPORTACIONES_LOG", "🔍 [TRANSACCION] - ardeSuc: ${inventario.ardeSuc}")
+            Log.d("EXPORTACIONES_LOG", "🔍 [TRANSACCION] - winveDep: ${inventario.winveDep}")
+            Log.d("EXPORTACIONES_LOG", "🔍 [TRANSACCION] - winveLoginCerradoWeb: ${inventario.winveLoginCerradoWeb}")
+             Log.d("EXPORTACIONES_LOG", "🔍 [TRANSACCION] - winvdNroInv (ref): ${inventario.winvdNroInv}")
+            
             val tipoToma = if (inventario.tipoToma == "MANUAL") "M" else "C"
             
             val sqlCabecera = """
@@ -204,6 +260,7 @@ class ExportacionConteosRepository @Inject constructor(
             """.trimIndent()
             
             val psCabecera = connection.prepareStatement(sqlCabecera)
+            Log.d("EXPORTACIONES_LOG", "🔍 [TRANSACCION] Preparando statement de cabecera...")
             psCabecera.setInt(1, idCabecera)
             psCabecera.setInt(2, inventario.ardeSuc)
             psCabecera.setInt(3, inventario.winveDep)
@@ -211,6 +268,7 @@ class ExportacionConteosRepository @Inject constructor(
             psCabecera.setString(5, tipoToma)
             psCabecera.setInt(6, inventario.winvdNroInv)
             
+            Log.d("EXPORTACIONES_LOG", "🔍 [TRANSACCION] Ejecutando inserción de cabecera...")
             val filasCabecera = psCabecera.executeUpdate()
             Log.d("EXPORTACIONES_LOG", "🔍 [TRANSACCION] Cabecera insertada. Filas afectadas: $filasCabecera")
             psCabecera.close()
@@ -261,7 +319,8 @@ class ExportacionConteosRepository @Inject constructor(
             Log.d("EXPORTACIONES_LOG", "✅ [TRANSACCION] Transacción completada exitosamente")
             
         } catch (e: Exception) {
-            Log.d("EXPORTACIONES_LOG", "❌ [TRANSACCION] Error en transacción: ${e.message}")
+            Log.e("EXPORTACIONES_LOG", "❌ [TRANSACCION] Error en transacción: ${e.message}")
+            Log.e("EXPORTACIONES_LOG", "❌ [TRANSACCION] Stack trace: ${e.stackTraceToString()}")
             Log.d("EXPORTACIONES_LOG", "🔍 [TRANSACCION] Realizando rollback...")
             connection?.rollback()
             throw Exception("Error al insertar inventario completo en transacción: ${e.message}")
@@ -355,11 +414,11 @@ class ExportacionConteosRepository @Inject constructor(
         idCabecera: Int,
         inventario: InventarioPendienteExportar,
         detalles: List<DetalleInventarioExportar>
-    ) {
+    ) = withContext(Dispatchers.IO) {
         var connection: java.sql.Connection? = null
         
         try {
-            connection = ConnectionOracle.getConnection() ?: throw Exception("No se pudo conectar a la base de datos")
+            connection = obtenerConexionOracle()
             connection.autoCommit = false
             
             Log.d("EXPORTACIONES_LOG", "🔍 [VERIFICACION] Iniciando inserción para verificación del inventario #${inventario.winvdNroInv}")
@@ -571,7 +630,7 @@ class ExportacionConteosRepository @Inject constructor(
         var connection: Connection? = null
 
         try {
-            connection = ConnectionOracle.getConnection() ?: throw Exception("No se pudo conectar a la base de datos")
+            connection = obtenerConexionOracle()
 
             val sql = """
                 SELECT COUNT(*) as count
@@ -608,7 +667,7 @@ class ExportacionConteosRepository @Inject constructor(
         var connection: Connection? = null
 
         try {
-            connection = ConnectionOracle.getConnection() ?: throw Exception("No se pudo conectar a la base de datos")
+            connection = obtenerConexionOracle()
             connection.autoCommit = false
 
             for (detalle in detalles) {

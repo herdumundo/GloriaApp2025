@@ -16,7 +16,8 @@ class SincronizacionCompletaRepository(
     private val familiaRepository: FamiliaRepository,
     private val grupoRepository: GrupoRepository,
     private val subgrupoRepository: SubgrupoRepository,
-    private val sucursalDepartamentoRepository: SucursalDepartamentoRepository
+    private val sucursalDepartamentoRepository: SucursalDepartamentoRepository,
+    private val authSessionUseCase: com.gloria.domain.usecase.AuthSessionUseCase
 ) {
     
     suspend fun sincronizarTodasLasTablas(
@@ -27,7 +28,7 @@ class SincronizacionCompletaRepository(
         
         try {
             Log.d("PROCESO_LOGIN", "🔍 Obteniendo conexión Oracle...")
-            val connection = ConnectionOracle.getConnection()
+            val connection = ConnectionOracle.getConnection(authSessionUseCase)
             
             if (connection == null) {
                 Log.e("PROCESO_LOGIN", "❌ CONEXIÓN FALLIDA - connection es null")

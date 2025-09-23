@@ -2,6 +2,7 @@ package com.gloria.data.repository
 
 import com.gloria.data.model.ArticuloLote
 import com.gloria.util.ConnectionOracle
+import com.gloria.domain.usecase.AuthSessionUseCase
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.catch
@@ -13,7 +14,9 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class ArticuloLoteRepository @Inject constructor() {
+class ArticuloLoteRepository @Inject constructor(
+    private val authSessionUseCase: AuthSessionUseCase
+) {
     
     suspend fun getArticulosLotes(
         subgruposSeleccionados: List<Pair<Int, Int>>, // (grupCodigo, sugrCodigo)
@@ -40,7 +43,7 @@ class ArticuloLoteRepository @Inject constructor() {
             
             // Obtener conexión a Oracle
             Log.d("ArticuloLoteRepository", "🔌 Obteniendo conexión a Oracle...")
-            connection = ConnectionOracle.getConnection()
+            connection = ConnectionOracle.getConnection(authSessionUseCase)
             if (connection == null) {
                 Log.e("ArticuloLoteRepository", "❌ No se pudo establecer conexión a Oracle")
                 emit(articulosLotes)
@@ -320,7 +323,7 @@ class ArticuloLoteRepository @Inject constructor() {
             Log.d("ArticuloLoteRepository", "🚀 Iniciando inserción de cabecera del inventario...")
             
             // Conectar a Oracle
-            connection = ConnectionOracle.getConnection()
+            connection = ConnectionOracle.getConnection(authSessionUseCase)
             if (connection == null) {
                 throw Exception("No se pudo establecer conexión a Oracle")
             }
@@ -480,7 +483,7 @@ class ArticuloLoteRepository @Inject constructor() {
             Log.d("ArticuloLoteRepository", "📊 Total de artículos a insertar: ${articulosSeleccionados.size}")
             
             // Conectar a Oracle
-            connection = ConnectionOracle.getConnection()
+            connection = ConnectionOracle.getConnection(authSessionUseCase)
             if (connection == null) {
                 throw Exception("No se pudo establecer conexión a Oracle")
             }
@@ -645,7 +648,7 @@ class ArticuloLoteRepository @Inject constructor() {
             Log.d("ArticuloLoteRepository", "🚀 Iniciando inserción de cabecera y detalle en transacción única...")
             
             // Conectar a Oracle
-            connection = ConnectionOracle.getConnection()
+            connection = ConnectionOracle.getConnection(authSessionUseCase)
             if (connection == null) {
                 throw Exception("No se pudo establecer conexión a Oracle")
             }

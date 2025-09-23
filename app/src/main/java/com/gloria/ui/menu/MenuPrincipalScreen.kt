@@ -1,5 +1,6 @@
 package com.gloria.ui.menu
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -19,11 +20,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.gloria.R
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.gloria.ui.inventario.viewmodel.TomaManualViewModel
 import androidx.navigation.NavHostController
@@ -54,7 +58,8 @@ fun MenuPrincipalScreen(
     username: String = "Usuario",
     sucursal: String = "Sucursal",
     onLogoutClick: () -> Unit = {},
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    authViewModel: com.gloria.ui.auth.viewmodel.AuthViewModel
 ) {
     val viewModel: MenuPrincipalViewModel = hiltViewModel()
     val loggedUser by viewModel.loggedUser.collectAsState()
@@ -138,7 +143,8 @@ fun MenuPrincipalScreen(
                             drawerState.close() 
                         }
                     },
-                    onLogout = onLogoutClick
+                    onLogout = onLogoutClick,
+                    authViewModel = authViewModel
                 )
             }
         }
@@ -471,7 +477,8 @@ private fun NavigationDrawerContent(
     sucursal: String,
     selectedItem: String,
     onItemClick: (String) -> Unit,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    authViewModel: com.gloria.ui.auth.viewmodel.AuthViewModel
 ) {
     Column(
         modifier = Modifier.fillMaxSize()
@@ -511,7 +518,7 @@ private fun NavigationDrawerContent(
         HorizontalDivider()
         
         // Toggle de modo oscuro
-        ThemeToggleItem()
+        ThemeToggleItem(authViewModel)
         
         HorizontalDivider()
         
@@ -538,13 +545,19 @@ private fun NavigationDrawerContent(
 }
 
 @Composable
-private fun ThemeToggleItem() {
-    val isDarkTheme = com.gloria.ui.theme.ThemeManager.isDarkTheme
+private fun ThemeToggleItem(
+    authViewModel: com.gloria.ui.auth.viewmodel.AuthViewModel
+) {
+    val authState by authViewModel.state.collectAsState()
+    val isDarkTheme = authState.modoDark
     
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { com.gloria.ui.theme.ThemeManager.toggleTheme() }
+            .clickable { 
+                authViewModel.updateModoDark(!isDarkTheme)
+                com.gloria.ui.theme.ThemeManager.updateTheme(!isDarkTheme)
+            }
             .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
@@ -566,7 +579,10 @@ private fun ThemeToggleItem() {
         
         Switch(
             checked = isDarkTheme,
-            onCheckedChange = { com.gloria.ui.theme.ThemeManager.toggleTheme() },
+            onCheckedChange = { 
+                authViewModel.updateModoDark(it)
+                com.gloria.ui.theme.ThemeManager.updateTheme(it)
+            },
             colors = SwitchDefaults.colors(
                 checkedThumbColor = MaterialTheme.colorScheme.primary,
                 checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
@@ -603,19 +619,19 @@ private fun DrawerHeader(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Icono de usuario
+            // Logo de Distribuidora Gloria
             Box(
                 modifier = Modifier
                     .size(80.dp)
                     .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.2f)),
+                    .background(Color(0xFFF5F5F5)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Default.Person,
-                    contentDescription = "Usuario",
-                    modifier = Modifier.size(40.dp),
-                    tint = MaterialTheme.colorScheme.onPrimary
+                Image(
+                    painter = painterResource(id = R.drawable.dgbann),
+                    contentDescription = "Logo Distribuidora Gloria",
+                    modifier = Modifier.size(70.dp),
+                    contentScale = ContentScale.Crop
                 )
             }
             

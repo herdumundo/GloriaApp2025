@@ -24,9 +24,13 @@ class ConteoPendienteRepository @Inject constructor(
     suspend fun getConteosPendientesByDate(fecha: String): Result<ConteoPendienteResponse> {
         return withContext(Dispatchers.IO) {
             try {
-                Log.d("CONTEO_PENDIENTE_LOG", "🔍 [REPOSITORY] Consultando conteos pendientes para fecha: $fecha")
+                // Token fijo sin vencimiento
+                val token = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIzMTUwOWQzYy0yZWZlLTQ3OTItOGYxMS02ZjEzNDRlMzBiZWYiLCJpYXQiOjE3NTg1NzExNDYsImlzcyI6Imdsb3JpYS1zeXN0ZW0ifQ._6XaXZUCCbRHQ6JJJ_bqDgRyVvs_ORwA_RIrmufqPlE"
                 
-                val response = conteoPendienteApi.getConteosPendientesByDate(fecha)
+                Log.d("CONTEO_PENDIENTE_LOG", "🔍 [REPOSITORY] Consultando conteos pendientes para fecha: $fecha")
+                Log.d("CONTEO_PENDIENTE_LOG", "🔍 [REPOSITORY] Usando token: ${token.take(20)}...")
+                
+                val response = conteoPendienteApi.getConteosPendientesByDate(fecha, token)
                 
                 Log.d("CONTEO_PENDIENTE_LOG", "✅ [REPOSITORY] Respuesta recibida exitosamente")
                 Log.d("CONTEO_PENDIENTE_LOG", "📊 [REPOSITORY] Total inventarios: ${response.totalInventories}")

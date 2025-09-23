@@ -4,6 +4,7 @@ import com.gloria.domain.usecase.GetSucursalesUseCase
 import com.gloria.domain.usecase.auth.LoginUseCase
 import com.gloria.domain.usecase.auth.LogoutUseCase
 import com.gloria.domain.usecase.auth.RegisterUseCase
+import com.gloria.domain.usecase.AuthSessionUseCase
 import com.gloria.domain.usecase.cancelacion.CancelarTomaParcialUseCase
 import com.gloria.domain.usecase.cancelacion.CancelarTomaTotalUseCase
 import com.gloria.domain.usecase.cancelacion.GetCancelacionesTomaUseCase
@@ -30,6 +31,7 @@ import com.gloria.data.repository.GrupoRepository
 import com.gloria.data.repository.SubgrupoRepository
 import com.gloria.data.repository.SucursalDepartamentoRepository
 import com.gloria.data.repository.LoggedUserRepository
+import com.gloria.data.repository.AuthSessionRepository
 import com.gloria.data.repository.CancelacionTomaRepository
 import com.gloria.data.repository.ArticuloTomaRepository
 import com.gloria.data.dao.LoggedUserDao
@@ -79,13 +81,13 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object UseCaseModule {
     
-    @Provides
+   @Provides
     @Singleton
     fun provideGetCancelacionesTomaUseCase(
-        cancelacionTomaRepository: CancelacionTomaRepository
+         cancelacionTomaRepository: CancelacionTomaRepository
     ): GetCancelacionesTomaUseCase {
-        return GetCancelacionesTomaUseCase(cancelacionTomaRepository)
-    }
+         return GetCancelacionesTomaUseCase(cancelacionTomaRepository)
+     }
 
     @Provides
     @Singleton
@@ -145,6 +147,14 @@ object UseCaseModule {
 
     @Provides
     @Singleton
+    fun provideAuthSessionUseCase(
+        authSessionRepository: AuthSessionRepository
+    ): AuthSessionUseCase {
+        return AuthSessionUseCase(authSessionRepository)
+    }
+
+    @Provides
+    @Singleton
     fun provideSaveTomaManualUseCase(
         authRepository: AuthRepository,
         inventarioRepository: InventarioRepository,
@@ -160,17 +170,19 @@ object UseCaseModule {
     @Provides
     @Singleton
     fun provideInsertarCabeceraInventarioUseCase(
-        loggedUserRepository: LoggedUserRepository
+        loggedUserRepository: LoggedUserRepository,
+        authSessionUseCase: AuthSessionUseCase
     ): InsertarCabeceraInventarioUseCase {
-        return InsertarCabeceraInventarioUseCase(loggedUserRepository)
+        return InsertarCabeceraInventarioUseCase(loggedUserRepository, authSessionUseCase)
     }
 
     @Provides
     @Singleton
     fun provideInsertarDetalleInventarioUseCase(
-        loggedUserRepository: LoggedUserRepository
+        loggedUserRepository: LoggedUserRepository,
+        authSessionUseCase: AuthSessionUseCase
     ): InsertarDetalleInventarioUseCase {
-        return InsertarDetalleInventarioUseCase(loggedUserRepository)
+        return InsertarDetalleInventarioUseCase(loggedUserRepository, authSessionUseCase)
     }
 
 
@@ -251,6 +263,14 @@ object UseCaseModule {
 
     @Provides
     @Singleton
+    fun provideAuthSessionRepository(
+        loggedUserDao: LoggedUserDao
+    ): AuthSessionRepository {
+        return AuthSessionRepository(loggedUserDao)
+    }
+
+    @Provides
+    @Singleton
     fun provideCancelacionTomaRepository(
         cancelacionTomaDao: CancelacionTomaDao
     ): CancelacionTomaRepository {
@@ -291,11 +311,12 @@ object UseCaseModule {
         familiaRepository: FamiliaRepository,
         grupoRepository: GrupoRepository,
         subgrupoRepository: SubgrupoRepository,
-        sucursalDepartamentoRepository: SucursalDepartamentoRepository
+        sucursalDepartamentoRepository: SucursalDepartamentoRepository,
+        authSessionUseCase: AuthSessionUseCase
     ): SincronizacionCompletaRepository {
         return SincronizacionCompletaRepository(
             areaRepository, departamentoRepository, seccionRepository, familiaRepository,
-            grupoRepository, subgrupoRepository, sucursalDepartamentoRepository
+            grupoRepository, subgrupoRepository, sucursalDepartamentoRepository, authSessionUseCase
         )
     }
 
@@ -394,13 +415,6 @@ object UseCaseModule {
         return GetTotalInventariosLocalesUseCase(inventarioSincronizacionRepository)
     }
 
-    @Provides
-    @Singleton
-    fun provideInventarioSincronizacionRepository(
-        inventarioDetalleDao: InventarioDetalleDao
-    ): InventarioSincronizacionRepository {
-        return InventarioSincronizacionRepository(inventarioDetalleDao)
-    }
 
     @Provides
     @Singleton
@@ -467,9 +481,10 @@ object UseCaseModule {
     @Singleton
     fun provideExportacionConteosRepository(
         inventarioDetalleDao: InventarioDetalleDao,
-        enviarConteoVerificacionUseCase: EnviarConteoVerificacionUseCase
+        enviarConteoVerificacionUseCase: EnviarConteoVerificacionUseCase,
+        loggedUserDao: LoggedUserDao
     ): ExportacionConteosRepository {
-        return ExportacionConteosRepository(inventarioDetalleDao, enviarConteoVerificacionUseCase)
+        return ExportacionConteosRepository(inventarioDetalleDao, enviarConteoVerificacionUseCase, loggedUserDao)
     }
     
     @Provides

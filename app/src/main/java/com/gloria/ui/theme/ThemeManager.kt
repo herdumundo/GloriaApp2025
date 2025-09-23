@@ -11,4 +11,8 @@ object ThemeManager {
     fun toggleTheme() {
         isDarkTheme = !isDarkTheme
     }
+    
+    fun updateTheme(isDark: Boolean) {
+        isDarkTheme = isDark
+    }
 }

@@ -6,17 +6,20 @@ import com.gloria.data.entity.Sucursal
 import com.gloria.util.ConnectionOracle
 import com.gloria.util.Controles
 import com.gloria.util.Variables
+import com.gloria.domain.usecase.AuthSessionUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.sql.ResultSet
+import javax.inject.Inject
 
-class SincronizacionRepository(
-    private val sucursalDepartamentoDao: SucursalDepartamentoDao
+class SincronizacionRepository @Inject constructor(
+    private val sucursalDepartamentoDao: SucursalDepartamentoDao,
+    private val authSessionUseCase: AuthSessionUseCase
 ) {
     
     suspend fun sincronizarSucursalDepartamentos(): Result<Int> = withContext(Dispatchers.IO) {
         try {
-            val connection = ConnectionOracle.getConnection()
+            val connection = ConnectionOracle.getConnection(authSessionUseCase)
             
             if (connection == null) {
                 return@withContext Result.failure(

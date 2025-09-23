@@ -11,10 +11,12 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.gloria.ui.auth.screen.LoginScreen
+import com.gloria.ui.auth.screen.SplashScreen
 import com.gloria.ui.main.screen.HomeScreen
 import com.gloria.ui.main.screen.MainMenuScreen
 import com.gloria.ui.inventario.screen.*
 import com.gloria.ui.exportaciones.screen.ExportacionesScreen
+import com.gloria.ui.informe.screen.InformeConteosPendientesScreen
 import com.gloria.ui.auth.viewmodel.AuthViewModel
 import com.gloria.ui.inventario.viewmodel.*
 import com.gloria.ui.exportaciones.viewmodel.ExportacionesViewModel
@@ -30,8 +32,28 @@ fun AppNavigation(
 ) {
     NavHost(
         navController = navController,
-        startDestination = "login"
+        startDestination = "splash"
     ) {
+        // Pantalla de Splash (verificación de sesión)
+        composable("splash") {
+            SplashScreen(
+                onNavigateToLogin = {
+                    navController.navigate("login") {
+                        popUpTo("splash") { inclusive = true }
+                    }
+                },
+                onNavigateToMain = { loggedUser ->
+                    // Restaurar la sesión en el AuthViewModel
+                    if (loggedUser != null) {
+                        authViewModel.restoreSession(loggedUser)
+                    }
+                    navController.navigate("menu_principal") {
+                        popUpTo("splash") { inclusive = true }
+                    }
+                }
+            )
+        }
+        
         // Pantalla de Login
         composable("login") {
             val authState by authViewModel.state.collectAsState()
@@ -71,7 +93,8 @@ fun AppNavigation(
                     navController.navigate("login") {
                         popUpTo("login") { inclusive = true }
                     }
-                }
+                },
+                authViewModel = authViewModel
             )
         }
 
@@ -108,6 +131,15 @@ fun AppNavigation(
             ExportacionesScreen(
                 navController = navController,
                 viewModel = exportacionesViewModel
+            )
+        }
+        
+        // Informe de Conteos Pendientes
+        composable("informe_conteos_pendientes") {
+            val informeViewModel: com.gloria.ui.informe.viewmodel.InformeConteosPendientesViewModel = hiltViewModel()
+            InformeConteosPendientesScreen(
+                navController = navController,
+                viewModel = informeViewModel
             )
         }
 

@@ -3,18 +3,21 @@ package com.gloria.data.dao
 import android.util.Log
 import com.gloria.data.model.CancelacionToma
 import com.gloria.util.ConnectionOracle
+import com.gloria.domain.usecase.AuthSessionUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
-class CancelacionTomaDaoImpl @Inject constructor() : CancelacionTomaDao {
+class CancelacionTomaDaoImpl @Inject constructor(
+    private val authSessionUseCase: AuthSessionUseCase
+) : CancelacionTomaDao {
     override suspend fun getCancelacionesToma(userLogin: String): List<CancelacionToma> {
         return withContext(Dispatchers.IO) {
             Log.d("PROCESO_LOGIN", "=== INICIANDO getCancelacionesToma ===")
             Log.d("PROCESO_LOGIN", "🔄 Hilo actual: ${Thread.currentThread().name}")
             Log.d("PROCESO_LOGIN", "👤 UserLogin: $userLogin")
             
-            val connection = ConnectionOracle.getConnection() ?: throw Exception("No se pudo conectar a la base de datos")
+            val connection = ConnectionOracle.getConnection(authSessionUseCase) ?: throw Exception("No se pudo conectar a la base de datos")
             
             try {
                 Log.d("PROCESO_LOGIN", "✅ Conexión obtenida exitosamente")
@@ -98,7 +101,7 @@ class CancelacionTomaDaoImpl @Inject constructor() : CancelacionTomaDao {
 
     override suspend fun cancelarTomaParcial(nroToma: Int, secuencias: List<String>): Int {
         return withContext(Dispatchers.IO) {
-            val connection = ConnectionOracle.getConnection() ?: throw Exception("No se pudo conectar a la base de datos")
+            val connection = ConnectionOracle.getConnection(authSessionUseCase) ?: throw Exception("No se pudo conectar a la base de datos")
             
             try {
             val secuenciasDelimitadasPorComas = secuencias.joinToString(",")
@@ -118,7 +121,7 @@ class CancelacionTomaDaoImpl @Inject constructor() : CancelacionTomaDao {
 
     override suspend fun cancelarTomaTotal(nroToma: Int, userLogin: String): Int {
         return withContext(Dispatchers.IO) {
-            val connection = ConnectionOracle.getConnection() ?: throw Exception("No se pudo conectar a la base de datos")
+            val connection = ConnectionOracle.getConnection(authSessionUseCase) ?: throw Exception("No se pudo conectar a la base de datos")
             
             try {
             val sql = """

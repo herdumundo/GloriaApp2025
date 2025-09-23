@@ -18,8 +18,10 @@ import androidx.navigation.NavHostController
 import com.gloria.data.model.ConteoPendienteResponse
 import com.gloria.data.model.InventarioConteo
 import com.gloria.ui.informe.viewmodel.InformeConteosPendientesViewModel
+import android.util.Log
 import java.text.SimpleDateFormat
 import java.util.*
+import java.util.Calendar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -28,7 +30,16 @@ fun InformeConteosPendientesScreen(
     viewModel: InformeConteosPendientesViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    var fechaSeleccionada by remember { mutableStateOf(Date()) }
+    var fechaSeleccionada by remember { 
+        mutableStateOf(
+            Calendar.getInstance().apply {
+                set(Calendar.HOUR_OF_DAY, 12) // Mediodía para evitar problemas de zona horaria
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }.time
+        )
+    }
     var mostrarDatePicker by remember { mutableStateOf(false) }
 
     Column(
@@ -206,7 +217,32 @@ fun InformeConteosPendientesScreen(
                 TextButton(
                     onClick = {
                         datePickerState.selectedDateMillis?.let { millis ->
-                            fechaSeleccionada = Date(millis)
+                            Log.d("DATE_PICKER_DEBUG", "🔍 Milisegundos recibidos: $millis")
+                            
+                            // Crear una nueva fecha usando solo año, mes y día
+                            val calendar = Calendar.getInstance()
+                            calendar.timeInMillis = millis
+                            Log.d("DATE_PICKER_DEBUG", "🔍 Calendar original - Año: ${calendar.get(Calendar.YEAR)}, Mes: ${calendar.get(Calendar.MONTH)}, Día: ${calendar.get(Calendar.DAY_OF_MONTH)}")
+                            
+                            // Crear un nuevo Calendar con la fecha local y SUMAR UN DÍA
+                            val localCalendar = Calendar.getInstance()
+                            localCalendar.set(Calendar.YEAR, calendar.get(Calendar.YEAR))
+                            localCalendar.set(Calendar.MONTH, calendar.get(Calendar.MONTH))
+                            localCalendar.set(Calendar.DAY_OF_MONTH, calendar.get(Calendar.DAY_OF_MONTH))
+                            localCalendar.set(Calendar.HOUR_OF_DAY, 12) // Establecer a mediodía para evitar problemas de zona horaria
+                            localCalendar.set(Calendar.MINUTE, 0)
+                            localCalendar.set(Calendar.SECOND, 0)
+                            localCalendar.set(Calendar.MILLISECOND, 0)
+                            
+                            // SUMAR UN DÍA para compensar el problema de zona horaria
+                            localCalendar.add(Calendar.DAY_OF_MONTH, 1)
+                            
+                            Log.d("DATE_PICKER_DEBUG", "🔍 Calendar local (después de sumar 1 día) - Año: ${localCalendar.get(Calendar.YEAR)}, Mes: ${localCalendar.get(Calendar.MONTH)}, Día: ${localCalendar.get(Calendar.DAY_OF_MONTH)}")
+                            
+                            val nuevaFecha = localCalendar.time
+                            Log.d("DATE_PICKER_DEBUG", "🔍 Fecha final: ${SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(nuevaFecha)}")
+                            
+                            fechaSeleccionada = nuevaFecha
                         }
                         mostrarDatePicker = false
                     }

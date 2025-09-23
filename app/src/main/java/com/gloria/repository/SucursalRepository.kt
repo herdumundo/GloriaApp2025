@@ -74,10 +74,17 @@ class SucursalRepository {
             var contador = 0
             while (resultSet.next()) {
                 val descripcion = resultSet.getString("SUCURSAL_DESCRIPCION")
-                val rol = resultSet.getString("ROL_SUCURSAL")
-                sucursales.add(Sucursal(descripcion, rol))
+                val rolSucursal = resultSet.getString("ROL_SUCURSAL")
+                // Convertir ROL_SUCURSAL a Int para usar como ID
+                val codigoSucursal = try {
+                    rolSucursal.toInt()
+                } catch (e: NumberFormatException) {
+                    // Si no se puede convertir a Int, usar el hash del string como ID
+                    rolSucursal.hashCode()
+                }
+                sucursales.add(Sucursal(codigoSucursal, descripcion, rolSucursal))
                 contador++
-                Log.d("PROCESO_LOGIN", "Sucursal $contador: $descripcion - Rol: $rol")
+                Log.d("PROCESO_LOGIN", "Sucursal $contador: $codigoSucursal - $descripcion - Rol: $rolSucursal")
             }
             
             Log.d("PROCESO_LOGIN", "📈 Total sucursales encontradas: $contador")

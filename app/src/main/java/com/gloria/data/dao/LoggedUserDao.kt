@@ -4,24 +4,21 @@ import androidx.room.*
 import com.gloria.data.entity.LoggedUser
 import kotlinx.coroutines.flow.Flow
 
-/**
- * DAO para manejar las operaciones del usuario logueado
- */
 @Dao
 interface LoggedUserDao {
     
-    @Query("SELECT * FROM logged_user WHERE id = 1")
-    fun getLoggedUser(): Flow<LoggedUser?>
+    @Query("SELECT * FROM logged_user ORDER BY loginTimestamp DESC LIMIT 1")
+    fun getCurrentUser(): Flow<LoggedUser?>
     
-    @Query("SELECT * FROM logged_user WHERE id = 1")
-    suspend fun getLoggedUserSync(): LoggedUser?
+    @Query("SELECT * FROM logged_user ORDER BY loginTimestamp DESC LIMIT 1")
+    suspend fun getCurrentUserSync(): LoggedUser?
     
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertLoggedUser(user: LoggedUser)
-    
-    @Delete
-    suspend fun deleteLoggedUser(user: LoggedUser)
+    suspend fun insertUser(user: LoggedUser)
     
     @Query("DELETE FROM logged_user")
-    suspend fun clearLoggedUsers()
+    suspend fun clearAllUsers()
+    
+    @Query("DELETE FROM logged_user WHERE id = :userId")
+    suspend fun deleteUser(userId: Int)
 }

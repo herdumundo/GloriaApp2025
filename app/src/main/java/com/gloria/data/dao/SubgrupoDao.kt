@@ -190,13 +190,13 @@ interface SubgrupoDao {
         AND s.sugr_grupo IN (:grupCodigos)
         ORDER BY s.sugrCodigo
     """)
-    fun getSubgruposByMultipleGruposWithCompleteJoin(
+    suspend fun getSubgruposByMultipleGruposWithCompleteJoin(
         grupCodigos: List<Int>,
         areaCodigo: Int,
         dptoCodigo: Int,
         fliaCodigo: Int,
-        seccCodigo: Int,
-        ):  List<SubgrupoWithGrupo>
+        seccCodigo: Int
+    ): List<SubgrupoWithGrupo>
     
     @Query("SELECT * FROM subgrupo WHERE sugrCodigo = :sugrCodigo")
     suspend fun getSubgrupoByCodigo(sugrCodigo: Int): Subgrupo?

@@ -3,6 +3,7 @@ package com.gloria.di
 import android.content.Context
 import com.gloria.data.AppDatabase
 import com.gloria.data.dao.*
+import com.gloria.domain.usecase.AuthSessionUseCase
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -69,13 +70,13 @@ object DatabaseModule {
     }
 
     @Provides
-    fun provideArticuloTomaDao(): ArticuloTomaDao {
-        return ArticuloTomaDaoImpl()
+    fun provideArticuloTomaDao(authSessionUseCase: AuthSessionUseCase): ArticuloTomaDao {
+        return ArticuloTomaDaoImpl(authSessionUseCase)
     }
 
     @Provides
-    fun provideCancelacionTomaDao(): CancelacionTomaDao {
-        return CancelacionTomaDaoImpl()
+    fun provideCancelacionTomaDao(authSessionUseCase: AuthSessionUseCase): CancelacionTomaDao {
+        return CancelacionTomaDaoImpl(authSessionUseCase)
     }
 }
 

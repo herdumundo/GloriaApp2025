@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gloria.data.model.CancelacionToma
 import com.gloria.domain.usecase.cancelacion.GetCancelacionesTomaUseCase
-import com.gloria.util.Variables
+import com.gloria.domain.usecase.AuthSessionUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,7 +20,8 @@ data class CancelacionInventarioState(
 
 @HiltViewModel
 class CancelacionInventarioViewModel @Inject constructor(
-    private val getCancelacionesTomaUseCase: GetCancelacionesTomaUseCase
+    private val getCancelacionesTomaUseCase: GetCancelacionesTomaUseCase,
+    private val authSessionUseCase: AuthSessionUseCase
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(CancelacionInventarioState())
@@ -30,7 +31,17 @@ class CancelacionInventarioViewModel @Inject constructor(
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
             try {
-                val cancelaciones = getCancelacionesTomaUseCase(Variables.userdb)
+                // Obtener el usuario logueado desde la sesión
+                val currentUser = authSessionUseCase.getCurrentUser()
+                if (currentUser?.username.isNullOrBlank()) {
+                    _state.update { it.copy(
+                        isLoading = false,
+                        error = "No hay usuario logueado. Por favor, inicie sesión nuevamente."
+                    )}
+                    return@launch
+                }
+                
+                val cancelaciones = getCancelacionesTomaUseCase(currentUser.username)
                 _state.update { it.copy(
                     cancelaciones = cancelaciones,
                     isLoading = false

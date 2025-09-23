@@ -7,6 +7,7 @@ import com.gloria.domain.model.Sucursal
 import com.gloria.domain.usecase.auth.LoginUseCase
 import com.gloria.domain.usecase.auth.LogoutUseCase
 import com.gloria.domain.usecase.GetSucursalesUseCase
+import com.gloria.domain.usecase.AuthSessionUseCase
 import com.gloria.repository.AuthResult
 import com.gloria.repository.SucursalResult
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -14,6 +15,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import android.util.Log
 import javax.inject.Inject
 
 data class AuthState(
@@ -23,7 +25,10 @@ data class AuthState(
     val errorMessage: String? = null,
     val showSucursalDialog: Boolean = false,
     val sucursales: List<Sucursal> = emptyList(),
-    val selectedSucursal: Sucursal? = null
+    val selectedSucursal: Sucursal? = null,
+    val tempUsername: String? = null,
+    val tempPassword: String? = null,
+    val modoDark: Boolean = false
 )
 
 sealed class AuthEvent {
@@ -38,7 +43,8 @@ sealed class AuthEvent {
 class AuthViewModel @Inject constructor(
     private val loginUseCase: LoginUseCase,
     private val logoutUseCase: LogoutUseCase,
-    private val getSucursalesUseCase: GetSucursalesUseCase
+    private val getSucursalesUseCase: GetSucursalesUseCase,
+    private val authSessionUseCase: AuthSessionUseCase
 ) : ViewModel() {
     
       val _state = MutableStateFlow(AuthState())
@@ -64,9 +70,46 @@ class AuthViewModel @Inject constructor(
         }
     }
     
+    fun resetAuthState() {
+        Log.d("AuthViewModel", "Reiniciando estado de autenticación")
+        _state.value = AuthState()
+    }
+    
+    fun restoreSession(loggedUser: com.gloria.data.entity.LoggedUser) {
+        Log.d("AuthViewModel", "Restaurando sesión para usuario: ${loggedUser.username}, sucursal: ${loggedUser.sucursalNombre}, modoDark: ${loggedUser.modoDark}")
+        viewModelScope.launch {
+            // Crear objeto Sucursal si tenemos la información
+            val sucursal = if (loggedUser.sucursalNombre != null && loggedUser.sucursalId != null) {
+                com.gloria.domain.model.Sucursal(
+                    id = loggedUser.sucursalId,
+                    descripcion = loggedUser.sucursalNombre,
+                    rol = "" // No tenemos información del rol guardada
+                )
+            } else null
+            
+            _state.value = _state.value.copy(
+                isLoggedIn = true,
+                currentUser = loggedUser.username, // Usar el username del usuario, no el nombre de la sucursal
+                selectedSucursal = sucursal,
+                modoDark = loggedUser.modoDark
+            )
+        }
+    }
+    
     fun login(username: String, password: String) {
+        // Evitar múltiples llamadas simultáneas
+        if (_state.value.isLoading) {
+            Log.d("AuthViewModel", "Login ya en progreso, ignorando llamada duplicada")
+            return
+        }
+        
         // Establecer loading inmediatamente, antes del launch
-        _state.value = _state.value.copy(isLoading = true, errorMessage = null)
+        _state.value = _state.value.copy(
+            isLoading = true, 
+            errorMessage = null,
+            tempUsername = username,
+            tempPassword = password
+        )
         
         viewModelScope.launch {
             if (username.isBlank() || password.isBlank()) {
@@ -80,6 +123,8 @@ class AuthViewModel @Inject constructor(
             // Usar el caso de uso para autenticar (es suspend)
             when (val result = loginUseCase(username, password)) {
                 is AuthResult.Success -> {
+                    Log.d("AuthViewModel", "Login exitoso para: $username, obteniendo sucursales")
+                    // NO guardar la sesión aquí - se guardará cuando se seleccione la sucursal
                     // Obtener sucursales del usuario
                     getSucursales()
                 }
@@ -145,19 +190,51 @@ class AuthViewModel @Inject constructor(
     
     private fun sucursalSelected(sucursal: Sucursal) {
         viewModelScope.launch {
+            Log.d("AuthViewModel", "Sucursal seleccionada: ${sucursal.descripcion}, guardando en sesión")
+            
+            // Verificar que tenemos los datos temporales necesarios
+            val username = _state.value.tempUsername
+            val password = _state.value.tempPassword
+            
+            if (username.isNullOrBlank() || password.isNullOrBlank()) {
+                Log.e("AuthViewModel", "Error: No se encontraron credenciales temporales para guardar sesión")
+                return@launch
+            }
+            
+            // Guardar la información de la sucursal en la sesión persistente usando los datos temporales
+            authSessionUseCase.saveUserSession(
+                username = username,
+                password = password,
+                sucursalId = sucursal.id,
+                sucursalNombre = sucursal.descripcion
+            )
+            
             _state.value = _state.value.copy(
                 selectedSucursal = sucursal,
                 showSucursalDialog = false,
                 isLoggedIn = true,
-                currentUser = sucursal.descripcion
+                currentUser = username, // Usar el username del usuario, no el nombre de la sucursal
+                tempUsername = null, // Limpiar datos temporales
+                tempPassword = null
             )
         }
     }
     
-      fun logout() {
+      fun updateModoDark(modoDark: Boolean) {
+        Log.d("AuthViewModel", "Actualizando modo oscuro: $modoDark")
+        _state.value = _state.value.copy(modoDark = modoDark)
+        viewModelScope.launch {
+            authSessionUseCase.updateModoDark(modoDark)
+        }
+    }
+
+    fun logout() {
         viewModelScope.launch {
             // Usar el caso de uso para logout
             logoutUseCase()
+            
+            // Limpiar la sesión guardada
+            authSessionUseCase.clearUserSession()
             
             _state.value = _state.value.copy(
                 isLoading = false,

@@ -16,34 +16,34 @@ class LoggedUserRepository @Inject constructor(
      * Obtiene el usuario logueado como Flow
      */
     fun getLoggedUser(): Flow<LoggedUser?> {
-        return loggedUserDao.getLoggedUser()
+        return loggedUserDao.getCurrentUser()
     }
     
     /**
      * Obtiene el usuario logueado de forma síncrona
      */
     suspend fun getLoggedUserSync(): LoggedUser? {
-        return loggedUserDao.getLoggedUserSync()
+        return loggedUserDao.getCurrentUserSync()
     }
     
     /**
      * Inserta o actualiza el usuario logueado
      */
     suspend fun insertLoggedUser(user: LoggedUser) {
-        loggedUserDao.insertLoggedUser(user)
+        loggedUserDao.insertUser(user)
     }
     
     /**
      * Elimina un usuario logueado
      */
     suspend fun deleteLoggedUser(user: LoggedUser) {
-        loggedUserDao.deleteLoggedUser(user)
+        loggedUserDao.deleteUser(user.id)
     }
     
     /**
      * Limpia todos los usuarios logueados
      */
     suspend fun clearLoggedUsers() {
-        loggedUserDao.clearLoggedUsers()
+        loggedUserDao.clearAllUsers()
     }
 }

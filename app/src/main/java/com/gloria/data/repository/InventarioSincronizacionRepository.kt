@@ -23,7 +23,8 @@ import javax.inject.Singleton
  */
 @Singleton
 class InventarioSincronizacionRepository @Inject constructor(
-    private val inventarioDetalleDao: InventarioDetalleDao
+    private val inventarioDetalleDao: InventarioDetalleDao,
+    private val authSessionUseCase: com.gloria.domain.usecase.AuthSessionUseCase
 ) {
     
     /**
@@ -85,7 +86,7 @@ class InventarioSincronizacionRepository @Inject constructor(
         
         try {
             Log.d("PROCESO_LOGIN", "🔍 Obteniendo conexión Oracle para inventarios...")
-            connection = ConnectionOracle.getConnection() ?: throw Exception("No se pudo conectar a la base de datos")
+            connection = ConnectionOracle.getConnection(authSessionUseCase) ?: throw Exception("No se pudo conectar a la base de datos")
             Log.d("PROCESO_LOGIN", "✅ Conexión Oracle obtenida para inventarios")
             
             onProgressUpdate("🔍 Consultando inventarios en Oracle...", 0, 0)

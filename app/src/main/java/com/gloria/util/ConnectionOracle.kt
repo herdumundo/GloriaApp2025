@@ -3,6 +3,8 @@ package com.gloria.util
 import android.annotation.SuppressLint
 import android.os.StrictMode
 import android.util.Log
+import android.content.Context
+import com.gloria.domain.usecase.AuthSessionUseCase
 import java.sql.Connection
 import java.sql.DriverManager
 import java.sql.SQLException
@@ -13,12 +15,85 @@ import java.sql.SQLException
  */
 object ConnectionOracle {
     
+    /**
+     * Obtiene las credenciales del usuario logueado desde la base de datos local
+     */
+    private suspend fun obtenerCredencialesUsuario(authSessionUseCase: AuthSessionUseCase): Pair<String, String>? {
+        return try {
+            val loggedUser = authSessionUseCase.getCurrentUser()
+            
+            if (loggedUser != null && !loggedUser.username.isNullOrBlank() && !loggedUser.password.isNullOrBlank()) {
+                Log.d("PROCESO_LOGIN", "🔍 [CREDENCIALES] Usuario obtenido: ${loggedUser.username}")
+                Log.d("PROCESO_LOGIN", "🔍 [CREDENCIALES] Password: ${loggedUser.password.take(3)}***")
+                Pair(loggedUser.username, loggedUser.password)
+            } else {
+                Log.e("PROCESO_LOGIN", "❌ [CREDENCIALES] No hay usuario logueado o credenciales vacías")
+                null
+            }
+        } catch (e: Exception) {
+            Log.e("PROCESO_LOGIN", "❌ [CREDENCIALES] Error al obtener credenciales: ${e.message}")
+            null
+        }
+    }
+    
+    @SuppressLint("NewApi")
+    suspend fun getConnection(authSessionUseCase: AuthSessionUseCase): Connection? {
+        Log.d("PROCESO_LOGIN", "🔍 [CON_AUTH] Variables.userdb: '${Variables.userdb}'")
+        Log.d("PROCESO_LOGIN", "🔍 [CON_AUTH] Variables.passdb: '${Variables.passdb.take(3)}***'")
+        
+        // PRIORIDAD 1: Si hay variables globales configuradas (login reciente), usarlas primero
+        if (!Variables.userdb.isBlank() && !Variables.passdb.isBlank()) {
+            Log.d("PROCESO_LOGIN", "🔍 [CON_AUTH] Usando variables globales (login reciente)")
+            return getConnection(Variables.userdb, Variables.passdb)
+        }
+        
+        // PRIORIDAD 2: Si no hay variables globales, intentar obtener credenciales desde la base de datos local
+        val credenciales = obtenerCredencialesUsuario(authSessionUseCase)
+        
+        if (credenciales != null) {
+            Log.d("PROCESO_LOGIN", "🔍 [CON_AUTH] Usando credenciales de usuario logueado (sesión persistente)")
+            return getConnection(credenciales.first, credenciales.second)
+        }
+        
+        Log.e("PROCESO_LOGIN", "❌ [CON_AUTH] No hay credenciales disponibles")
+        throw Exception("No hay credenciales disponibles. Usuario no logueado y variables globales vacías.")
+    }
+    
     @SuppressLint("NewApi")
     fun getConnection(): Connection? {
-        val user = Variables.userdb
+        Log.d("PROCESO_LOGIN", "🔍 [SIN_PARAMETROS] Variables.userdb: '${Variables.userdb}'")
+        Log.d("PROCESO_LOGIN", "🔍 [SIN_PARAMETROS] Variables.passdb: '${Variables.passdb.take(3)}***'")
+        
+        // Si las variables globales están vacías, lanzar error
+        if (Variables.userdb.isBlank() || Variables.passdb.isBlank()) {
+            Log.e("PROCESO_LOGIN", "❌ [SIN_PARAMETROS] Variables globales vacías")
+            throw Exception("Variables de conexión no configuradas. Use getConnection(context) o getConnection(user, passwd)")
+        }
+        
+        return getConnection(Variables.userdb, Variables.passdb)
+    }
+    
+    @SuppressLint("NewApi")
+    fun getConnection(user: String, passwd: String): Connection? {
+        Log.d("PROCESO_LOGIN", "=== INICIANDO getConnection CON PARÁMETROS ===")
+        Log.d("PROCESO_LOGIN", "🔍 Parámetro user recibido: '$user'")
+        Log.d("PROCESO_LOGIN", "🔍 Parámetro passwd recibido: '${passwd.take(3)}***'")
+        Log.d("PROCESO_LOGIN", "🔍 user es null: ${user == null}")
+        Log.d("PROCESO_LOGIN", "🔍 passwd es null: ${passwd == null}")
+        
+        // Validar parámetros
+        if (user.isNullOrBlank()) {
+            Log.e("PROCESO_LOGIN", "❌ ERROR: Usuario es null o vacío")
+            return null
+        }
+        
+        if (passwd.isNullOrBlank()) {
+            Log.e("PROCESO_LOGIN", "❌ ERROR: Password es null o vacío")
+            return null
+        }
+
         //   String url = "jdbc:oracle:thin:@(DESCRIPTION= (ADDRESS=(PROTOCOL=TCP)(HOST=192.168.0.6)(PORT=1521)) (CONNECT_DATA=(SERVICE_NAME=orcl)))";
         val url =  "jdbc:oracle:thin:@(DESCRIPTION= (ADDRESS=(PROTOCOL=TCP)(HOST=192.168.0.7)(PORT=1521)) (CONNECT_DATA=(SERVICE_NAME=prueba)))"
-        val passwd = Variables.passdb
         val driver = "oracle.jdbc.driver.OracleDriver"
         
         Log.d("PROCESO_LOGIN", "=== INICIANDO getConnection ===")

@@ -44,5 +44,5 @@ class ConteoRepository @Inject constructor(
     /**
      * Obtiene el usuario logueado
      */
-    suspend fun getLoggedUser() = loggedUserDao.getLoggedUserSync()
+    suspend fun getLoggedUser() = loggedUserDao.getCurrentUserSync()
 }

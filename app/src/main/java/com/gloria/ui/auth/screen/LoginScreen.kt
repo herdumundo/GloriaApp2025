@@ -10,6 +10,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
@@ -21,18 +22,23 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
- import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
- import kotlinx.coroutines.delay
+import com.gloria.BuildConfig
+import com.gloria.R
+import kotlinx.coroutines.delay
 
 @Composable
 fun LoginScreen(
@@ -208,7 +214,7 @@ fun Body(
                         Spacer(modifier = Modifier.height(16.dp))
                         
                         Text(
-                            text = "Versión 1.0.0",
+                            text = "App ${BuildConfig.VERSION_NAME}",
                             style = MaterialTheme.typography.bodySmall,
                             color = Color.White.copy(alpha = 0.7f),
                             modifier = Modifier.padding(bottom = 8.dp)
@@ -233,38 +239,22 @@ fun SystemLogo(modifier: Modifier, isSmallScreen: Boolean) {
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Icono del sistema de inventario
+        // Logo de Distribuidora Gloria
         Box(
             modifier = Modifier
                 .size(if (isSmallScreen) 80.dp else 120.dp)
-                .background(
-                    Color.White.copy(alpha = 0.2f),
-                    shape = RoundedCornerShape(if (isSmallScreen) 40.dp else 60.dp)
-                ),
+                .clip(CircleShape)
+                .background(Color(0xFFFFFFFF)),
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                imageVector = Icons.Default.Person,
-                contentDescription = "Sistema de Inventario",
-                modifier = Modifier.size(if (isSmallScreen) 40.dp else 60.dp),
-                tint = Color.White
+            Image(
+                painter = painterResource(id = R.drawable.dgbann),
+                contentDescription = "Logo Distribuidora Gloria",
+                modifier = Modifier.size(if (isSmallScreen) 70.dp else 100.dp),
+                contentScale = ContentScale.Crop
             )
         }
-        
-        Spacer(modifier = Modifier.height(if (isSmallScreen) 8.dp else 16.dp))
-        
-        Text(
-            text = "INVENTARIO",
-            fontSize = if (isSmallScreen) 18.sp else 24.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color.White
-        )
-        
-        Text(
-            text = "v1.0.0",
-            fontSize = if (isSmallScreen) 12.sp else 14.sp,
-            color = Color.White.copy(alpha = 0.8f)
-        )
+
     }
 }
 
@@ -422,7 +412,7 @@ fun LoginDivider() {
             color = Color.White.copy(alpha = 0.3f)
         )
         Text(
-            text = "Sistema de Inventario v1.0.0",
+            text = "App Inventario v1.0.0",
             modifier = Modifier.padding(horizontal = 16.dp),
             fontSize = 12.sp,
             fontWeight = FontWeight.Bold,

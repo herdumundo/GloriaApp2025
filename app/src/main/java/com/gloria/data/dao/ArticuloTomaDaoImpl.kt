@@ -4,19 +4,22 @@ import android.util.Log
 import com.gloria.data.model.ArticuloToma
 import com.gloria.data.repository.DetalleInventarioExportar
 import com.gloria.domain.usecase.exportacion.InventarioPendienteExportar
+import com.gloria.domain.usecase.AuthSessionUseCase
 import com.gloria.util.ConnectionOracle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
-class ArticuloTomaDaoImpl @Inject constructor() : ArticuloTomaDao {
+class ArticuloTomaDaoImpl @Inject constructor(
+    private val authSessionUseCase: AuthSessionUseCase
+) : ArticuloTomaDao {
     override suspend fun getArticulosToma(nroToma: Int): List<ArticuloToma> {
         return withContext(Dispatchers.IO) {
             Log.d("PROCESO_LOGIN", "=== INICIANDO getArticulosToma ===")
             Log.d("PROCESO_LOGIN", "🔄 Hilo actual: ${Thread.currentThread().name}")
             Log.d("PROCESO_LOGIN", "🔢 NroToma: $nroToma")
             
-            val connection = ConnectionOracle.getConnection() ?: throw Exception("No se pudo conectar a la base de datos")
+            val connection = ConnectionOracle.getConnection(authSessionUseCase) ?: throw Exception("No se pudo conectar a la base de datos")
             
             try {
                 Log.d("PROCESO_LOGIN", "✅ Conexión obtenida exitosamente")
@@ -46,8 +49,8 @@ class ArticuloTomaDaoImpl @Inject constructor() : ArticuloTomaDao {
                     sugr_desc
                 FROM ADCS.V_WEB_ARTICULOS_CLASIFICACION a
                 INNER JOIN ADCS.WEB_INVENTARIO_det b 
-                    ON a.arde_lote = b.winvd_lote 
-                    AND a.ART_CODIGO = b.winvd_art
+                    ON   a.ART_CODIGO = b.winvd_art
+                    AND (b.WINVD_LOTE = 'N/A' OR a.ARDE_LOTE = b.WINVD_LOTE)
                     AND a.SECC_CODIGO = b.winvd_secc 
                     AND a.ARDE_FEC_VTO_LOTE = b.winvd_fec_vto
                 INNER JOIN ADCS.WEB_INVENTARIO c 
@@ -110,7 +113,7 @@ class ArticuloTomaDaoImpl @Inject constructor() : ArticuloTomaDao {
         userLogin: String
     ): List<InventarioPendienteExportar> {
         return withContext(Dispatchers.IO) {
-            val connection = ConnectionOracle.getConnection() ?: throw Exception("No se pudo conectar a la base de datos")
+            val connection = ConnectionOracle.getConnection(authSessionUseCase) ?: throw Exception("No se pudo conectar a la base de datos")
             
             try {
             val sql = """
@@ -162,7 +165,7 @@ class ArticuloTomaDaoImpl @Inject constructor() : ArticuloTomaDao {
 
     override suspend fun getDetallesInventario(nroInventario: Int): List<DetalleInventarioExportar> {
         return withContext(Dispatchers.IO) {
-            val connection = ConnectionOracle.getConnection() ?: throw Exception("No se pudo conectar a la base de datos")
+            val connection = ConnectionOracle.getConnection(authSessionUseCase) ?: throw Exception("No se pudo conectar a la base de datos")
             
             try {
             val sql = """
@@ -267,7 +270,7 @@ class ArticuloTomaDaoImpl @Inject constructor() : ArticuloTomaDao {
 
     override suspend fun marcarInventarioComoAnulado(nroInventario: Int) {
         withContext(Dispatchers.IO) {
-            val connection = ConnectionOracle.getConnection() ?: throw Exception("No se pudo conectar a la base de datos")
+            val connection = ConnectionOracle.getConnection(authSessionUseCase) ?: throw Exception("No se pudo conectar a la base de datos")
             
             try {
             val sql = """
@@ -293,7 +296,7 @@ class ArticuloTomaDaoImpl @Inject constructor() : ArticuloTomaDao {
 
     override suspend fun marcarInventarioComoCerrado(nroInventario: Int) {
         withContext(Dispatchers.IO) {
-            val connection = ConnectionOracle.getConnection() ?: throw Exception("No se pudo conectar a la base de datos")
+            val connection = ConnectionOracle.getConnection(authSessionUseCase) ?: throw Exception("No se pudo conectar a la base de datos")
             
             try {
             val sql = """
