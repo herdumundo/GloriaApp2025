@@ -14,7 +14,11 @@ import com.gloria.domain.usecase.toma.InsertarCabeceraInventarioUseCase
 import com.gloria.domain.usecase.toma.InsertarDetalleInventarioUseCase
 import com.gloria.domain.usecase.toma.InsertarCabeceraYDetalleInventarioUseCase
 import com.gloria.domain.usecase.toma.GetArticulosLotesUseCase
- import com.gloria.domain.usecase.toma.GetAreasUseCase
+import com.gloria.domain.usecase.toma.GetAreasUseCase
+import com.gloria.domain.usecase.permission.CheckUserPermissionUseCase
+import com.gloria.domain.usecase.permission.SyncUserPermissionsUseCase
+import com.gloria.domain.usecase.permission.GetUserAllowedScreensUseCase
+import com.gloria.domain.usecase.permission.SyncUserPermissionsFromOracleUseCase
 import com.gloria.domain.usecase.toma.GetDepartamentosUseCase
 import com.gloria.domain.usecase.toma.GetSeccionesUseCase
 import com.gloria.domain.usecase.toma.GetFamiliasUseCase
@@ -69,6 +73,9 @@ import com.gloria.data.api.EnviarConteoVerificacionApi
 import com.gloria.domain.usecase.conteopendiente.GetConteosPendientesByDateUseCase
 import com.gloria.data.repository.ConteoPendienteRepository
 import com.gloria.data.api.ConteoPendienteApi
+import com.gloria.data.dao.UserPermissionOracleDao
+import com.gloria.data.dao.UserPermissionDao
+import com.gloria.data.repository.UserPermissionRepository
 import retrofit2.Retrofit
 import dagger.Module
 import dagger.Provides
@@ -312,11 +319,13 @@ object UseCaseModule {
         grupoRepository: GrupoRepository,
         subgrupoRepository: SubgrupoRepository,
         sucursalDepartamentoRepository: SucursalDepartamentoRepository,
-        authSessionUseCase: AuthSessionUseCase
+        authSessionUseCase: AuthSessionUseCase,
+        syncUserPermissionsFromOracleUseCase: SyncUserPermissionsFromOracleUseCase
     ): SincronizacionCompletaRepository {
         return SincronizacionCompletaRepository(
             areaRepository, departamentoRepository, seccionRepository, familiaRepository,
-            grupoRepository, subgrupoRepository, sucursalDepartamentoRepository, authSessionUseCase
+            grupoRepository, subgrupoRepository, sucursalDepartamentoRepository, authSessionUseCase,
+            syncUserPermissionsFromOracleUseCase
         )
     }
 
@@ -546,6 +555,14 @@ object UseCaseModule {
     ): ConteoPendienteRepository {
         return ConteoPendienteRepository(conteoPendienteApi)
     }
+
+    @Provides
+    @Singleton
+    fun provideUserPermissionRepository(
+        userPermissionDao: UserPermissionDao
+    ): UserPermissionRepository {
+        return UserPermissionRepository(userPermissionDao)
+    }
     
     @Provides
     @Singleton
@@ -553,6 +570,39 @@ object UseCaseModule {
         conteoPendienteRepository: ConteoPendienteRepository
     ): GetConteosPendientesByDateUseCase {
         return GetConteosPendientesByDateUseCase(conteoPendienteRepository)
+    }
+
+    @Provides
+    @Singleton
+    fun provideCheckUserPermissionUseCase(
+        userPermissionRepository: UserPermissionRepository
+    ): CheckUserPermissionUseCase {
+        return CheckUserPermissionUseCase(userPermissionRepository)
+    }
+
+    @Provides
+    @Singleton
+    fun provideSyncUserPermissionsUseCase(
+        userPermissionRepository: UserPermissionRepository
+    ): SyncUserPermissionsUseCase {
+        return SyncUserPermissionsUseCase(userPermissionRepository)
+    }
+
+    @Provides
+    @Singleton
+    fun provideGetUserAllowedScreensUseCase(
+        userPermissionRepository: UserPermissionRepository
+    ): GetUserAllowedScreensUseCase {
+        return GetUserAllowedScreensUseCase(userPermissionRepository)
+    }
+
+    @Provides
+    @Singleton
+    fun provideSyncUserPermissionsFromOracleUseCase(
+        userPermissionOracleDao: UserPermissionOracleDao,
+        userPermissionRepository: UserPermissionRepository
+    ): SyncUserPermissionsFromOracleUseCase {
+        return SyncUserPermissionsFromOracleUseCase(userPermissionOracleDao, userPermissionRepository)
     }
 
 }

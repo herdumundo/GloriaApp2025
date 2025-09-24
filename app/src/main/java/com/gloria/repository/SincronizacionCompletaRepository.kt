@@ -2,6 +2,7 @@ package com.gloria.repository
 
 import com.gloria.data.entity.*
 import com.gloria.data.repository.*
+import com.gloria.domain.usecase.permission.SyncUserPermissionsFromOracleUseCase
 import com.gloria.util.ConnectionOracle
 import com.gloria.util.Controles
 import kotlinx.coroutines.Dispatchers
@@ -17,7 +18,8 @@ class SincronizacionCompletaRepository(
     private val grupoRepository: GrupoRepository,
     private val subgrupoRepository: SubgrupoRepository,
     private val sucursalDepartamentoRepository: SucursalDepartamentoRepository,
-    private val authSessionUseCase: com.gloria.domain.usecase.AuthSessionUseCase
+    private val authSessionUseCase: com.gloria.domain.usecase.AuthSessionUseCase,
+    private val syncUserPermissionsFromOracleUseCase: SyncUserPermissionsFromOracleUseCase
 ) {
     
     suspend fun sincronizarTodasLasTablas(
@@ -44,11 +46,11 @@ class SincronizacionCompletaRepository(
             
             // Sincronizar en orden jerárquico para mantener integridad referencial
             try {
-                onProgress("🔄 Conectando a Oracle...", 0, 7)
+                onProgress("🔄 Conectando a Oracle...", 0, 8)
                 
                 // 1. Sincronizar Áreas
                 Log.d("PROCESO_LOGIN", "📁 Sincronizando áreas...")
-                onProgress("📁 Sincronizando áreas...", 1, 7)
+                onProgress("📁 Sincronizando áreas...", 1, 8)
                 val areas = sincronizarAreas(connection)
                 areaRepository.deleteAllAreas()
                 areaRepository.insertAllAreas(areas)
@@ -57,7 +59,7 @@ class SincronizacionCompletaRepository(
                 
                 // 2. Sincronizar Departamentos
                 Log.d("SincronizacionCompletaRepository", "📂 Sincronizando departamentos...")
-                onProgress("📂 Sincronizando departamentos...", 2, 7)
+                onProgress("📂 Sincronizando departamentos...", 2, 8)
                 val departamentos = sincronizarDepartamentos(connection)
                 departamentoRepository.deleteAllDepartamentos()
                 departamentoRepository.insertAllDepartamentos(departamentos)
@@ -66,7 +68,7 @@ class SincronizacionCompletaRepository(
                 
                 // 3. Sincronizar Secciones
                 Log.d("SincronizacionCompletaRepository", "📋 Sincronizando secciones...")
-                onProgress("📋 Sincronizando secciones...", 3, 7)
+                onProgress("📋 Sincronizando secciones...", 3, 8)
                 val secciones = sincronizarSecciones(connection)
                 seccionRepository.deleteAllSecciones()
                 seccionRepository.insertAllSecciones(secciones)
@@ -75,7 +77,7 @@ class SincronizacionCompletaRepository(
                 
                 // 4. Sincronizar Familias
                 Log.d("SincronizacionCompletaRepository", "👨‍👩‍👧‍👦 Sincronizando familias...")
-                onProgress("👨‍👩‍👧‍👦 Sincronizando familias...", 4, 7)
+                onProgress("👨‍👩‍👧‍👦 Sincronizando familias...", 4, 8)
                 val familias = sincronizarFamilias(connection)
                 familiaRepository.deleteAllFamilias()
                 familiaRepository.insertAllFamilias(familias)
@@ -84,7 +86,7 @@ class SincronizacionCompletaRepository(
                 
                 // 5. Sincronizar Grupos
                 Log.d("SincronizacionCompletaRepository", "👥 Sincronizando grupos...")
-                onProgress("👥 Sincronizando grupos...", 5, 7)
+                onProgress("👥 Sincronizando grupos...", 5, 8)
                 val grupos = sincronizarGrupos(connection)
                 grupoRepository.deleteAllGrupos()
                 grupoRepository.insertAllGrupos(grupos)
@@ -93,7 +95,7 @@ class SincronizacionCompletaRepository(
                 
                 // 6. Sincronizar Subgrupos
                 Log.d("SincronizacionCompletaRepository", "🔗 Sincronizando subgrupos...")
-                onProgress("🔗 Sincronizando subgrupos...", 6, 7)
+                onProgress("🔗 Sincronizando subgrupos...", 6, 8)
                 val subgrupos = sincronizarSubgrupos(connection)
                 subgrupoRepository.deleteAllSubgrupos()
                 subgrupoRepository.insertAllSubgrupos(subgrupos)
@@ -102,12 +104,41 @@ class SincronizacionCompletaRepository(
                 
                 // 7. Sincronizar Sucursal-Departamento
                 Log.d("SincronizacionCompletaRepository", "🏢 Sincronizando sucursales y departamentos...")
-                onProgress("🏢 Sincronizando sucursales y departamentos...", 7, 7)
+                onProgress("🏢 Sincronizando sucursales y departamentos...", 7, 8)
                 val sucursalDepartamentos = sincronizarSucursalDepartamentos(connection)
                 sucursalDepartamentoRepository.deleteAllSucursalDepartamentos()
                 sucursalDepartamentoRepository.insertAllSucursalDepartamentos(sucursalDepartamentos)
                 result.sucursalDepartamentosCount = sucursalDepartamentos.size
                 Log.d("SincronizacionCompletaRepository", "✅ Sucursal-Departamentos sincronizados: ${sucursalDepartamentos.size}")
+                
+                // 8. Sincronizar Permisos del Usuario
+                Log.d("SincronizacionCompletaRepository", "🔐 Sincronizando permisos del usuario...")
+                onProgress("🔐 Sincronizando permisos del usuario...", 8, 8)
+                
+                try {
+                    // Obtener el usuario actual del AuthSessionUseCase
+                    val currentUser = authSessionUseCase.getCurrentUser()
+                    if (currentUser != null) {
+                        Log.d("PROCESO_LOGIN", "👤 Sincronizando permisos para usuario: ${currentUser.username}")
+                        
+                        val syncResult = syncUserPermissionsFromOracleUseCase(currentUser.username)
+                        syncResult.fold(
+                            onSuccess = {
+                                Log.d("PROCESO_LOGIN", "✅ Permisos sincronizados exitosamente para ${currentUser.username}")
+                            },
+                            onFailure = { error ->
+                                Log.e("PROCESO_LOGIN", "❌ Error al sincronizar permisos para ${currentUser.username}: ${error.message}")
+                                // No fallar toda la sincronización por error de permisos
+                                // El usuario puede usar la app sin permisos sincronizados
+                            }
+                        )
+                    } else {
+                        Log.w("PROCESO_LOGIN", "⚠️ No hay usuario logueado, omitiendo sincronización de permisos")
+                    }
+                } catch (e: Exception) {
+                    Log.e("PROCESO_LOGIN", "❌ Error inesperado al sincronizar permisos: ${e.message}")
+                    // No fallar toda la sincronización por error de permisos
+                }
                 
                 connection.close()
                 Log.d("PROCESO_LOGIN", "🔒 Conexión cerrada")

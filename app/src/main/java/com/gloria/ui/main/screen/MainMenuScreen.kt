@@ -14,21 +14,30 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.gloria.R
+import com.gloria.domain.model.MenuItem
 import com.gloria.domain.model.MenuItems
+import com.gloria.domain.usecase.permission.GetUserAllowedScreensUseCase
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.components.SingletonComponent
 import com.gloria.ui.inventario.screen.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -55,8 +64,23 @@ import com.gloria.util.ConnectionOracle
 import android.util.Log
 import com.gloria.BuildConfig
 
-// Variable global para controlar sincronización automática (solo una vez por sesión)
-private var hasAutoSyncedGlobally = false
+// EntryPoint para inyección de dependencias en MainMenuScreen
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+interface MainMenuEntryPoint {
+    fun getUserAllowedScreensUseCase(): GetUserAllowedScreensUseCase
+}
+
+// Mapa para controlar sincronización automática por usuario (solo una vez por usuario por sesión)
+private val hasAutoSyncedByUser = mutableMapOf<String, Boolean>()
+
+/**
+ * Función para limpiar el estado de sincronización cuando un usuario cierra sesión
+ */
+fun clearSyncStateForUser(username: String) {
+    hasAutoSyncedByUser.remove(username)
+    Log.d("PROCESO_LOGIN", "🧹 Estado de sincronización limpiado para usuario: $username")
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -78,8 +102,22 @@ fun MainMenuScreen(
     var syncSuccess by remember { mutableStateOf(false) }
     var syncError by remember { mutableStateOf<String?>(null) }
     
+    // Estados para permisos del menú
+    var allowedMenuItems by remember { mutableStateOf<List<MenuItem>>(emptyList()) }
+    var isLoadingPermissions by remember { mutableStateOf(true) }
+    var permissionsError by remember { mutableStateOf<String?>(null) }
+    
     // ViewModel para sincronización
     val sincronizacionViewModel: SincronizacionViewModel = hiltViewModel()
+    
+    // UseCase para permisos del menú - lo inyectamos usando LocalContext
+    val context = LocalContext.current
+    val getUserAllowedScreensUseCase: GetUserAllowedScreensUseCase = remember {
+        EntryPointAccessors.fromApplication(
+            context.applicationContext,
+            MainMenuEntryPoint::class.java
+        ).getUserAllowedScreensUseCase()
+    }
 
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -87,11 +125,27 @@ fun MainMenuScreen(
     // Observar estado de sincronización
     val syncState by sincronizacionViewModel.uiState.collectAsState()
     
-    // Sincronización automática al cargar la pantalla por primera vez (solo una vez por sesión)
-    LaunchedEffect(Unit) {
-        if (!hasAutoSyncedGlobally) {
-            hasAutoSyncedGlobally = true
-            Log.d("PROCESO_LOGIN", "🔄 Primera vez en MainMenuScreen, iniciando sincronización automática")
+    // Cargar permisos del usuario
+    LaunchedEffect(username) {
+        try {
+            isLoadingPermissions = true
+            permissionsError = null
+            val allowedScreens = getUserAllowedScreensUseCase(username)
+            allowedMenuItems = allowedScreens
+            isLoadingPermissions = false
+        } catch (e: Exception) {
+            isLoadingPermissions = false
+            permissionsError = "Error al cargar permisos: ${e.message}"
+            // En caso de error, mostrar todos los items
+            allowedMenuItems = MenuItems.items
+        }
+    }
+    
+    // Sincronización automática al cargar la pantalla por primera vez (solo una vez por usuario por sesión)
+    LaunchedEffect(username) {
+        if (hasAutoSyncedByUser[username] != true) {
+            hasAutoSyncedByUser[username] = true
+            Log.d("PROCESO_LOGIN", "🔄 Primera vez en MainMenuScreen para usuario $username, iniciando sincronización automática")
             
             // Verificar conexión a la base de datos antes de sincronizar
             val connection = withContext(Dispatchers.IO) {
@@ -173,6 +227,9 @@ fun MainMenuScreen(
                     username = username,
                     sucursal = sucursal,
                     selectedItem = selectedMenuItem,
+                    allowedMenuItems = allowedMenuItems,
+                    isLoadingPermissions = isLoadingPermissions,
+                    permissionsError = permissionsError,
                     onItemClick = { itemId ->
                         selectedMenuItem = itemId
                         if (itemId == "registro_toma") {
@@ -183,7 +240,11 @@ fun MainMenuScreen(
                             drawerState.close() 
                         }
                     },
-                    onLogout = onLogoutClick,
+                    onLogout = {
+                        // Limpiar estado de sincronización antes de hacer logout
+                        clearSyncStateForUser(username)
+                        onLogoutClick()
+                    },
                     authViewModel = authViewModel
                 )
             }
@@ -464,6 +525,9 @@ private fun NavigationDrawerContent(
     username: String,
     sucursal: String,
     selectedItem: String,
+    allowedMenuItems: List<MenuItem>,
+    isLoadingPermissions: Boolean,
+    permissionsError: String?,
     onItemClick: (String) -> Unit,
     onLogout: () -> Unit,
     authViewModel: com.gloria.ui.auth.viewmodel.AuthViewModel
@@ -477,11 +541,57 @@ private fun NavigationDrawerContent(
         HorizontalDivider()
         
         // Items del menú
-        LazyColumn(
-            modifier = Modifier.weight(1f),
-            contentPadding = PaddingValues(vertical = 8.dp)
-        ) {
-            items(MenuItems.items) { item ->
+        if (isLoadingPermissions) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    CircularProgressIndicator()
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Cargando permisos...",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        } else if (permissionsError != null) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxSize()
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Warning,
+                        contentDescription = "Error",
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(48.dp)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = permissionsError,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(vertical = 8.dp)
+            ) {
+                items(allowedMenuItems) { item ->
                 NavigationDrawerItem(
                     icon = {
                         Icon(
@@ -500,6 +610,7 @@ private fun NavigationDrawerContent(
                     onClick = { onItemClick(item.id) },
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
                 )
+            }
             }
         }
         

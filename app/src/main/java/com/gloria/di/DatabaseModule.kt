@@ -78,5 +78,15 @@ object DatabaseModule {
     fun provideCancelacionTomaDao(authSessionUseCase: AuthSessionUseCase): CancelacionTomaDao {
         return CancelacionTomaDaoImpl(authSessionUseCase)
     }
+
+    @Provides
+    fun provideUserPermissionDao(database: AppDatabase): UserPermissionDao {
+        return database.userPermissionDao()
+    }
+
+    @Provides
+    fun provideUserPermissionOracleDao(authSessionUseCase: AuthSessionUseCase): UserPermissionOracleDao {
+        return UserPermissionOracleDao(authSessionUseCase)
+    }
 }
 
