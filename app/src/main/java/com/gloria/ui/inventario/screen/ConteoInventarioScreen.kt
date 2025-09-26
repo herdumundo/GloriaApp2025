@@ -5,6 +5,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
@@ -327,10 +328,10 @@ fun ConteoInventarioScreen(
                             modifier = Modifier.weight(1f),
                             contentPadding = PaddingValues(vertical = 8.dp)
                         ) {
-                            items(
+                            itemsIndexed(
                                 items = articulosFiltrados,
-                                key = { it.winvdSecu }
-                            ) { articulo ->
+                                key = { index, articulo -> "${articulo.winvdSecu}_${articulo.winvdArt}_${articulo.winvdLote}_$index" }
+                            ) { index, articulo ->
                                 ArticuloConteoCard(
                                     articulo = articulo,
                                     estadoConteo = viewModel.obtenerEstadoConteo(articulo.winvdSecu),

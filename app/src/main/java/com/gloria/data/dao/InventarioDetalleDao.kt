@@ -158,13 +158,11 @@ interface InventarioDetalleDao {
     ): Flow<List<InventarioDetalle>>
     
     /**
-     * Obtiene inventarios DISTINCT para los cards de registro
-     * Basado en el query: SELECT DISTINCT winvd_nro_inv,strftime('%d/%m/%Y %H:%M',winve_fec), area_desc,dpto_desc,tipo_toma,secc_desc,
-     * winvd_consolidado,desc_grupo_parcial,desc_familia,sucursal,deposito 
-     * FROM STKW002INV WHERE estado = 'A' AND arde_suc = :sucursal ORDER BY 1 DESC
+     * Obtiene inventarios agrupados por winvd_nro_inv para los cards de registro
+     * Agrupa por número de inventario y muestra "Todas" si hay múltiples familias
      */
     @Query("""
-        SELECT DISTINCT 
+        SELECT 
             winvd_nro_inv,
             strftime('%d/%m/%Y %H:%M', winve_fec) as fecha_toma,
             area_desc,
@@ -173,13 +171,17 @@ interface InventarioDetalleDao {
             secc_desc,
             winvd_consolidado,
             desc_grupo_parcial,
-            desc_familia,
+            CASE 
+                WHEN COUNT(DISTINCT desc_familia) > 1 THEN 'Todas'
+                ELSE MIN(desc_familia)
+            END as desc_familia,
             sucursal,
             deposito,
             estado
         FROM STKW002INV 
         WHERE estado in ('A','P') 
         AND ARDE_SUC = :sucursal
+        GROUP BY winvd_nro_inv, strftime('%d/%m/%Y %H:%M', winve_fec), area_desc, dpto_desc, tipo_toma, secc_desc, winvd_consolidado, desc_grupo_parcial, sucursal, deposito, estado
         ORDER BY winvd_nro_inv DESC
     """)
     fun getInventariosCardsDistinct(sucursal: Int): Flow<List<InventarioCard>>

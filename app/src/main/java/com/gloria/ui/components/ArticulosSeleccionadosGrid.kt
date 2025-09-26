@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.ScrollState
@@ -147,10 +148,10 @@ fun ArticulosSeleccionadosGrid(
                 modifier = Modifier.heightIn(max = 300.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                items(
+                itemsIndexed(
                     items = articulos,
-                    key = { "${it.artCodigo}_${it.ardeLote}" }
-                ) { articulo ->
+                    key = { index, articulo -> "${articulo.artCodigo}_${articulo.ardeLote}_$index" }
+                ) { index, articulo ->
                     ArticuloGridRow(
                         articulo = articulo,
                         onRemove = { onRemoveArticulo(articulo) },

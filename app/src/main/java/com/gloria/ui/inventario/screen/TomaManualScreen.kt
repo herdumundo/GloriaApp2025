@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 
@@ -370,7 +371,7 @@ fun TomaManualScreen(
                                 .height(300.dp), // Altura fija para el scroll vertical
                             verticalArrangement = Arrangement.spacedBy(2.dp)
                         ) {
-                            items(uiState.selectedArticulosLotes) { articulo ->
+                            itemsIndexed(uiState.selectedArticulosLotes) { index, articulo ->
                                 Card(
                                     modifier = Modifier.fillMaxWidth(),
                                     colors = CardDefaults.cardColors(

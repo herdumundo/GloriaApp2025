@@ -8,6 +8,7 @@ import com.gloria.data.model.InventarioCard
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
 
 /**
@@ -22,50 +23,20 @@ class InventarioRepository @Inject constructor(
      * Obtiene los inventarios como Flow
      */
     fun getInventariosFlow(): Flow<List<InventarioCard>> {
-        // Convertir InventarioDetalle a InventarioCard
-        return inventarioDetalleDao.getAllInventariosDetalle().map { detalles ->
-            detalles.groupBy { it.winvd_nro_inv }.map { (nroInv, detallesInv) ->
-                InventarioCard(
-                    winvd_nro_inv = nroInv,
-                    fecha_toma = detallesInv.first().winve_fec,
-                    area_desc = detallesInv.first().area_desc,
-                    dpto_desc = detallesInv.first().dpto_desc,
-                    tipo_toma = detallesInv.first().tipo_toma,
-                    secc_desc = detallesInv.first().secc_desc,
-                    winvd_consolidado = detallesInv.first().winvd_consolidado.toString(),
-                    desc_grupo_parcial = detallesInv.first().desc_grupo_parcial,
-                    desc_familia = detallesInv.first().desc_familia,
-                    sucursal = detallesInv.first().sucursal,
-                    deposito = detallesInv.first().deposito,
-                    estado= detallesInv.first().estado
-                )
-            }
-        }
+        // Usar el query corregido que ya agrupa por winvd_nro_inv
+        // Obtener la sucursal del usuario logueado de forma síncrona
+        val sucursal = runBlocking { loggedUserRepository.getLoggedUserSync()?.sucursalId ?: 0 }
+        return inventarioDetalleDao.getInventariosCardsDistinct(sucursal)
     }
     
     /**
      * Obtiene los inventarios de forma síncrona
      */
     suspend fun getInventarios(): List<InventarioCard> {
-        val detalles = inventarioDetalleDao.getAllInventariosDetalle()
         var result: List<InventarioCard> = emptyList()
-        detalles.collect { detallesList ->
-            result = detallesList.groupBy { it.winvd_nro_inv }.map { (nroInv, detallesInv) ->
-                InventarioCard(
-                    winvd_nro_inv = nroInv,
-                    fecha_toma = detallesInv.first().winve_fec,
-                    area_desc = detallesInv.first().area_desc,
-                    dpto_desc = detallesInv.first().dpto_desc,
-                    tipo_toma = detallesInv.first().tipo_toma,
-                    secc_desc = detallesInv.first().secc_desc,
-                    winvd_consolidado = detallesInv.first().winvd_consolidado.toString(),
-                    desc_grupo_parcial = detallesInv.first().desc_grupo_parcial,
-                    desc_familia = detallesInv.first().desc_familia,
-                    sucursal = detallesInv.first().sucursal,
-                    deposito = detallesInv.first().deposito,
-                    estado = detallesInv.first().estado
-                )
-            }
+        val sucursal = loggedUserRepository.getLoggedUserSync()?.sucursalId ?: 0
+        inventarioDetalleDao.getInventariosCardsDistinct(sucursal).collect { inventarios ->
+            result = inventarios
         }
         return result
     }

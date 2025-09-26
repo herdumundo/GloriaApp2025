@@ -3,6 +3,7 @@ package com.gloria.ui.inventario.screen
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Refresh
@@ -229,10 +230,10 @@ fun RegistroInventarioScreen(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(vertical = 8.dp)
                     ) {
-                        items(
+                        itemsIndexed(
                             items = uiState.inventarios,
-                            key = { it.winvd_nro_inv }
-                        ) { inventario ->
+                            key = { index, inventario -> "${inventario.winvd_nro_inv}_$index" }
+                        ) { index, inventario ->
                             InventarioCard(
                                 inventario = inventario,
                                 onMenuClick = {

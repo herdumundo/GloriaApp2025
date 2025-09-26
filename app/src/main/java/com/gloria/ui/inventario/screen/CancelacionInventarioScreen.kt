@@ -3,6 +3,7 @@ package com.gloria.ui.inventario.screen
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -83,7 +84,7 @@ fun CancelacionInventarioScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(8.dp)
                 ) {
-                    items(state.cancelaciones) { cancelacion ->
+                    itemsIndexed(state.cancelaciones) { index, cancelacion ->
                         CancelacionTomaCard(
                             cancelacion = cancelacion,
                             onClick = { onNavigateToArticulos(cancelacion.winveNumero) }
