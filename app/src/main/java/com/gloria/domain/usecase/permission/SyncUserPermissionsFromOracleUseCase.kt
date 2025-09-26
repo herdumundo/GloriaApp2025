@@ -1,34 +1,39 @@
 package com.gloria.domain.usecase.permission
 
 import android.util.Log
-import com.gloria.data.dao.UserPermissionOracleDao
 import com.gloria.data.repository.UserPermissionRepository
+import com.gloria.data.repository.OracleLoginApiRepository
 import javax.inject.Inject
 
 /**
- * UseCase para sincronizar permisos de usuario desde Oracle a Room
+ * UseCase para sincronizar permisos de usuario desde API a Room
  */
 class SyncUserPermissionsFromOracleUseCase @Inject constructor(
-    private val userPermissionOracleDao: UserPermissionOracleDao,
+    private val oracleLoginApiRepository: OracleLoginApiRepository,
     private val userPermissionRepository: UserPermissionRepository
 ) {
     
     /**
-     * Sincroniza los permisos de un usuario específico desde Oracle
+     * Sincroniza los permisos de un usuario específico desde la API
      */
-    suspend operator fun invoke(username: String): Result<Unit> {
+    suspend operator fun invoke(username: String, password: String): Result<Unit> {
         return try {
-            Log.d("UserPermissions", "=== SINCRONIZANDO PERMISOS DE $username ===")
+            Log.d("UserPermissions", "=== SINCRONIZANDO PERMISOS DE $username DESDE API UNIFICADA ===")
             
-            // Obtener permisos desde Oracle
-            val oracleResult = userPermissionOracleDao.getUserPermissionsFromOracle(username)
+            // Llamar a la API de login unificada para obtener permisos
+            val apiResult = oracleLoginApiRepository.oracleLogin(username, password)
             
-            oracleResult.fold(
-                onSuccess = { permissions ->
-                    Log.d("SyncUserPermissionsFromOracleUseCase", "Resultado de Oracle para $username: $permissions")
+            apiResult.fold(
+                onSuccess = { loginResponse ->
+                    Log.d("SyncUserPermissionsFromOracleUseCase", "Respuesta de API para $username: ${loginResponse.permisos}")
                     
-                    if (permissions.isNotEmpty()) {
-                        Log.d("SyncUserPermissionsFromOracleUseCase", "Permisos encontrados en Oracle: $permissions")
+                    if (loginResponse.permisos.isNotEmpty()) {
+                        Log.d("SyncUserPermissionsFromOracleUseCase", "Permisos encontrados en API: ${loginResponse.permisos}")
+                        
+                        // Convertir permisos de API a formato esperado por Room
+                        val permissions = loginResponse.permisos.map { permiso ->
+                            permiso.formulario to permiso.nombre
+                        }
                         
                         // Sincronizar con Room
                         Log.d("SyncUserPermissionsFromOracleUseCase", "Llamando a syncUserPermissionsFromOracle...")
@@ -37,14 +42,14 @@ class SyncUserPermissionsFromOracleUseCase @Inject constructor(
                         Log.d("SyncUserPermissionsFromOracleUseCase", "Permisos sincronizados exitosamente para $username")
                         Result.success(Unit)
                     } else {
-                        Log.w("SyncUserPermissionsFromOracleUseCase", "No se encontraron permisos en Oracle para $username")
-                        // Eliminar permisos existentes en Room si no hay en Oracle
+                        Log.w("SyncUserPermissionsFromOracleUseCase", "No se encontraron permisos en API para $username")
+                        // Eliminar permisos existentes en Room si no hay en API
                         userPermissionRepository.deleteAllUserPermissions(username)
                         Result.success(Unit)
                     }
                 },
                 onFailure = { error ->
-                    Log.e("UserPermissions", "Error al obtener permisos desde Oracle para $username", error)
+                    Log.e("UserPermissions", "Error al obtener permisos desde API para $username", error)
                     Result.failure(error)
                 }
             )
@@ -55,63 +60,19 @@ class SyncUserPermissionsFromOracleUseCase @Inject constructor(
     }
     
     /**
-     * Sincroniza los permisos de todos los usuarios desde Oracle
+     * Verifica si un usuario tiene un permiso específico en la API y sincroniza si es necesario
      */
-    suspend fun syncAllUsersPermissions(): Result<Unit> {
+    suspend fun checkAndSyncUserPermission(username: String, password: String, formulario: String): Result<Boolean> {
         return try {
-            Log.d("UserPermissions", "=== SINCRONIZANDO PERMISOS DE TODOS LOS USUARIOS ===")
+            val apiResult = oracleLoginApiRepository.oracleLogin(username, password)
             
-            // Obtener lista de usuarios desde Oracle
-            val usersResult = userPermissionOracleDao.getAllUsersWithPermissions()
-            
-            usersResult.fold(
-                onSuccess = { users ->
-                    Log.d("UserPermissions", "Usuarios encontrados en Oracle: $users")
+            apiResult.fold(
+                onSuccess = { loginResponse ->
+                    val hasPermission = loginResponse.permisos.any { it.formulario == formulario }
                     
-                    var successCount = 0
-                    var errorCount = 0
-                    
-                    users.forEach { username ->
-                        try {
-                            val result = invoke(username)
-                            if (result.isSuccess) {
-                                successCount++
-                            } else {
-                                errorCount++
-                                Log.e("UserPermissions", "Error al sincronizar usuario $username: ${result.exceptionOrNull()?.message}")
-                            }
-                        } catch (e: Exception) {
-                            errorCount++
-                            Log.e("UserPermissions", "Error inesperado al sincronizar usuario $username", e)
-                        }
-                    }
-                    
-                    Log.d("UserPermissions", "Sincronización completada: $successCount exitosos, $errorCount errores")
-                    Result.success(Unit)
-                },
-                onFailure = { error ->
-                    Log.e("UserPermissions", "Error al obtener lista de usuarios desde Oracle", error)
-                    Result.failure(error)
-                }
-            )
-        } catch (e: Exception) {
-            Log.e("UserPermissions", "Error inesperado en sincronización masiva", e)
-            Result.failure(e)
-        }
-    }
-    
-    /**
-     * Verifica si un usuario tiene un permiso específico en Oracle y sincroniza si es necesario
-     */
-    suspend fun checkAndSyncUserPermission(username: String, formulario: String): Result<Boolean> {
-        return try {
-            val oracleResult = userPermissionOracleDao.hasPermissionInOracle(username, formulario)
-            
-            oracleResult.fold(
-                onSuccess = { hasPermission ->
-                    // Si tiene el permiso en Oracle, sincronizar todos sus permisos
+                    // Si tiene el permiso en API, sincronizar todos sus permisos
                     if (hasPermission) {
-                        invoke(username)
+                        invoke(username, password)
                     }
                     Result.success(hasPermission)
                 },

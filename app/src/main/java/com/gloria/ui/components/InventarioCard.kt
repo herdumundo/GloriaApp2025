@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -51,39 +50,19 @@ fun InventarioCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(10.dp),
             verticalAlignment = Alignment.Top
         ) {
             // Columna izquierda: Iconos
             Column(
-                modifier = Modifier.width(48.dp),
+                modifier = Modifier.width(0.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Icono de menú (hamburger)
-                IconButton(
-                    onClick = onMenuClick,
-                    modifier = Modifier
-                        .size(32.dp)
-                        .background(
-                            color = Color.White.copy(alpha = 0.2f),
-                            shape = RoundedCornerShape(6.dp)
-                        )
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Menu,
-                        contentDescription = "Menú",
-                        tint = Color.White,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                
                 // Icono de check
                 IconButton(
                     onClick = onCheckClick,
                     modifier = Modifier
-                        .size(32.dp)
+                        .size(28.dp)
                         .background(
                             color = Color.White.copy(alpha = 0.2f),
                             shape = RoundedCornerShape(6.dp)
@@ -93,12 +72,12 @@ fun InventarioCard(
                         imageVector = Icons.Default.Check,
                         contentDescription = "Verificado",
                         tint = Color.White,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(18.dp)
                     )
                 }
             }
             
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(0.dp))
             
             // Columna derecha: Detalles del inventario
             Column(
@@ -116,60 +95,12 @@ fun InventarioCard(
                     label = "FECHA TOMA:",
                     value = inventario.fecha_toma.ifEmpty { "N/A" }
                 )
-                
-                // Sucursal
-                DetailRow(
-                    label = "SUCURSAL:",
-                    value = inventario.sucursal.ifEmpty { "N/A" }
-                )
-                
-                // Depósito
-                DetailRow(
-                    label = "DEPOSITO:",
-                    value = inventario.deposito.ifEmpty { "N/A" }
-                )
-                
-                // Área
-                DetailRow(
-                    label = "AREA:",
-                    value = inventario.area_desc.ifEmpty { "N/A" }
-                )
-                
-                // Departamento
-                DetailRow(
-                    label = "DEPARTAMENTO:",
-                    value = inventario.dpto_desc.ifEmpty { "N/A" }
-                )
-                
-                // Sección
-                DetailRow(
-                    label = "SECCION:",
-                    value = inventario.secc_desc.ifEmpty { "N/A" }
-                )
-                
-                // Familia
-                DetailRow(
-                    label = "FAMILIA:",
-                    value = inventario.desc_familia.ifEmpty { "N/A" }
-                )
-                
-                // Grupo
-                DetailRow(
-                    label = "GRUPO:",
-                    value = inventario.desc_grupo_parcial.ifEmpty { "N/A" }
-                )
-                
-                // Tipo de toma
-                DetailRow(
-                    label = "TOMA:",
-                    value = inventario.tipo_toma.ifEmpty { "N/A" }
-                )
-                
-                // Consolidado
-                DetailRow(
-                    label = "CONSOLIDADO:",
-                    value = inventario.winvd_consolidado.ifEmpty { "N/A" }
-                )
+                // Versión compacta: menos filas
+                DetailRow(label = "SUCURSAL:", value = inventario.sucursal.ifEmpty { "N/A" })
+                DetailRow(label = "DEPÓSITO:", value = inventario.deposito.ifEmpty { "N/A" })
+                DetailRow(label = "ÁREA:", value = inventario.area_desc.ifEmpty { "N/A" })
+                DetailRow(label = "FAMILIA:", value = inventario.desc_familia.ifEmpty { "N/A" })
+                DetailRow(label = "TOMA:", value = inventario.tipo_toma.ifEmpty { "N/A" })
                 
                 // Mensaje de estado si está procesado
                 if (inventario.estado == "P") {
@@ -219,23 +150,23 @@ private fun DetailRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 2.dp),
+            .padding(vertical = 1.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = label,
             color = Color.White,
-            fontSize = 12.sp,
+            fontSize = 11.sp,
             fontWeight = FontWeight.Medium,
-            modifier = Modifier.width(120.dp)
+            modifier = Modifier.width(110.dp)
         )
         
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(6.dp))
         
         Text(
             text = value,
             color = Color.White,
-            fontSize = 12.sp,
+            fontSize = 11.sp,
             fontWeight = if (isBold) FontWeight.Bold else FontWeight.Normal,
             modifier = Modifier.weight(1f)
         )

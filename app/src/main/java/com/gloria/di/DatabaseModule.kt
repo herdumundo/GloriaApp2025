@@ -70,13 +70,20 @@ object DatabaseModule {
     }
 
     @Provides
-    fun provideArticuloTomaDao(authSessionUseCase: AuthSessionUseCase): ArticuloTomaDao {
-        return ArticuloTomaDaoImpl(authSessionUseCase)
+    fun provideArticuloTomaDao(
+        authSessionUseCase: AuthSessionUseCase,
+        productosApiRepository: com.gloria.data.repository.ProductosInventarioPorNumeroApiRepository
+    ): ArticuloTomaDao {
+        return ArticuloTomaDaoImpl(authSessionUseCase, productosApiRepository)
     }
 
     @Provides
-    fun provideCancelacionTomaDao(authSessionUseCase: AuthSessionUseCase): CancelacionTomaDao {
-        return CancelacionTomaDaoImpl(authSessionUseCase)
+    fun provideCancelacionTomaDao(
+        authSessionUseCase: AuthSessionUseCase,
+        inventariosPendientesRepo: com.gloria.data.repository.InventariosPendientesPorUsuarioApiRepository,
+        cancelarTomaApiRepository: com.gloria.data.repository.CancelarTomaApiRepository
+    ): CancelacionTomaDao {
+        return CancelacionTomaDaoImpl(authSessionUseCase, inventariosPendientesRepo, cancelarTomaApiRepository)
     }
 
     @Provides

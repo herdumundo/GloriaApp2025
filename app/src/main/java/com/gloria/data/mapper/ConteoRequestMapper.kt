@@ -2,7 +2,7 @@ package com.gloria.data.mapper
 
 import com.gloria.data.entity.InventarioDetalle
 import com.gloria.data.model.ConteoRequest
-import com.gloria.data.repository.DetalleInventarioExportar
+import com.gloria.domain.usecase.exportacion.DetalleInventarioExportar
 
 /**
  * Mapper para convertir datos de SQLite a ConteoRequest

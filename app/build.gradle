@@ -37,8 +37,8 @@ android {
 
     buildTypes {
         debug {
-         //   buildConfigField "String", "BASE_URL", "\"http://192.168.6.111:8081/backend-gloria/\""
-            buildConfigField "String", "BASE_URL", "\"http://190.128.196.166:9001/backend-gloria/\""
+           buildConfigField "String", "BASE_URL", "\"http://192.168.6.111:8081/backend-gloria/\""
+            //   buildConfigField "String", "BASE_URL", "\"http://190.128.196.166:9001/backend-gloria/\""
 
             signingConfig signingConfigs.debug
         }
@@ -53,7 +53,7 @@ android {
             // Deshabilitar completamente los Baseline Profiles
             manifestPlaceholders = [enableBaselineProfile: "false"]
             // Configuración adicional para evitar Baseline Profiles
-            debuggable false
+            debuggable true
             jniDebuggable false
             renderscriptDebuggable false
             zipAlignEnabled true

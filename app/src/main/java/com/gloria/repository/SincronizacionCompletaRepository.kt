@@ -1,14 +1,13 @@
 package com.gloria.repository
 
 import com.gloria.data.entity.*
+import com.gloria.data.entity.api.*
 import com.gloria.data.repository.*
 import com.gloria.domain.usecase.permission.SyncUserPermissionsFromOracleUseCase
-import com.gloria.util.ConnectionOracle
-import com.gloria.util.Controles
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.sql.ResultSet
 import android.util.Log
+import com.gloria.domain.usecase.AuthSessionUseCase
 
 class SincronizacionCompletaRepository(
     private val areaRepository: AreaRepository,
@@ -18,101 +17,104 @@ class SincronizacionCompletaRepository(
     private val grupoRepository: GrupoRepository,
     private val subgrupoRepository: SubgrupoRepository,
     private val sucursalDepartamentoRepository: SucursalDepartamentoRepository,
-    private val authSessionUseCase: com.gloria.domain.usecase.AuthSessionUseCase,
-    private val syncUserPermissionsFromOracleUseCase: SyncUserPermissionsFromOracleUseCase
+    private val authSessionUseCase: AuthSessionUseCase,
+    private val syncUserPermissionsFromOracleUseCase: SyncUserPermissionsFromOracleUseCase,
+    private val datosMaestrosApiRepository: DatosMaestrosApiRepository
 ) {
     
     suspend fun sincronizarTodasLasTablas(
-        onProgress: (message: String, current: Int, total: Int) -> Unit = { _, _, _ -> }
+        onProgress: (message: String, current: Int, total: Int) -> Unit = { _, _, _ -> },
+        userdb: String = "invap",
+        passdb: String = "invext2024"
     ): Result<SincronizacionResult> = withContext(Dispatchers.IO) {
-        Log.d("PROCESO_LOGIN", "=== INICIANDO sincronizarTodasLasTablas ===")
+        Log.d("PROCESO_LOGIN", "=== INICIANDO sincronizarTodasLasTablas con API ===")
         Log.d("PROCESO_LOGIN", "🔄 Ejecutando en hilo IO: ${Thread.currentThread().name}")
         
         try {
-            Log.d("PROCESO_LOGIN", "🔍 Obteniendo conexión Oracle...")
-            val connection = ConnectionOracle.getConnection(authSessionUseCase)
+            Log.d("PROCESO_LOGIN", "🌐 Llamando a API de datos maestros...")
+            onProgress("🌐 Conectando a API...", 0, 8)
             
-            if (connection == null) {
-                Log.e("PROCESO_LOGIN", "❌ CONEXIÓN FALLIDA - connection es null")
-                Log.e("PROCESO_LOGIN", "Controles.resBD: ${Controles.resBD}")
-                Log.e("PROCESO_LOGIN", "Controles.mensajeLogin: ${Controles.mensajeLogin}")
+            // Llamar a la API para obtener todos los datos maestros
+            val apiResult = datosMaestrosApiRepository.getDatosMaestros(userdb, passdb)
+            
+            if (apiResult.isFailure) {
+                Log.e("PROCESO_LOGIN", "❌ ERROR en API: ${apiResult.exceptionOrNull()?.message}")
                 return@withContext Result.failure(
-                    Exception("Error de conexión: ${Controles.mensajeLogin}")
+                    Exception("Error al obtener datos de la API: ${apiResult.exceptionOrNull()?.message}")
                 )
             }
             
-            Log.d("PROCESO_LOGIN", "✅ CONEXIÓN EXITOSA - connection obtenida")
+            val datosMaestros = apiResult.getOrNull()!!
+            Log.d("PROCESO_LOGIN", "✅ Datos recibidos de la API - Áreas: ${datosMaestros.areas.size}, Departamentos: ${datosMaestros.departamentos.size}")
+            
             val result = SincronizacionResult()
             
-            // Sincronizar en orden jerárquico para mantener integridad referencial
             try {
-                onProgress("🔄 Conectando a Oracle...", 0, 8)
-                
                 // 1. Sincronizar Áreas
                 Log.d("PROCESO_LOGIN", "📁 Sincronizando áreas...")
                 onProgress("📁 Sincronizando áreas...", 1, 8)
-                val areas = sincronizarAreas(connection)
+                val areas = convertirAreasFromApi(datosMaestros.areas)
                 areaRepository.deleteAllAreas()
                 areaRepository.insertAllAreas(areas)
                 result.areasCount = areas.size
                 Log.d("PROCESO_LOGIN", "✅ Áreas sincronizadas: ${areas.size}")
                 
                 // 2. Sincronizar Departamentos
-                Log.d("SincronizacionCompletaRepository", "📂 Sincronizando departamentos...")
+                Log.d("PROCESO_LOGIN", "📂 Sincronizando departamentos...")
                 onProgress("📂 Sincronizando departamentos...", 2, 8)
-                val departamentos = sincronizarDepartamentos(connection)
+                val departamentos = convertirDepartamentosFromApi(datosMaestros.departamentos)
                 departamentoRepository.deleteAllDepartamentos()
                 departamentoRepository.insertAllDepartamentos(departamentos)
                 result.departamentosCount = departamentos.size
-                Log.d("SincronizacionCompletaRepository", "✅ Departamentos sincronizados: ${departamentos.size}")
+                Log.d("PROCESO_LOGIN", "✅ Departamentos sincronizados: ${departamentos.size}")
                 
                 // 3. Sincronizar Secciones
-                Log.d("SincronizacionCompletaRepository", "📋 Sincronizando secciones...")
+                Log.d("PROCESO_LOGIN", "📋 Sincronizando secciones...")
                 onProgress("📋 Sincronizando secciones...", 3, 8)
-                val secciones = sincronizarSecciones(connection)
+                val secciones = convertirSeccionesFromApi(datosMaestros.secciones)
                 seccionRepository.deleteAllSecciones()
                 seccionRepository.insertAllSecciones(secciones)
                 result.seccionesCount = secciones.size
-                Log.d("SincronizacionCompletaRepository", "✅ Secciones sincronizadas: ${secciones.size}")
+                Log.d("PROCESO_LOGIN", "✅ Secciones sincronizadas: ${secciones.size}")
                 
                 // 4. Sincronizar Familias
-                Log.d("SincronizacionCompletaRepository", "👨‍👩‍👧‍👦 Sincronizando familias...")
+                Log.d("PROCESO_LOGIN", "👨‍👩‍👧‍👦 Sincronizando familias...")
                 onProgress("👨‍👩‍👧‍👦 Sincronizando familias...", 4, 8)
-                val familias = sincronizarFamilias(connection)
+                val familias = convertirFamiliasFromApi(datosMaestros.familias)
                 familiaRepository.deleteAllFamilias()
                 familiaRepository.insertAllFamilias(familias)
                 result.familiasCount = familias.size
-                Log.d("SincronizacionCompletaRepository", "✅ Familias sincronizadas: ${familias.size}")
+                Log.d("PROCESO_LOGIN", "✅ Familias sincronizadas: ${familias.size}")
                 
                 // 5. Sincronizar Grupos
-                Log.d("SincronizacionCompletaRepository", "👥 Sincronizando grupos...")
+                Log.d("PROCESO_LOGIN", "👥 Sincronizando grupos...")
                 onProgress("👥 Sincronizando grupos...", 5, 8)
-                val grupos = sincronizarGrupos(connection)
+                val grupos = convertirGruposFromApi(datosMaestros.grupos)
                 grupoRepository.deleteAllGrupos()
                 grupoRepository.insertAllGrupos(grupos)
                 result.gruposCount = grupos.size
-                Log.d("SincronizacionCompletaRepository", "✅ Grupos sincronizados: ${grupos.size}")
+                Log.d("PROCESO_LOGIN", "✅ Grupos sincronizados: ${grupos.size}")
                 
                 // 6. Sincronizar Subgrupos
-                Log.d("SincronizacionCompletaRepository", "🔗 Sincronizando subgrupos...")
+                Log.d("PROCESO_LOGIN", "🔗 Sincronizando subgrupos...")
                 onProgress("🔗 Sincronizando subgrupos...", 6, 8)
-                val subgrupos = sincronizarSubgrupos(connection)
+                val subgrupos = convertirSubgruposFromApi(datosMaestros.subgrupos)
                 subgrupoRepository.deleteAllSubgrupos()
                 subgrupoRepository.insertAllSubgrupos(subgrupos)
                 result.subgruposCount = subgrupos.size
-                Log.d("SincronizacionCompletaRepository", "✅ Subgrupos sincronizados: ${subgrupos.size}")
+                Log.d("PROCESO_LOGIN", "✅ Subgrupos sincronizados: ${subgrupos.size}")
                 
                 // 7. Sincronizar Sucursal-Departamento
-                Log.d("SincronizacionCompletaRepository", "🏢 Sincronizando sucursales y departamentos...")
+                Log.d("PROCESO_LOGIN", "🏢 Sincronizando sucursales y departamentos...")
                 onProgress("🏢 Sincronizando sucursales y departamentos...", 7, 8)
-                val sucursalDepartamentos = sincronizarSucursalDepartamentos(connection)
+                val sucursalDepartamentos = convertirSucursalDepartamentosFromApi(datosMaestros.sucursalesDepartamentos)
                 sucursalDepartamentoRepository.deleteAllSucursalDepartamentos()
                 sucursalDepartamentoRepository.insertAllSucursalDepartamentos(sucursalDepartamentos)
                 result.sucursalDepartamentosCount = sucursalDepartamentos.size
-                Log.d("SincronizacionCompletaRepository", "✅ Sucursal-Departamentos sincronizados: ${sucursalDepartamentos.size}")
+                Log.d("PROCESO_LOGIN", "✅ Sucursal-Departamentos sincronizados: ${sucursalDepartamentos.size}")
                 
-                // 8. Sincronizar Permisos del Usuario
-                Log.d("SincronizacionCompletaRepository", "🔐 Sincronizando permisos del usuario...")
+                // 8. Sincronizar Permisos del Usuario (Opcional)
+                Log.d("PROCESO_LOGIN", "🔐 Sincronizando permisos del usuario...")
                 onProgress("🔐 Sincronizando permisos del usuario...", 8, 8)
                 
                 try {
@@ -121,13 +123,14 @@ class SincronizacionCompletaRepository(
                     if (currentUser != null) {
                         Log.d("PROCESO_LOGIN", "👤 Sincronizando permisos para usuario: ${currentUser.username}")
                         
-                        val syncResult = syncUserPermissionsFromOracleUseCase(currentUser.username)
+                        val syncResult = syncUserPermissionsFromOracleUseCase(currentUser.username, currentUser.password)
                         syncResult.fold(
                             onSuccess = {
                                 Log.d("PROCESO_LOGIN", "✅ Permisos sincronizados exitosamente para ${currentUser.username}")
                             },
                             onFailure = { error ->
-                                Log.e("PROCESO_LOGIN", "❌ Error al sincronizar permisos para ${currentUser.username}: ${error.message}")
+                                Log.w("PROCESO_LOGIN", "⚠️ Error al sincronizar permisos para ${currentUser.username}: ${error.message}")
+                                Log.w("PROCESO_LOGIN", "⚠️ Continuando sin permisos sincronizados - el usuario puede usar la app normalmente")
                                 // No fallar toda la sincronización por error de permisos
                                 // El usuario puede usar la app sin permisos sincronizados
                             }
@@ -136,15 +139,13 @@ class SincronizacionCompletaRepository(
                         Log.w("PROCESO_LOGIN", "⚠️ No hay usuario logueado, omitiendo sincronización de permisos")
                     }
                 } catch (e: Exception) {
-                    Log.e("PROCESO_LOGIN", "❌ Error inesperado al sincronizar permisos: ${e.message}")
+                    Log.w("PROCESO_LOGIN", "⚠️ Error inesperado al sincronizar permisos: ${e.message}")
+                    Log.w("PROCESO_LOGIN", "⚠️ Continuando sin permisos sincronizados - el usuario puede usar la app normalmente")
                     // No fallar toda la sincronización por error de permisos
                 }
                 
-                connection.close()
-                Log.d("PROCESO_LOGIN", "🔒 Conexión cerrada")
-                
                 result.timestamp = System.currentTimeMillis()
-                Log.d("PROCESO_LOGIN", "✅ SINCRONIZACIÓN COMPLETADA EXITOSAMENTE")
+                Log.d("PROCESO_LOGIN", "✅ SINCRONIZACIÓN API COMPLETADA EXITOSAMENTE")
                 Log.d("PROCESO_LOGIN", "📊 Total elementos sincronizados:")
                 Log.d("PROCESO_LOGIN", "   - Áreas: ${result.areasCount}")
                 Log.d("PROCESO_LOGIN", "   - Departamentos: ${result.departamentosCount}")
@@ -157,181 +158,104 @@ class SincronizacionCompletaRepository(
                 Result.success(result)
                 
             } catch (e: Exception) {
-                Log.e("PROCESO_LOGIN", "❌ ERROR durante sincronización: ${e.message}")
+                Log.e("PROCESO_LOGIN", "❌ ERROR durante sincronización API: ${e.message}")
                 Log.e("PROCESO_LOGIN", "Stack trace: ${e.stackTraceToString()}")
-                connection.close()
                 throw e
             }
             
         } catch (e: Exception) {
-            Log.e("PROCESO_LOGIN", "❌ ERROR GENERAL en sincronizarTodasLasTablas: ${e.message}")
+            Log.e("PROCESO_LOGIN", "❌ ERROR GENERAL en sincronizarTodasLasTablas API: ${e.message}")
             Log.e("PROCESO_LOGIN", "Stack trace: ${e.stackTraceToString()}")
             Result.failure(e)
         }
     }
     
-    private suspend fun sincronizarAreas(connection: java.sql.Connection): List<Area> {
-        val query = "SELECT * FROM V_WEB_AREA"
-        val statement = connection.createStatement()
-        val resultSet: ResultSet = statement.executeQuery(query)
-        
-        val areas = mutableListOf<Area>()
-        while (resultSet.next()) {
-            areas.add(
-                Area(
-                    areaCodigo = resultSet.getInt("AREA_CODIGO"),
-                    areaDesc = resultSet.getString("AREA_DESC") ?: "",
-                    syncTimestamp = System.currentTimeMillis()
-                )
+    // Métodos de conversión de modelos API a entidades de base de datos
+    private fun convertirAreasFromApi(areasApi: List<AreaApi>): List<Area> {
+        return areasApi.map { areaApi ->
+            Area(
+                areaCodigo = areaApi.areaCodigo,
+                areaDesc = areaApi.areaDesc,
+                syncTimestamp = System.currentTimeMillis()
             )
         }
-        
-        resultSet.close()
-        statement.close()
-        return areas
     }
     
-    private suspend fun sincronizarDepartamentos(connection: java.sql.Connection): List<Departamento> {
-        val query = "SELECT * FROM V_WEB_DPTO"
-        val statement = connection.createStatement()
-        val resultSet: ResultSet = statement.executeQuery(query)
-        
-        val departamentos = mutableListOf<Departamento>()
-        while (resultSet.next()) {
-            departamentos.add(
-                Departamento(
-                    dptoCodigo = resultSet.getInt("DPTO_CODIGO"),
-                    dptoDesc = resultSet.getString("DPTO_DESC") ?: "",
-                    dptoArea = resultSet.getInt("DPTO_AREA"),
-                    syncTimestamp = System.currentTimeMillis()
-                )
+    private fun convertirDepartamentosFromApi(departamentosApi: List<DepartamentoApi>): List<Departamento> {
+        return departamentosApi.map { departamentoApi ->
+            Departamento(
+                dptoCodigo = departamentoApi.dptoCodigo,
+                dptoDesc = departamentoApi.dptoDesc,
+                dptoArea = departamentoApi.dptoArea,
+                syncTimestamp = System.currentTimeMillis()
             )
         }
-        
-        resultSet.close()
-        statement.close()
-        return departamentos
     }
     
-    private suspend fun sincronizarSecciones(connection: java.sql.Connection): List<Seccion> {
-        val query = "SELECT * FROM V_WEB_SECC"
-        val statement = connection.createStatement()
-        val resultSet: ResultSet = statement.executeQuery(query)
-        
-        val secciones = mutableListOf<Seccion>()
-        while (resultSet.next()) {
-            secciones.add(
-                Seccion(
-                    seccCodigo = resultSet.getInt("SECC_CODIGO"),
-                    seccDesc = resultSet.getString("SECC_DESC") ?: "",
-                    seccArea = resultSet.getInt("SECC_AREA"),
-                    seccDpto = resultSet.getInt("SECC_DPTO"),
-                    syncTimestamp = System.currentTimeMillis()
-                )
+    private fun convertirSeccionesFromApi(seccionesApi: List<SeccionApi>): List<Seccion> {
+        return seccionesApi.map { seccionApi ->
+            Seccion(
+                seccCodigo = seccionApi.seccCodigo,
+                seccDesc = seccionApi.seccDesc,
+                seccArea = seccionApi.seccArea,
+                seccDpto = seccionApi.seccDpto,
+                syncTimestamp = System.currentTimeMillis()
             )
         }
-        
-        resultSet.close()
-        statement.close()
-        return secciones
     }
     
-    private suspend fun sincronizarFamilias(connection: java.sql.Connection): List<Familia> {
-        val query = "SELECT * FROM ADCS.V_WEB_FLIA"
-        val statement = connection.createStatement()
-        val resultSet: ResultSet = statement.executeQuery(query)
-        
-        val familias = mutableListOf<Familia>()
-        while (resultSet.next()) {
-            familias.add(
-                Familia(
-                    fliaCodigo = resultSet.getInt("FLIA_CODIGO"),
-                    fliaDesc = resultSet.getString("FLIA_DESC") ?: "",
-                    fliaArea = resultSet.getInt("FLIA_AREA"),
-                    fliaDpto = resultSet.getInt("FLIA_DPTO"),
-                    fliaSeccion = resultSet.getInt("FLIA_SECCION"),
-                    syncTimestamp = System.currentTimeMillis()
-                )
+    private fun convertirFamiliasFromApi(familiasApi: List<FamiliaApi>): List<Familia> {
+        return familiasApi.map { familiaApi ->
+            Familia(
+                fliaCodigo = familiaApi.fliaCodigo,
+                fliaDesc = familiaApi.fliaDesc,
+                fliaArea = familiaApi.fliaArea,
+                fliaDpto = familiaApi.fliaDpto,
+                fliaSeccion = familiaApi.fliaSeccion,
+                syncTimestamp = System.currentTimeMillis()
             )
         }
-        
-        resultSet.close()
-        statement.close()
-        return familias
     }
     
-    private suspend fun sincronizarGrupos(connection: java.sql.Connection): List<Grupo> {
-        val query = "SELECT * FROM  V_WEB_GRUPO"
-        val statement = connection.createStatement()
-        val resultSet: ResultSet = statement.executeQuery(query)
-        
-        val grupos = mutableListOf<Grupo>()
-        while (resultSet.next()) {
-            grupos.add(
-                Grupo(
-                    grupCodigo = resultSet.getInt("GRUP_CODIGO"),
-                    grupDesc = resultSet.getString("GRUP_DESC") ?: "",
-                    grupArea = resultSet.getInt("GRUP_AREA"),
-                    grupDpto = resultSet.getInt("GRUP_DPTO"),
-                    grupSeccion = resultSet.getInt("GRUP_SECCION"),
-                    grupFamilia = resultSet.getInt("GRUP_FAMILIA"),
-                    syncTimestamp = System.currentTimeMillis()
-                )
+    private fun convertirGruposFromApi(gruposApi: List<GrupoApi>): List<Grupo> {
+        return gruposApi.map { grupoApi ->
+            Grupo(
+                grupCodigo = grupoApi.grupCodigo,
+                grupDesc = grupoApi.grupDesc,
+                grupArea = grupoApi.grupArea,
+                grupDpto = grupoApi.grupDpto,
+                grupSeccion = grupoApi.grupSeccion,
+                grupFamilia = grupoApi.grupFamilia,
+                syncTimestamp = System.currentTimeMillis()
             )
         }
-        
-        resultSet.close()
-        statement.close()
-        return grupos
     }
     
-    private suspend fun sincronizarSubgrupos(connection: java.sql.Connection): List<Subgrupo> {
-        val query = "SELECT * FROM ADCS.V_WEB_SUBGRUPO"
-        val statement = connection.createStatement()
-        val resultSet: ResultSet = statement.executeQuery(query)
-        
-        val subgrupos = mutableListOf<Subgrupo>()
-        while (resultSet.next()) {
-            subgrupos.add(
-                Subgrupo(
-                    sugrCodigo = resultSet.getInt("SUGR_CODIGO"),
-                    sugrDesc = resultSet.getString("SUGR_DESC") ?: "",
-                    sugrArea = resultSet.getInt("SUGR_AREA"),
-                    sugrDpto = resultSet.getInt("SUGR_DPTO"),
-                    sugrSeccion = resultSet.getInt("SUGR_SECCION"),
-                    sugrFlia = resultSet.getInt("SUGR_FLIA"),
-                    sugrGrupo = resultSet.getInt("SUGR_GRUPO"),
-                    syncTimestamp = System.currentTimeMillis()
-                )
+    private fun convertirSubgruposFromApi(subgruposApi: List<SubgrupoApi>): List<Subgrupo> {
+        return subgruposApi.map { subgrupoApi ->
+            Subgrupo(
+                sugrCodigo = subgrupoApi.sugrCodigo,
+                sugrDesc = subgrupoApi.sugrDesc,
+                sugrArea = subgrupoApi.sugrArea,
+                sugrDpto = subgrupoApi.sugrDpto,
+                sugrSeccion = subgrupoApi.sugrSeccion,
+                sugrFlia = subgrupoApi.sugrFlia,
+                sugrGrupo = subgrupoApi.sugrGrupo,
+                syncTimestamp = System.currentTimeMillis()
             )
         }
-        
-        resultSet.close()
-        statement.close()
-        return subgrupos
     }
     
-    private suspend fun sincronizarSucursalDepartamentos(connection: java.sql.Connection): List<SucursalDepartamento> {
-        val query = "SELECT * FROM ADCS.V_WEB_SUC_DEP"
-        val statement = connection.createStatement()
-        val resultSet: ResultSet = statement.executeQuery(query)
-        
-        val sucursalDepartamentos = mutableListOf<SucursalDepartamento>()
-        while (resultSet.next()) {
-            sucursalDepartamentos.add(
-                SucursalDepartamento(
-                    sucCodigo = resultSet.getInt("SUC_CODIGO"),
-                    sucDesc = resultSet.getString("SUC_DESC") ?: "",
-                    depCodigo = resultSet.getInt("DEP_CODIGO"),
-                    depDesc = resultSet.getString("DEP_DESC") ?: "",
-                    syncTimestamp = System.currentTimeMillis()
-                )
+    private fun convertirSucursalDepartamentosFromApi(sucursalDepartamentosApi: List<SucursalDepartamentoApi>): List<SucursalDepartamento> {
+        return sucursalDepartamentosApi.map { sucursalDepartamentoApi ->
+            SucursalDepartamento(
+                sucCodigo = sucursalDepartamentoApi.sucCodigo,
+                sucDesc = sucursalDepartamentoApi.sucDesc,
+                depCodigo = sucursalDepartamentoApi.depCodigo,
+                depDesc = sucursalDepartamentoApi.depDesc,
+                syncTimestamp = System.currentTimeMillis()
             )
         }
-        
-        resultSet.close()
-        statement.close()
-        return sucursalDepartamentos
     }
     
     // Métodos para obtener estadísticas

@@ -2,6 +2,7 @@ package com.gloria.data.repository
 
 import com.gloria.data.dao.ArticuloTomaDao
 import com.gloria.data.model.ArticuloToma
+import com.gloria.domain.usecase.exportacion.DetalleInventarioExportar
 import com.gloria.domain.usecase.exportacion.InventarioPendienteExportar
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -52,42 +53,3 @@ class ArticuloTomaRepository @Inject constructor(
         articuloTomaDao.marcarInventarioComoCerrado(nroInventario)
     }
 }
-
-data class DetalleInventarioExportar(
-    val winvdNroInv: Int,
-    val winvdLote: String,
-    val winvdArt: String,
-    val winvdFecVto: String,
-    val winvdArea: String,
-    val winvdDpto: String,
-    val winvdSecc: String,
-    val winvdFlia: String,
-    val winvdGrupo: String,
-    val winvdCantAct: String,
-    val winvdCantInv: String,
-    val winvdSecu: Int,
-    val winveDep: Int,
-    val winveSuc: Int,
-    val caja: Int,
-    val gruesa: Int,
-    val unidInd: Int,
-    val artDesc: String,
-    val areaDesc: String,
-    val dptoDesc: String,
-    val seccDesc: String,
-    val fliaDesc: String,
-    val grupDesc: String,
-    val winvdSubgr: Int,
-    val estado: String,
-    val winveLoginCerradoWeb: String,
-    val tipoToma: String,
-    val winveLogin: String,
-    val winvdConsolidado: String,
-    val descGrupoParcial: String,
-    val descFamilia: String,
-    val winveFec: String,
-    val tomaRegistro: String,
-    val codBarra: String,
-    val sucursal: String,
-    val deposito: String
-)

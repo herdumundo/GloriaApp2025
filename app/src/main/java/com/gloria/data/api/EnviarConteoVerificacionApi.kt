@@ -18,7 +18,7 @@ interface EnviarConteoVerificacionApi {
      * @param token Token de autenticación
      * @return Respuesta del servidor
      */
-    @POST("api/stkw002inv/batch?method=jdbc")
+    @POST("api/stkw002inv/upsert-batch?method=jdbc")
     suspend fun enviar(
         @Body request: List<ConteoRequest>,
         @Query("token") token: String

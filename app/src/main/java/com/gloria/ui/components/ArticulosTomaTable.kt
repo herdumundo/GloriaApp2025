@@ -214,7 +214,7 @@ fun ArticulosTomaTable(
         ) {
             itemsIndexed(
                 items = articulos,
-                key = { index, articulo -> "${articulo.winvdSecu}_${articulo.winvdArt}_${articulo.winvdLote}_$index" }
+                key = { index, articulo -> "${articulo.winvdSecu}_${articulo.winvdArt}_${articulo.winvdLote}_${articulo.winvdNroInv}_${articulo.winvdArea}_${articulo.winvdDpto}_${articulo.winvdSecc}_$index" }
             ) { index, articulo ->
                 Row(
                     modifier = Modifier

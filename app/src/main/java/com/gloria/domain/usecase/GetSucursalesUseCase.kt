@@ -1,12 +1,12 @@
 package com.gloria.domain.usecase
 
 import com.gloria.data.repository.LoggedUserRepository
+import com.gloria.data.repository.OracleLoginApiRepository
 import com.gloria.data.entity.LoggedUser
 import com.gloria.repository.SucursalRepository
 import com.gloria.repository.SucursalResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.flow.first
 import android.util.Log
 import javax.inject.Inject
 
@@ -15,7 +15,8 @@ import javax.inject.Inject
  * Reutilizable para diferentes partes de la aplicación
  */
 class GetSucursalesUseCase @Inject constructor(
-    private val loggedUserRepository: LoggedUserRepository
+    private val loggedUserRepository: LoggedUserRepository,
+    private val oracleLoginApiRepository: OracleLoginApiRepository
 ) {
     
     /**
@@ -41,12 +42,12 @@ class GetSucursalesUseCase @Inject constructor(
             Log.d("PROCESO_LOGIN", "   - Password: ${loggedUser.password.take(3)}***")
             Log.d("PROCESO_LOGIN", "   - Login Timestamp: ${loggedUser.loginTimestamp}")
             
-            // Crear repository localmente
-            Log.d("PROCESO_LOGIN", "🏗️ Creando SucursalRepository...")
-            val sucursalRepository = SucursalRepository()
+            // Crear repository internamente
+            Log.d("PROCESO_LOGIN", "🏗️ Creando SucursalRepository internamente...")
+            val sucursalRepository = SucursalRepository(oracleLoginApiRepository)
             
-            // Usar las credenciales del usuario logueado para consultar Oracle
-            Log.d("PROCESO_LOGIN", "🔍 Consultando sucursales en Oracle...")
+            // Usar el repository creado
+            Log.d("PROCESO_LOGIN", "🔍 Consultando sucursales usando API...")
             val result = sucursalRepository.getSucursales(
                 username = loggedUser.username,
                 password = loggedUser.password
@@ -62,12 +63,6 @@ class GetSucursalesUseCase @Inject constructor(
                 }
                 is SucursalResult.Error -> {
                     Log.e("PROCESO_LOGIN", "❌ ERROR: ${result.message}")
-                }
-                is SucursalResult.NetworkError -> {
-                    Log.e("PROCESO_LOGIN", "🌐 ERROR DE RED: ${result.message}")
-                }
-                is SucursalResult.InvalidCredentials -> {
-                    Log.e("PROCESO_LOGIN", "🔐 CREDENCIALES INVÁLIDAS: ${result.message}")
                 }
             }
             

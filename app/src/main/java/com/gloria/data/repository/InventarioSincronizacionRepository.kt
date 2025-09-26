@@ -3,17 +3,13 @@ package com.gloria.data.repository
 import android.util.Log
 import com.gloria.data.dao.InventarioDetalleDao
 import com.gloria.data.entity.InventarioDetalle
+import com.gloria.data.entity.api.InventarioSincronizacionApi
 import com.gloria.data.model.InventarioSincronizacion
-import com.gloria.util.ConnectionOracle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.withContext
-import java.sql.Connection
-import java.sql.PreparedStatement
-import java.sql.ResultSet
-import java.sql.Statement
 import java.text.SimpleDateFormat
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -24,6 +20,7 @@ import javax.inject.Singleton
 @Singleton
 class InventarioSincronizacionRepository @Inject constructor(
     private val inventarioDetalleDao: InventarioDetalleDao,
+    private val inventariosPorSucursalApiRepository: InventariosPorSucursalApiRepository,
     private val authSessionUseCase: com.gloria.domain.usecase.AuthSessionUseCase
 ) {
     
@@ -42,199 +39,151 @@ class InventarioSincronizacionRepository @Inject constructor(
             // 🚀 Iniciando sincronización
             onProgressUpdate("🔄 Iniciando sincronización de inventarios...", 0, 0)
             
-            // 📊 Obtener inventarios desde Oracle
-            val inventariosOracle = obtenerInventariosDesdeOracle(onProgressUpdate)
+            // 📊 Obtener inventarios desde API
+            val inventariosApi = obtenerInventariosDesdeApi(onProgressUpdate)
             
-            if (inventariosOracle.isEmpty()) {
+            if (inventariosApi.isEmpty()) {
                 onProgressUpdate("✅ No se encontraron inventarios para sincronizar", 0, 0)
                 emit(Result.success(0))
                 return@flow
             }
             
-            // 🗑️ Limpiar solo inventarios sin conteo (estado 'A' únicamente)
-            onProgressUpdate("🗑️ Limpiando inventarios sin conteo...", 0, inventariosOracle.size)
-            Log.d("PROCESO_LOGIN", "🗑️ Eliminando inventarios con estado 'A' (sin conteo)...")
-            inventarioDetalleDao.deleteInventariosDetalleByMultiplesCriterios(estado = "A")
-            Log.d("PROCESO_LOGIN", "✅ Limpieza de inventarios sin conteo completada")
-
-            // 💾 Insertar nuevos inventarios en Room
-            onProgressUpdate("💾 Insertando inventarios en base local...", 0, inventariosOracle.size)
-            val inventariosInsertados = insertarInventariosEnRoom(inventariosOracle, onProgressUpdate)
+            Log.d("PROCESO_LOGIN", "📊 Inventarios obtenidos desde API: ${inventariosApi.size}")
             
-            // ✅ Sincronización completada
-            onProgressUpdate("✅ Sincronización completada exitosamente", inventariosInsertados, inventariosOracle.size)
-            emit(Result.success(inventariosInsertados))
+            // 🔄 Convertir inventarios API a modelo local
+            val inventariosConvertidos = convertirInventariosApiToLocal(inventariosApi)
+            
+            Log.d("PROCESO_LOGIN", "🔄 Inventarios convertidos: ${inventariosConvertidos.size}")
+            
+            // 🗑️ Limpiar inventarios existentes
+            onProgressUpdate("🗑️ Limpiando inventarios existentes...", 0, inventariosConvertidos.size)
+            inventarioDetalleDao.deleteAllInventariosDetalle()
+            
+            // 💾 Insertar nuevos inventarios
+            onProgressUpdate("💾 Insertando inventarios sincronizados...", 0, inventariosConvertidos.size)
+            val inventariosDetalle = convertirInventariosToDetalle(inventariosConvertidos)
+            inventarioDetalleDao.insertInventariosDetalle(inventariosDetalle)
+            
+            Log.d("PROCESO_LOGIN", "✅ Inventarios sincronizados exitosamente: ${inventariosDetalle.size}")
+            
+            // 🎉 Finalizar
+            onProgressUpdate("🎉 Sincronización completada: ${inventariosDetalle.size} inventarios", inventariosDetalle.size, inventariosDetalle.size)
+            emit(Result.success(inventariosDetalle.size))
             
         } catch (e: Exception) {
-            Log.e("InventarioSincronizacion", "Error en sincronización: ${e.message}", e)
-            onProgressUpdate("❌ Error en sincronización: ${e.message}", 0, 0)
+            Log.e("PROCESO_LOGIN", "❌ Error en sincronización de inventarios: ${e.message}", e)
+            onProgressUpdate("❌ Error: ${e.message}", 0, 0)
             emit(Result.failure(e))
         }
     }
     
     /**
-     * Obtiene inventarios desde Oracle
+     * Obtiene inventarios desde la API
      */
-    private suspend fun obtenerInventariosDesdeOracle(
+    private suspend fun obtenerInventariosDesdeApi(
         onProgressUpdate: (String, Int, Int) -> Unit
-    ): List<InventarioSincronizacion> = withContext(Dispatchers.IO) {
-        Log.d("PROCESO_LOGIN", "=== INICIANDO obtenerInventariosDesdeOracle ===")
+    ): List<InventarioSincronizacionApi> = withContext(Dispatchers.IO) {
+        Log.d("PROCESO_LOGIN", "=== INICIANDO obtenerInventariosDesdeApi ===")
         Log.d("PROCESO_LOGIN", "🔄 Ejecutando en hilo IO: ${Thread.currentThread().name}")
         
-        var connection: Connection? = null
-        val inventarios = mutableListOf<InventarioSincronizacion>()
-        
         try {
-            Log.d("PROCESO_LOGIN", "🔍 Obteniendo conexión Oracle para inventarios...")
-            connection = ConnectionOracle.getConnection(authSessionUseCase) ?: throw Exception("No se pudo conectar a la base de datos")
-            Log.d("PROCESO_LOGIN", "✅ Conexión Oracle obtenida para inventarios")
-            
-            onProgressUpdate("🔍 Consultando inventarios en Oracle...", 0, 0)
-            
-            // 📝 Query de sincronización
-            val sqlQuery = """
-                SELECT  
-                    'A' AS toma,
-                    b.WINVD_CANT_ACT as invd_cant_inv,
-                    ART_DESC,
-                    ARDE_SUC,
-                    winvd_nro_inv,
-                    winvd_art,
-                    b.WINVD_LOTE AS winvd_lote,
-                    b.winvd_fec_vto AS winvd_fec_vto,
-                    winvd_area,
-                    winvd_dpto,
-                    winvd_secc,
-                    winvd_flia,
-                    winvd_grupo,
-                    b.WINVD_CANT_ACT AS winvd_cant_act,
-                    winve_fec,
-                    dpto_desc,
-                    secc_desc,
-                    flia_desc,
-                    grup_desc,
-                    area_desc,
-                    sugr_codigo,
-                    winvd_secu AS winvd_secu,
-                    CASE 
-                        WHEN c.winve_tipo_toma = 'C' THEN 'CRITERIO'
-                        ELSE 'MANUAL' 
-                    END AS tipo_toma,
-                    winve_login,
-                    '' AS winvd_consolidado,
-                    CASE 
-                        WHEN c.winve_grupo IS NULL AND c.winve_grupo_parcial IS NULL THEN 'TODOS'
-                        WHEN c.winve_grupo_parcial IS NOT NULL THEN 'PARCIALES' 
-                        ELSE grup_desc 
-                    END AS desc_grupo_parcial,
-                    CASE 
-                        WHEN c.winve_flia IS NULL THEN 'TODAS'
-                        ELSE a.flia_desc 
-                    END AS desc_familia,
-                    winve_dep,
-                    winve_suc,
-                    a.coba_codigo_barra,
-                    a.caja,
-                    a.GRUESA,
-                    a.UNID_IND,
-                    suc.SUC_DESC,
-                    suc.DEP_DESC,
-                    c.WINVE_STOCK_VISIBLE
-                FROM  
-                    ADCS.V_WEB_ARTICULOS_CLASIFICACION a
-                    INNER JOIN  ADCS.WEB_INVENTARIO_det b  ON a.ART_CODIGO = b.winvd_art  AND a.SECC_CODIGO = b.winvd_secc
-                    INNER JOIN  ADCS.WEB_INVENTARIO c  ON b.winvd_nro_inv = c.winve_numero 
-                        AND c.winve_dep = a.ARDE_DEP 
-                        AND c.winve_area = a.AREA_CODIGO 
-                        AND c.winve_suc = a.ARDE_SUC 
-                        AND c.winve_secc = a.SECC_CODIGO
-                    INNER JOIN  ADCS.V_WEB_SUC_DEP suc  ON  suc.SUC_CODIGO = a.ARDE_SUC
-                        AND suc.DEP_CODIGO = a.ARDE_DEP
-                WHERE 
-                    c.winve_empr = 1 
-                    AND a.ARDE_SUC = 1 
-                    AND c.WINVE_ESTADO_WEB = 'A' 
-                GROUP BY 
-                    ARDE_SUC, winvd_nro_inv,winvd_art,winvd_area,winvd_dpto,winvd_secc,winve_suc, 
-                    winvd_flia, winvd_grupo,winve_fec,dpto_desc,secc_desc,flia_desc,grup_desc, 
-                    area_desc, sugr_codigo,winve_grupo,winve_tipo_toma,winve_login,winve_grupo_parcial, 
-                    winve_flia, winve_dep,ART_DESC,a.coba_codigo_barra,a.caja,a.GRUESA,
-                    a.UNID_IND,suc.SUC_DESC,suc.DEP_DESC,b.WINVD_LOTE,b.winvd_fec_vto,winvd_secu,
-                    c.WINVE_STOCK_VISIBLE, b.WINVD_CANT_ACT
-            """.trimIndent()
-            
-            val statement = connection.createStatement()
-            val resultSet = statement.executeQuery(sqlQuery)
-            
-            while (resultSet.next()) {
-                val inventario = InventarioSincronizacion(
-                    toma = resultSet.getString("toma") ?: "A",
-                    invd_cant_inv = resultSet.getInt("invd_cant_inv"),
-                    ART_DESC = resultSet.getString("ART_DESC") ?: "",
-                    ARDE_SUC = resultSet.getInt("ARDE_SUC"),
-                    winvd_nro_inv = resultSet.getInt("winvd_nro_inv"),
-                    winvd_art = resultSet.getString("winvd_art") ?: "",
-                    winvd_lote = resultSet.getString("winvd_lote") ?: "",
-                    winvd_fec_vto = resultSet.getString("winvd_fec_vto") ?: "",
-                    winvd_area = resultSet.getInt("winvd_area"),
-                    winvd_dpto = resultSet.getInt("winvd_dpto"),
-                    winvd_secc = resultSet.getInt("winvd_secc"),
-                    winvd_flia = resultSet.getInt("winvd_flia"),
-                    winvd_grupo = resultSet.getInt("winvd_grupo"),
-                    winvd_cant_act = resultSet.getInt("winvd_cant_act"),
-                    winve_fec = resultSet.getString("winve_fec") ?: "",
-                    dpto_desc = resultSet.getString("dpto_desc") ?: "",
-                    secc_desc = resultSet.getString("secc_desc") ?: "",
-                    flia_desc = resultSet.getString("flia_desc") ?: "",
-                    grup_desc = resultSet.getString("grup_desc") ?: "",
-                    area_desc = resultSet.getString("area_desc") ?: "",
-                    sugr_codigo = resultSet.getInt("sugr_codigo"),
-                    winvd_secu = resultSet.getInt("winvd_secu"),
-                    tipo_toma = resultSet.getString("tipo_toma") ?: "MANUAL",
-                    winve_login = resultSet.getString("winve_login") ?: "",
-                    winvd_consolidado = resultSet.getString("winvd_consolidado") ?: "",
-                    desc_grupo_parcial = resultSet.getString("desc_grupo_parcial") ?: "",
-                    desc_familia = resultSet.getString("desc_familia") ?: "",
-                    winve_dep = resultSet.getString("winve_dep") ?: "",
-                    winve_suc = resultSet.getString("winve_suc") ?: "",
-                    coba_codigo_barra = resultSet.getString("coba_codigo_barra") ?: "",
-                    caja = resultSet.getInt("caja"),
-                    GRUESA = resultSet.getInt("GRUESA"),
-                    UNID_IND = resultSet.getInt("UNID_IND"),
-                    SUC_DESC = resultSet.getString("SUC_DESC") ?: "",
-                    DEP_DESC = resultSet.getString("DEP_DESC") ?: "",
-                    WINVE_STOCK_VISIBLE = resultSet.getString("WINVE_STOCK_VISIBLE") ?: "N"
-                )
-                inventarios.add(inventario)
+            // 🔍 Obtener usuario logueado
+            val currentUser = authSessionUseCase.getCurrentUser()
+            if (currentUser == null) {
+                throw Exception("No hay usuario logueado")
             }
             
-            resultSet.close()
-            statement.close()
+            Log.d("PROCESO_LOGIN", "👤 Usuario logueado: ${currentUser.username}")
+            
+            onProgressUpdate("🌐 Consultando inventarios desde API...", 0, 0)
+            
+            // 🌐 Llamar a la API usando la sucursal guardada en logged_user
+            val sucursalId = currentUser.sucursalId
+                ?: throw Exception("No hay sucursal seleccionada en la sesión")
+
+            val apiResult = inventariosPorSucursalApiRepository.getInventariosPorSucursal(
+                userdb = currentUser.username,
+                passdb = currentUser.password,
+                ardeSuc = sucursalId
+            )
+            
+            if (apiResult.isFailure) {
+                val error = apiResult.exceptionOrNull() ?: Exception("Error desconocido")
+                Log.e("PROCESO_LOGIN", "❌ Error en API: ${error.message}", error)
+                throw error
+            }
+            
+            val response = apiResult.getOrNull()!!
+            Log.d("PROCESO_LOGIN", "✅ Respuesta API recibida - Success: ${response.success}, Length: ${response.length}")
+            
+            if (!response.success) {
+                throw Exception("API retornó success=false")
+            }
+            
+            val inventarios = response.data
+            Log.d("PROCESO_LOGIN", "📊 Inventarios obtenidos desde API: ${inventarios.size}")
             
             onProgressUpdate("📊 Inventarios obtenidos: ${inventarios.size}", inventarios.size, 0)
             
+            inventarios
+            
         } catch (e: Exception) {
-            Log.e("InventarioSincronizacion", "Error al obtener inventarios desde Oracle: ${e.message}", e)
+            Log.e("PROCESO_LOGIN", "❌ Error al obtener inventarios desde API: ${e.message}", e)
             throw e
-        } finally {
-            connection?.close()
         }
-        
-        inventarios
     }
     
     /**
-     * Inserta inventarios en Room
+     * Convierte inventarios de la API al modelo local
      */
-    private suspend fun insertarInventariosEnRoom(
-        inventarios: List<InventarioSincronizacion>,
-        onProgressUpdate: (String, Int, Int) -> Unit
-    ): Int = withContext(Dispatchers.IO) {
-        Log.d("PROCESO_LOGIN", "=== INICIANDO insertarInventariosEnRoom ===")
-        Log.d("PROCESO_LOGIN", "🔄 Ejecutando en hilo IO: ${Thread.currentThread().name}")
-        Log.d("PROCESO_LOGIN", "📊 Total inventarios a insertar: ${inventarios.size}")
-        
-        val inventariosRoom = inventarios.map { oracle ->
+    private fun convertirInventariosApiToLocal(inventariosApi: List<InventarioSincronizacionApi>): List<InventarioSincronizacion> {
+        return inventariosApi.map { api ->
+            InventarioSincronizacion(
+                toma = api.toma,
+                invd_cant_inv = api.invdCantInv,
+                ART_DESC = api.artDesc,
+                ARDE_SUC = api.ardeSuc,
+                winvd_nro_inv = api.winvdNroInv,
+                winvd_art = api.winvdArt.toString(),
+                winvd_lote = api.winvdLote ?: "",
+                winvd_fec_vto = api.winvdFecVto ?: "",
+                winvd_area = api.winvdArea,
+                winvd_dpto = api.winvdDpto,
+                winvd_secc = api.winvdSecc,
+                winvd_flia = api.winvdFlia,
+                winvd_grupo = api.winvdGrupo,
+                winvd_cant_act = api.winvdCantAct,
+                winve_fec = api.winveFec ?: "",
+                dpto_desc = api.dptoDesc,
+                secc_desc = api.seccDesc,
+                flia_desc = api.fliaDesc,
+                grup_desc = api.grupDesc,
+                area_desc = api.areaDesc,
+                sugr_codigo = api.sugrCodigo,
+                winvd_secu = api.winvdSecu,
+                tipo_toma = api.tipoToma,
+                winve_login = api.winveLogin,
+                winvd_consolidado = api.winvdConsolidado ?: "",
+                desc_grupo_parcial = api.descGrupoParcial,
+                desc_familia = api.descFamilia,
+                winve_dep = api.winveDep.toString(),
+                winve_suc = api.winveSuc.toString(),
+                coba_codigo_barra = api.cobaCodigoBarra ?: "",
+                caja = api.caja,
+                GRUESA = api.gruesa,
+                UNID_IND = api.unidInd,
+                SUC_DESC = api.sucDesc,
+                DEP_DESC = api.depDesc,
+                WINVE_STOCK_VISIBLE = api.winveStockVisible
+            )
+        }
+    }
+    
+    /**
+     * Convierte inventarios a detalle para Room
+     */
+    private fun convertirInventariosToDetalle(inventarios: List<InventarioSincronizacion>): List<InventarioDetalle> {
+        return inventarios.map { oracle ->
             InventarioDetalle(
                 winvd_nro_inv = oracle.winvd_nro_inv,
                 winvd_secu = oracle.winvd_secu,
@@ -273,33 +222,9 @@ class InventarioSincronizacionRepository @Inject constructor(
                 UNID_IND = oracle.UNID_IND,
                 sucursal = oracle.SUC_DESC,
                 deposito = oracle.DEP_DESC,
-                stockVisible = oracle.WINVE_STOCK_VISIBLE ?: "N" // Valor por defecto "N" si es null
+                stockVisible = oracle.WINVE_STOCK_VISIBLE ?: "N"
             )
         }
-        
-        // 💾 Insertar inventarios usando estrategia IGNORE para evitar duplicados
-        val loteSize = 100
-        var totalInsertados = 0
-        
-        for (i in inventariosRoom.indices step loteSize) {
-            val lote = inventariosRoom.subList(i, minOf(i + loteSize, inventariosRoom.size))
-            
-            try {
-                // Usar insertInventariosDetalleIgnore para evitar duplicados
-                val ids = inventarioDetalleDao.insertInventariosDetalleIgnore(lote)
-                totalInsertados += ids.size
-                
-                Log.d("PROCESO_LOGIN", "✅ Procesados ${ids.size} inventarios del lote ${i/loteSize + 1} (${lote.size} total)")
-                
-                onProgressUpdate("💾 Insertando en Room... ($totalInsertados/${inventariosRoom.size})", totalInsertados, inventariosRoom.size)
-                
-            } catch (e: Exception) {
-                throw Exception("Error al insertar lote en Room: ${e.message}")
-            }
-        }
-        
-        Log.d("PROCESO_LOGIN", "✅ Inventarios insertados exitosamente: $totalInsertados")
-        totalInsertados
     }
     
     /**

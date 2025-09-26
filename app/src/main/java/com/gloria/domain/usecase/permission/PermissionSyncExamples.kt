@@ -15,11 +15,11 @@ class PermissionSyncExamples @Inject constructor(
      * EJEMPLO 1: Sincronización durante el LOGIN
      * Este es el momento más común y recomendado
      */
-    suspend fun syncOnLogin(username: String) {
+    suspend fun syncOnLogin(username: String, password: String) {
         Log.d("PermissionSync", "=== SINCRONIZACIÓN EN LOGIN ===")
         
         // Sincronizar permisos del usuario al hacer login
-        val result = syncUserPermissionsFromOracleUseCase(username)
+        val result = syncUserPermissionsFromOracleUseCase(username, password)
         
         result.fold(
             onSuccess = {
@@ -35,11 +35,11 @@ class PermissionSyncExamples @Inject constructor(
      * EJEMPLO 2: Sincronización manual desde un botón o menú
      * Útil para actualizar permisos sin hacer logout/login
      */
-    suspend fun syncManually(username: String) {
+    suspend fun syncManually(username: String, password: String) {
         Log.d("PermissionSync", "=== SINCRONIZACIÓN MANUAL ===")
         
         // El usuario puede forzar una sincronización manual
-        val result = syncUserPermissionsFromOracleUseCase(username)
+        val result = syncUserPermissionsFromOracleUseCase(username, password)
         
         result.fold(
             onSuccess = {
@@ -55,7 +55,7 @@ class PermissionSyncExamples @Inject constructor(
      * EJEMPLO 3: Verificación con sincronización automática
      * Cuando se verifica un permiso y no está en Room, sincroniza automáticamente
      */
-    suspend fun checkPermissionWithAutoSync(username: String, screenId: String): Boolean {
+    suspend fun checkPermissionWithAutoSync(username: String, password: String, screenId: String): Boolean {
         Log.d("PermissionSync", "=== VERIFICACIÓN CON AUTO-SYNC ===")
         
         // Primero verificar en Room (rápido)
@@ -65,7 +65,7 @@ class PermissionSyncExamples @Inject constructor(
             Log.d("PermissionSync", "Permiso no encontrado en Room, sincronizando desde Oracle...")
             
             // Si no tiene el permiso en Room, sincronizar desde Oracle
-            val syncResult = syncUserPermissionsFromOracleUseCase(username)
+            val syncResult = syncUserPermissionsFromOracleUseCase(username, password)
             
             syncResult.fold(
                 onSuccess = {
@@ -90,7 +90,7 @@ class PermissionSyncExamples @Inject constructor(
     suspend fun syncAllUsers() {
         Log.d("PermissionSync", "=== SINCRONIZACIÓN MASIVA ===")
         
-        val result = syncUserPermissionsFromOracleUseCase.syncAllUsersPermissions()
+      /*  val result = syncUserPermissionsFromOracleUseCase.syncAllUsersPermissions()
         
         result.fold(
             onSuccess = {
@@ -99,18 +99,18 @@ class PermissionSyncExamples @Inject constructor(
             onFailure = { error ->
                 Log.e("PermissionSync", "Error en sincronización masiva", error)
             }
-        )
+        )*/
     }
     
     /**
      * EJEMPLO 5: Sincronización periódica (ejemplo con Timer o WorkManager)
      * Para mantener los permisos actualizados automáticamente
      */
-    suspend fun periodicSync(username: String) {
+    suspend fun periodicSync(username: String, password: String) {
         Log.d("PermissionSync", "=== SINCRONIZACIÓN PERIÓDICA ===")
         
         // Esto se podría llamar cada X minutos o cuando la app vuelve del background
-        val result = syncUserPermissionsFromOracleUseCase(username)
+        val result = syncUserPermissionsFromOracleUseCase(username, password)
         
         result.fold(
             onSuccess = {
@@ -125,11 +125,11 @@ class PermissionSyncExamples @Inject constructor(
     /**
      * EJEMPLO 6: Sincronización específica para el usuario INVAP
      */
-    suspend fun syncInvapPermissions() {
+    suspend fun syncInvapPermissions(password: String) {
         Log.d("PermissionSync", "=== SINCRONIZACIÓN ESPECÍFICA INVAP ===")
         
         // Sincronizar específicamente los permisos del usuario INVAP
-        val result = syncUserPermissionsFromOracleUseCase("INVAP")
+        val result = syncUserPermissionsFromOracleUseCase("INVAP", password)
         
         result.fold(
             onSuccess = {

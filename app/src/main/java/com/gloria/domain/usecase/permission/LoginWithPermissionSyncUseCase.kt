@@ -30,7 +30,7 @@ class LoginWithPermissionSyncUseCase @Inject constructor(
                     Log.d("LoginWithPermissionSync", "Login exitoso, sincronizando permisos...")
                     
                     // 2. Sincronizar permisos desde Oracle
-                    val syncResult = syncUserPermissionsFromOracleUseCase(username)
+                    val syncResult = syncUserPermissionsFromOracleUseCase(username, password)
                     
                     syncResult.fold(
                         onSuccess = {

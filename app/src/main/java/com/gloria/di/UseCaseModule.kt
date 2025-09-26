@@ -1,10 +1,7 @@
 package com.gloria.di
 
 import com.gloria.domain.usecase.GetSucursalesUseCase
-import com.gloria.domain.usecase.auth.LoginUseCase
-import com.gloria.domain.usecase.auth.LogoutUseCase
-import com.gloria.domain.usecase.auth.RegisterUseCase
-import com.gloria.domain.usecase.AuthSessionUseCase
+ import com.gloria.domain.usecase.AuthSessionUseCase
 import com.gloria.domain.usecase.cancelacion.CancelarTomaParcialUseCase
 import com.gloria.domain.usecase.cancelacion.CancelarTomaTotalUseCase
 import com.gloria.domain.usecase.cancelacion.GetCancelacionesTomaUseCase
@@ -27,6 +24,10 @@ import com.gloria.domain.usecase.toma.GetSucursalesUseCase as GetSucursalesTomaU
  import com.gloria.repository.AuthRepository
 import com.gloria.repository.InventarioRepository
 import com.gloria.repository.SincronizacionCompletaRepository
+import com.gloria.data.repository.DatosMaestrosApiRepository
+import com.gloria.data.repository.InsertarCabeceraYDetalleApiRepository
+import com.gloria.data.repository.UserPermissionsApiRepository
+import com.gloria.data.repository.OracleLoginApiRepository
 import com.gloria.data.repository.AreaRepository
 import com.gloria.data.repository.DepartamentoRepository
 import com.gloria.data.repository.SeccionRepository
@@ -49,7 +50,7 @@ import com.gloria.data.dao.SubgrupoDao
 import com.gloria.data.dao.CancelacionTomaDao
 import com.gloria.data.dao.ArticuloTomaDao
 import com.gloria.data.dao.SucursalDepartamentoDao
-import com.gloria.data.repository.ArticuloLoteRepository
+import com.gloria.data.repository.ArticulosClasificacionApiRepository
 import com.gloria.domain.usecase.sincronizacion.SincronizarDatosUseCase
 import com.gloria.domain.usecase.sincronizacion.GetEstadisticasSincronizacionUseCase
 import com.gloria.domain.usecase.sincronizacion.SincronizarInventariosUseCase
@@ -75,7 +76,12 @@ import com.gloria.data.repository.ConteoPendienteRepository
 import com.gloria.data.api.ConteoPendienteApi
 import com.gloria.data.dao.UserPermissionOracleDao
 import com.gloria.data.dao.UserPermissionDao
+import com.gloria.data.repository.ArticuloLoteRepository
 import com.gloria.data.repository.UserPermissionRepository
+import com.gloria.domain.usecase.auth.LoginUseCase
+import com.gloria.domain.usecase.auth.LogoutUseCase
+import com.gloria.domain.usecase.auth.RegisterUseCase
+import com.gloria.domain.usecase.permission.LoginWithPermissionSyncUseCase
 import retrofit2.Retrofit
 import dagger.Module
 import dagger.Provides
@@ -123,9 +129,19 @@ object UseCaseModule {
     @Provides
     @Singleton
     fun provideLoginUseCase(
-        loggedUserRepository: LoggedUserRepository
+        loggedUserRepository: LoggedUserRepository,
+        oracleLoginApiRepository: OracleLoginApiRepository
     ): LoginUseCase {
-        return LoginUseCase(loggedUserRepository)
+        return LoginUseCase(loggedUserRepository, oracleLoginApiRepository)
+    }
+
+    @Provides
+    @Singleton
+    fun provideLoginWithPermissionSyncUseCase(
+        loginUseCase: LoginUseCase,
+        syncUserPermissionsFromOracleUseCase: SyncUserPermissionsFromOracleUseCase
+    ): LoginWithPermissionSyncUseCase {
+        return LoginWithPermissionSyncUseCase(loginUseCase, syncUserPermissionsFromOracleUseCase)
     }
 
     @Provides
@@ -138,18 +154,17 @@ object UseCaseModule {
 
     @Provides
     @Singleton
-    fun provideRegisterUseCase(
-        loggedUserRepository: LoggedUserRepository
-    ): RegisterUseCase {
-        return RegisterUseCase(loggedUserRepository)
+    fun provideRegisterUseCase(): RegisterUseCase {
+        return RegisterUseCase()
     }
 
     @Provides
     @Singleton
     fun provideGetSucursalesUseCase(
-        loggedUserRepository: LoggedUserRepository
+        loggedUserRepository: LoggedUserRepository,
+        oracleLoginApiRepository: OracleLoginApiRepository
     ): GetSucursalesUseCase {
-        return GetSucursalesUseCase(loggedUserRepository)
+        return GetSucursalesUseCase(loggedUserRepository, oracleLoginApiRepository)
     }
 
     @Provides
@@ -163,14 +178,16 @@ object UseCaseModule {
     @Provides
     @Singleton
     fun provideSaveTomaManualUseCase(
-        authRepository: AuthRepository,
+        loggedUserRepository: LoggedUserRepository,
         inventarioRepository: InventarioRepository,
-        sincronizacionRepository: SincronizacionCompletaRepository
+        sincronizacionRepository: SincronizacionCompletaRepository,
+        insertarCabeceraYDetalleInventarioUseCase: InsertarCabeceraYDetalleInventarioUseCase
     ): SaveTomaManualUseCase {
         return SaveTomaManualUseCase(
-            authRepository,
+            loggedUserRepository,
             inventarioRepository,
-            sincronizacionRepository
+            sincronizacionRepository,
+            insertarCabeceraYDetalleInventarioUseCase
         )
     }
 
@@ -178,27 +195,28 @@ object UseCaseModule {
     @Singleton
     fun provideInsertarCabeceraInventarioUseCase(
         loggedUserRepository: LoggedUserRepository,
-        authSessionUseCase: AuthSessionUseCase
+        articuloLoteRepository: ArticuloLoteRepository
     ): InsertarCabeceraInventarioUseCase {
-        return InsertarCabeceraInventarioUseCase(loggedUserRepository, authSessionUseCase)
+        return InsertarCabeceraInventarioUseCase(loggedUserRepository, articuloLoteRepository)
     }
 
     @Provides
     @Singleton
     fun provideInsertarDetalleInventarioUseCase(
         loggedUserRepository: LoggedUserRepository,
-        authSessionUseCase: AuthSessionUseCase
+        articuloLoteRepository: ArticuloLoteRepository
     ): InsertarDetalleInventarioUseCase {
-        return InsertarDetalleInventarioUseCase(loggedUserRepository, authSessionUseCase)
+        return InsertarDetalleInventarioUseCase(loggedUserRepository, articuloLoteRepository)
     }
 
 
     @Provides
     @Singleton
     fun provideInsertarCabeceraYDetalleInventarioUseCase(
-        repository: ArticuloLoteRepository
+        insertarCabeceraYDetalleApiRepository: InsertarCabeceraYDetalleApiRepository,
+        loggedUserRepository: LoggedUserRepository
     ): InsertarCabeceraYDetalleInventarioUseCase {
-        return InsertarCabeceraYDetalleInventarioUseCase(repository)
+        return InsertarCabeceraYDetalleInventarioUseCase(insertarCabeceraYDetalleApiRepository, loggedUserRepository)
     }
     @Provides
     @Singleton
@@ -292,13 +310,6 @@ object UseCaseModule {
         return ArticuloTomaRepository(articuloTomaDao)
     }
 
-    @Provides
-    @Singleton
-    fun provideAuthRepository(
-        loggedUserRepository: LoggedUserRepository
-    ): AuthRepository {
-        return AuthRepository(loggedUserRepository)
-    }
 
     @Provides
     @Singleton
@@ -320,12 +331,13 @@ object UseCaseModule {
         subgrupoRepository: SubgrupoRepository,
         sucursalDepartamentoRepository: SucursalDepartamentoRepository,
         authSessionUseCase: AuthSessionUseCase,
-        syncUserPermissionsFromOracleUseCase: SyncUserPermissionsFromOracleUseCase
+        syncUserPermissionsFromOracleUseCase: SyncUserPermissionsFromOracleUseCase,
+        datosMaestrosApiRepository: DatosMaestrosApiRepository
     ): SincronizacionCompletaRepository {
         return SincronizacionCompletaRepository(
             areaRepository, departamentoRepository, seccionRepository, familiaRepository,
             grupoRepository, subgrupoRepository, sucursalDepartamentoRepository, authSessionUseCase,
-            syncUserPermissionsFromOracleUseCase
+            syncUserPermissionsFromOracleUseCase, datosMaestrosApiRepository
         )
     }
 
@@ -486,16 +498,7 @@ object UseCaseModule {
     
 
     
-    @Provides
-    @Singleton
-    fun provideExportacionConteosRepository(
-        inventarioDetalleDao: InventarioDetalleDao,
-        enviarConteoVerificacionUseCase: EnviarConteoVerificacionUseCase,
-        loggedUserDao: LoggedUserDao
-    ): ExportacionConteosRepository {
-        return ExportacionConteosRepository(inventarioDetalleDao, enviarConteoVerificacionUseCase, loggedUserDao)
-    }
-    
+
     @Provides
     @Singleton
     fun provideExportarConteosRealizadosUseCase(
@@ -599,10 +602,10 @@ object UseCaseModule {
     @Provides
     @Singleton
     fun provideSyncUserPermissionsFromOracleUseCase(
-        userPermissionOracleDao: UserPermissionOracleDao,
+        oracleLoginApiRepository: OracleLoginApiRepository,
         userPermissionRepository: UserPermissionRepository
     ): SyncUserPermissionsFromOracleUseCase {
-        return SyncUserPermissionsFromOracleUseCase(userPermissionOracleDao, userPermissionRepository)
+        return SyncUserPermissionsFromOracleUseCase(oracleLoginApiRepository, userPermissionRepository)
     }
 
 }

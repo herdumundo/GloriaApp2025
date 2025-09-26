@@ -81,7 +81,7 @@ fun RegistroInventarioScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Los inventarios aparecerán aquí después de sincronizar desde Oracle",
+                        text = "Los inventarios aparecerán aquí después de sincronizar",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center

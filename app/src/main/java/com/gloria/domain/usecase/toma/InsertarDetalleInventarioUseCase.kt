@@ -3,12 +3,11 @@ package com.gloria.domain.usecase.toma
 import com.gloria.data.repository.LoggedUserRepository
 import com.gloria.data.model.ArticuloLote
 import com.gloria.data.repository.ArticuloLoteRepository
-import com.gloria.domain.usecase.AuthSessionUseCase
 import javax.inject.Inject
 
 class InsertarDetalleInventarioUseCase @Inject constructor(
     private val loggedUserRepository: LoggedUserRepository,
-    private val authSessionUseCase: AuthSessionUseCase
+    private val articuloLoteRepository: ArticuloLoteRepository
 ) {
     suspend operator fun invoke(
         idCabecera: Int,
@@ -20,16 +19,8 @@ class InsertarDetalleInventarioUseCase @Inject constructor(
         seccion: Int,
         onProgressUpdate: (current: Int, total: Int) -> Unit
     ): Int {
-        val articuloLoteRepository = ArticuloLoteRepository(authSessionUseCase)
-        return articuloLoteRepository.insertarDetalleInventario(
-            idCabecera = idCabecera,
-            articulosSeleccionados = articulosSeleccionados,
-            sucursal = sucursal,
-            deposito = deposito,
-            area = area,
-            departamento = departamento,
-            seccion = seccion,
-            onProgressUpdate = onProgressUpdate
-        )
+        // TODO: Este método necesita ser implementado o refactorizado
+        // El ArticuloLoteRepository actual solo maneja consultas API, no inserción de detalles
+        throw NotImplementedError("El método insertarDetalleInventario no está implementado en el nuevo ArticuloLoteRepository basado en API")
     }
 }

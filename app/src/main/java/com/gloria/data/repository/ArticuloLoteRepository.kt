@@ -1,21 +1,19 @@
 package com.gloria.data.repository
 
 import com.gloria.data.model.ArticuloLote
-import com.gloria.util.ConnectionOracle
+import com.gloria.data.entity.api.ArticuloClasificacionApi
 import com.gloria.domain.usecase.AuthSessionUseCase
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.catch
-import java.sql.PreparedStatement
-import java.sql.ResultSet
-import java.sql.Statement
 import android.util.Log
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class ArticuloLoteRepository @Inject constructor(
-    private val authSessionUseCase: AuthSessionUseCase
+    private val authSessionUseCase: AuthSessionUseCase,
+    private val articulosClasificacionApiRepository: ArticulosClasificacionApiRepository
 ) {
     
     suspend fun getArticulosLotes(
@@ -27,928 +25,151 @@ class ArticuloLoteRepository @Inject constructor(
         seccion: Int,
         familia: String,
         isFamiliaTodos: Boolean = false,
-        isGruposTodos: Boolean = false, // ✅ Nuevo parámetro para indicar si se seleccionaron todos los grupos
+        isGruposTodos: Boolean = false,
         onProgressUpdate: ((current: Int, total: Int) -> Unit)? = null
     ): Flow<List<ArticuloLote>> = flow {
-        Log.d("ArticuloLoteRepository", "🎯 MÉTODO getArticulosLotes() LLAMADO")
+        Log.d("ArticuloLoteRepository", "🎯 MÉTODO getArticulosLotes() LLAMADO CON API")
         Log.d("ArticuloLoteRepository", "📞 Llamada desde ViewModel recibida")
-        val articulosLotes = mutableListOf<ArticuloLote>()
-        var connection: java.sql.Connection? = null
-        var statement: PreparedStatement? = null
-        var resultSet: ResultSet? = null
         
         try {
-            Log.d("ArticuloLoteRepository", "🔄 INICIANDO consulta Oracle...")
+            Log.d("ArticuloLoteRepository", "🔄 INICIANDO consulta API...")
             Log.d("ArticuloLoteRepository", "📊 Parámetros: suc=$sucursal, dep=$deposito, area=$area, dpto=$departamento, secc=$seccion, flia=$familia, isFamiliaTodos=$isFamiliaTodos, isGruposTodos=$isGruposTodos")
             
-            // Obtener conexión a Oracle
-            Log.d("ArticuloLoteRepository", "🔌 Obteniendo conexión a Oracle...")
-            connection = ConnectionOracle.getConnection(authSessionUseCase)
-            if (connection == null) {
-                Log.e("ArticuloLoteRepository", "❌ No se pudo establecer conexión a Oracle")
-                emit(articulosLotes)
+            // Obtener credenciales del usuario logueado
+            val loggedUser = authSessionUseCase.getCurrentUser()
+            if (loggedUser == null) {
+                Log.e("ArticuloLoteRepository", "❌ No hay usuario logueado")
+                emit(emptyList())
                 return@flow
             }
-            Log.d("ArticuloLoteRepository", "✅ Conexión a Oracle establecida exitosamente")
             
-            // Configurar timeout de conexión para evitar que se cuelgue
-            // Nota: setNetworkTimeout no está disponible en esta versión de JDBC
-            // Usaremos solo el timeout del statement
+            Log.d("ArticuloLoteRepository", "👤 Usuario logueado: ${loggedUser.username}")
             
-            // Preparar variables para la consulta
-            val subgruposPlaceholders = if (!isFamiliaTodos && !isGruposTodos) {
-                // Solo usar filtro de subgrupos si no es "todas las familias" y no es "todos los grupos"
-                subgruposSeleccionados.joinToString(",") { "'${it.first}#${it.second}'" }
-            } else ""
+            // Actualizar progreso inicial
+            onProgressUpdate?.invoke(0, 0)
             
-            val gruposCodigos = if (!isFamiliaTodos && !isGruposTodos) {
-                // Solo usar filtro de grupos si no es "todas las familias" y no es "todos los grupos"
-                subgruposSeleccionados.map { it.first }.distinct().joinToString(",")
-            } else ""
-            
-            // Construir la consulta SQL según el tipo de selección
-            val sql = if (isFamiliaTodos) {
-                // Caso 1: Todas las familias - sin filtros de familia, grupo o subgrupo
-                """
-                SELECT  
-                    CONCAT(CONCAT(grup_codigo, '#'),SUGR_CODIGO) as concatID,
-                    TO_NUMBER (arde_cant_act) as cantidad, 
-                    TO_CHAR(arde_fec_vto_lote,'DD-MM-YYYY') as vencimiento, 
-                    flia_codigo, GRUP_CODIGO, GRUP_desc, flia_desc, art_desc, 
-                    arde_lote, art_codigo, ARDE_FEC_VTO_LOTE, sugr_codigo, sugr_desc
-                FROM ADCS.v_web_articulos_clasificacion 
-                WHERE arde_suc=? and arde_dep=? and area_codigo=? 
-                    and dpto_codigo=? and secc_codigo=?
-                ORDER BY flia_desc, GRUP_desc, sugr_desc, art_desc ASC
-                """.trimIndent()
-            } else if (isGruposTodos) {
-                // Caso 2: Todos los grupos de una familia específica - sin filtros de grupo o subgrupo
-                """
-                SELECT  
-                    CONCAT(CONCAT(grup_codigo, '#'),SUGR_CODIGO) as concatID,
-                    TO_NUMBER (arde_cant_act) as cantidad, 
-                    TO_CHAR(arde_fec_vto_lote,'DD-MM-YYYY') as vencimiento, 
-                    flia_codigo, GRUP_CODIGO, GRUP_desc, flia_desc, art_desc, 
-                    arde_lote, art_codigo, ARDE_FEC_VTO_LOTE, sugr_codigo, sugr_desc
-                FROM ADCS.v_web_articulos_clasificacion 
-                WHERE arde_suc=? and arde_dep=? and area_codigo=? 
-                    and dpto_codigo=? and secc_codigo=? and flia_codigo=?
-                ORDER BY flia_desc, GRUP_desc, sugr_desc, art_desc ASC
-                """.trimIndent()
-            } else {
-                // Caso 3: Grupos específicos - con filtros de grupo y subgrupo
-                """
-                SELECT  
-                    CONCAT(CONCAT(grup_codigo, '#'),SUGR_CODIGO) as concatID,
-                    TO_NUMBER (arde_cant_act) as cantidad, 
-                    TO_CHAR(arde_fec_vto_lote,'DD-MM-YYYY') as vencimiento, 
-                    flia_codigo, GRUP_CODIGO, GRUP_desc, flia_desc, art_desc, 
-                    arde_lote, art_codigo, ARDE_FEC_VTO_LOTE, sugr_codigo, sugr_desc
-                FROM ADCS.v_web_articulos_clasificacion 
-                WHERE CONCAT(CONCAT(grup_codigo, '#'),SUGR_CODIGO) in ($subgruposPlaceholders)
-                    and arde_suc=? and arde_dep=? and area_codigo=? 
-                    and dpto_codigo=? and secc_codigo=? 
-                    and grup_codigo in ($gruposCodigos) and flia_codigo=?
-                ORDER BY flia_desc, GRUP_desc, sugr_desc, art_desc ASC
-                """.trimIndent()
-            }
-            
-            Log.d("ArticuloLoteRepository", "📝 SQL Query construida:")
-            Log.d("ArticuloLoteRepository", sql)
-            
-            // Preparar y ejecutar la consulta según el tipo de consulta
-            Log.d("ArticuloLoteRepository", "🔧 Preparando statement...")
-            statement = connection.prepareStatement(sql)
-            
-            // Configurar timeout de statement para evitar consultas infinitas
-            statement.setQueryTimeout(30) // 30 segundos
-            Log.d("ArticuloLoteRepository", "⏱️ Timeout configurado: 30 segundos")
-            
-            if (isFamiliaTodos) {
-                // Caso 1: Todas las familias - sin filtros de familia, grupo o subgrupo (5 parámetros)
-                Log.d("ArticuloLoteRepository", "🔢 Configurando 5 parámetros para consulta 'Todas las familias'")
-                statement.setInt(1, sucursal)
-                statement.setInt(2, deposito)
-                statement.setInt(3, area)
-                statement.setInt(4, departamento)
-                statement.setInt(5, seccion)
-            } else if (isGruposTodos) {
-                // Caso 2: Todos los grupos de una familia específica - sin filtros de grupo o subgrupo (6 parámetros)
-                Log.d("ArticuloLoteRepository", "🔢 Configurando 6 parámetros para consulta 'Todos los grupos'")
-                statement.setInt(1, sucursal)
-                statement.setInt(2, deposito)
-                statement.setInt(3, area)
-                statement.setInt(4, departamento)
-                statement.setInt(5, seccion)
-                statement.setString(6, familia)
-            } else {
-                // Caso 3: Grupos específicos - con filtros de grupo y subgrupo (6 parámetros)
-                Log.d("ArticuloLoteRepository", "🔢 Configurando 6 parámetros para consulta específica")
-                statement.setInt(1, sucursal)
-                statement.setInt(2, deposito)
-                statement.setInt(3, area)
-                statement.setInt(4, departamento)
-                statement.setInt(5, seccion)
-                statement.setString(6, familia)
-            }
-            
-            // 🔍 PRIMERO: Obtener el conteo total de registros
-            Log.d("ArticuloLoteRepository", "📊 Obteniendo conteo total de registros...")
-            
-            // Crear consulta COUNT para obtener el total real
-            val sqlCount = if (isFamiliaTodos) {
-                // Caso 1: Todas las familias - sin filtros de familia, grupo o subgrupo
-                """
-                SELECT COUNT(*) as total FROM ADCS.v_web_articulos_clasificacion 
-                WHERE arde_suc=? and arde_dep=? and area_codigo=? 
-                and dpto_codigo=? and secc_codigo=?
-                """.trimIndent()
-            } else if (isGruposTodos) {
-                // Caso 2: Todos los grupos de una familia específica - sin filtros de grupo o subgrupo
-                """
-                SELECT COUNT(*) as total FROM ADCS.v_web_articulos_clasificacion 
-                WHERE arde_suc=? and arde_dep=? and area_codigo=? 
-                and dpto_codigo=? and secc_codigo=? and flia_codigo=?
-                """.trimIndent()
-            } else {
-                // Caso 3: Grupos específicos - con filtros de grupo y subgrupo
-                """
-                SELECT COUNT(*) as total FROM ADCS.v_web_articulos_clasificacion 
-                WHERE arde_suc=? and arde_dep=? and area_codigo=? 
-                and dpto_codigo=? and secc_codigo=? 
-                and grup_codigo in ($gruposCodigos) and flia_codigo=?
-                """.trimIndent()
-            }
-            
-            val countStatement = connection.prepareStatement(sqlCount)
-            countStatement.setQueryTimeout(30)
-            
-            if (isFamiliaTodos) {
-                // Caso 1: Todas las familias - sin filtros de familia, grupo o subgrupo (5 parámetros)
-                countStatement.setInt(1, sucursal)
-                countStatement.setInt(2, deposito)
-                countStatement.setInt(3, area)
-                countStatement.setInt(4, departamento)
-                countStatement.setInt(5, seccion)
-            } else if (isGruposTodos) {
-                // Caso 2: Todos los grupos de una familia específica - sin filtros de grupo o subgrupo (6 parámetros)
-                countStatement.setInt(1, sucursal)
-                countStatement.setInt(2, deposito)
-                countStatement.setInt(3, area)
-                countStatement.setInt(4, departamento)
-                countStatement.setInt(5, seccion)
-                countStatement.setString(6, familia)
-            } else {
-                // Caso 3: Grupos específicos - con filtros de grupo y subgrupo (6 parámetros)
-                countStatement.setInt(1, sucursal)
-                countStatement.setInt(2, deposito)
-                countStatement.setInt(3, area)
-                countStatement.setInt(4, departamento)
-                countStatement.setInt(5, seccion)
-                countStatement.setString(6, familia)
-            }
-            
-            val countResultSet = countStatement.executeQuery()
-            countResultSet.next()
-            val totalRegistros = countResultSet.getInt("total")
-            countResultSet.close()
-            countStatement.close()
-            
-            Log.d("ArticuloLoteRepository", "📊 Total de registros encontrados: $totalRegistros")
-            
-            // 🔄 SEGUNDO: Ejecutar consulta principal para procesar
-            Log.d("ArticuloLoteRepository", "🚀 Ejecutando consulta principal para procesar registros...")
-            resultSet = statement.executeQuery()
-            Log.d("ArticuloLoteRepository", "✅ Consulta ejecutada exitosamente, procesando resultados...")
-            
-            // Notificar progreso inicial
-            onProgressUpdate?.invoke(0, totalRegistros)
-            
-            // Contador para monitorear el progreso
-            var contador = 0
-            Log.d("ArticuloLoteRepository", "📊 Procesando $totalRegistros registros con progreso real...")
-            
-            // Mapear TODOS los resultados con progreso real
-            while (resultSet.next()) {
-                try {
-                    val articulo = ArticuloLote(
-                        concatID = resultSet.getString("concatID") ?: "",
-                        cantidad = resultSet.getDouble("cantidad"),
-                        vencimiento = resultSet.getString("vencimiento") ?: "",
-                        fliaCodigo = resultSet.getString("flia_codigo") ?: "",
-                        grupCodigo = resultSet.getInt("grup_codigo"),
-                        grupDesc = resultSet.getString("grup_desc") ?: "",
-                        fliaDesc = resultSet.getString("flia_desc") ?: "",
-                        artDesc = resultSet.getString("art_desc") ?: "",
-                        ardeLote = resultSet.getString("arde_lote") ?: "",
-                        artCodigo = resultSet.getString("art_codigo") ?: "",
-                        ardeFecVtoLote = resultSet.getString("arde_fec_vto_lote") ?: "",
-                        sugrCodigo = resultSet.getInt("sugr_codigo"),
-                        sugrDesc = resultSet.getString("sugr_desc") ?: ""
+            // Llamar a la API según el tipo de consulta
+            val apiResult = when {
+                isFamiliaTodos -> {
+                    Log.d("ArticuloLoteRepository", "🌐 Consultando: Todas las familias")
+                    articulosClasificacionApiRepository.getArticulosTodasFamilias(
+                        userdb = loggedUser.username,
+                        passdb = loggedUser.password,
+                        ardeSuc = sucursal,
+                        ardeDep = deposito,
+                        areaCodigo = area,
+                        dptoCodigo = departamento,
+                        seccCodigo = seccion
                     )
-                    articulosLotes.add(articulo)
-                    contador++
+                }
+                isGruposTodos -> {
+                    Log.d("ArticuloLoteRepository", "🌐 Consultando: Todos los grupos de familia $familia")
+                    articulosClasificacionApiRepository.getArticulosTodosGruposFamilia(
+                        userdb = loggedUser.username,
+                        passdb = loggedUser.password,
+                        ardeSuc = sucursal,
+                        ardeDep = deposito,
+                        areaCodigo = area,
+                        dptoCodigo = departamento,
+                        seccCodigo = seccion,
+                        fliaCodigo = familia.toIntOrNull() ?: 0
+                    )
+                }
+                else -> {
+                    Log.d("ArticuloLoteRepository", "🌐 Consultando: Grupos específicos")
+                    val subgruposCodigos = subgruposSeleccionados.map { it.second }
+                    val gruposCodigos = subgruposSeleccionados.map { it.first }.distinct()
                     
-                    // Log de progreso cada 100 registros
-                    if (contador % 100 == 0) {
-                        Log.d("ArticuloLoteRepository", "📈 Progreso: $contador/$totalRegistros registros procesados...")
-                        // Notificar progreso real al ViewModel
-                        onProgressUpdate?.invoke(contador, totalRegistros)
-                    }
-                    
-                } catch (e: Exception) {
-                    Log.e("ArticuloLoteRepository", "❌ Error al mapear artículo: ${e.message}", e)
-                    // Continuar con el siguiente artículo
+                    articulosClasificacionApiRepository.getArticulosGruposEspecificos(
+                        userdb = loggedUser.username,
+                        passdb = loggedUser.password,
+                        ardeSuc = sucursal,
+                        ardeDep = deposito,
+                        areaCodigo = area,
+                        dptoCodigo = departamento,
+                        seccCodigo = seccion,
+                        fliaCodigo = familia.toIntOrNull() ?: 0,
+                        subgruposSeleccionados = subgruposCodigos,
+                        gruposCodigos = gruposCodigos
+                    )
                 }
             }
             
-            // Notificar progreso final con total real
-            onProgressUpdate?.invoke(contador, totalRegistros)
+            if (apiResult.isFailure) {
+                Log.e("ArticuloLoteRepository", "❌ Error en API: ${apiResult.exceptionOrNull()?.message}")
+                emit(emptyList())
+                return@flow
+            }
             
-            Log.d("ArticuloLoteRepository", "🎯 PROCESAMIENTO COMPLETADO:")
-            Log.d("ArticuloLoteRepository", "   • Total de registros encontrados: $totalRegistros")
-            Log.d("ArticuloLoteRepository", "   • Total de registros procesados: $contador")
-            Log.d("ArticuloLoteRepository", "   • Artículos mapeados exitosamente: ${articulosLotes.size}")
+            val response = apiResult.getOrNull()!!
+            Log.d("ArticuloLoteRepository", "✅ Respuesta API exitosa: ${response.length} artículos")
             
-            Log.d("ArticuloLoteRepository", "📤 Enviando ${articulosLotes.size} artículos al ViewModel...")
+            // Actualizar progreso
+            onProgressUpdate?.invoke(0, response.length)
             
-            // Enviar los resultados al ViewModel
+            // Convertir respuesta API a ArticuloLote
+            val articulosLotes = response.data.mapIndexed { index, articuloApi ->
+                // Actualizar progreso durante la conversión
+                onProgressUpdate?.invoke(index + 1, response.length)
+                
+                convertirArticuloApiToArticuloLote(articuloApi)
+            }
+            
+            Log.d("ArticuloLoteRepository", "✅ Conversión completada: ${articulosLotes.size} artículos convertidos")
             emit(articulosLotes)
-            Log.d("ArticuloLoteRepository", "✅ Artículos enviados exitosamente al ViewModel")
             
         } catch (e: Exception) {
-            // Verificar si es un aborto normal del Flow (no es un error real)
-            if (e.message?.contains("Flow was aborted") == true) {
-                Log.d("ArticuloLoteRepository", "ℹ️ Flow abortado normalmente por .first() - esto es esperado")
-            } else {
-                Log.e("ArticuloLoteRepository", "💥 ERROR CRÍTICO en consulta Oracle: ${e.message}", e)
-                Log.e("ArticuloLoteRepository", "💥 Stack trace completo:", e)
+            // Verificar si el Flow fue cancelado
+            if (e is kotlinx.coroutines.CancellationException) {
+                Log.d("ArticuloLoteRepository", "🔄 Flow cancelado - operación interrumpida")
+                return@flow
             }
-            // ❌ NO emitir en catch - esto viola la transparencia del Flow
-            // Los errores se manejan en el ViewModel
-        } finally {
-            // Cerrar recursos
-            Log.d("ArticuloLoteRepository", "🧹 Cerrando recursos de base de datos...")
-            try {
-                resultSet?.close()
-                statement?.close()
-                connection?.close()
-                Log.d("ArticuloLoteRepository", "✅ Recursos cerrados exitosamente")
-            } catch (e: Exception) {
-                Log.e("ArticuloLoteRepository", "❌ Error al cerrar recursos: ${e.message}")
-            }
+            Log.e("ArticuloLoteRepository", "❌ ERROR GENERAL en getArticulosLotes API: ${e.message}")
+            Log.e("ArticuloLoteRepository", "Stack trace: ${e.stackTraceToString()}")
+            emit(emptyList())
         }
     }
     
     /**
-     * Inserta la cabecera del inventario en Oracle y retorna el ID generado
+     * Convierte un ArticuloClasificacionApi a ArticuloLote
      */
-    suspend fun insertarCabeceraInventario(
-        sucursal: Int,
-        deposito: Int,
-        area: Int,
-        departamento: Int,
-        seccion: Int,
-        familia: String?,
-        subgruposSeleccionados: List<Pair<Int, Int>>,
-        isFamiliaTodos: Boolean,
-        userdb: String,
-        inventarioVisible: Boolean
-    ): Int {
-        var connection: java.sql.Connection? = null
-        var statement: PreparedStatement? = null
-        var resultSet: ResultSet? = null
+    private fun convertirArticuloApiToArticuloLote(articuloApi: ArticuloClasificacionApi): ArticuloLote {
+        // Generar concatID combinando códigos
+        val concatID = "${articuloApi.artCodigo}_${articuloApi.ardeLote}_${articuloApi.ardeSuc}_${articuloApi.ardeDep}"
         
-        try {
-            Log.d("ArticuloLoteRepository", "🚀 Iniciando inserción de cabecera del inventario...")
-            
-            // Conectar a Oracle
-            connection = ConnectionOracle.getConnection(authSessionUseCase)
-            if (connection == null) {
-                throw Exception("No se pudo establecer conexión a Oracle")
-            }
-            Log.d("ArticuloLoteRepository", "✅ Conexión Oracle establecida")
-            
-            // 🔍 PRIMERO: Obtener el siguiente ID de la secuencia
-            Log.d("ArticuloLoteRepository", "🔍 Obteniendo siguiente ID de la secuencia SEQ_NRO_INV...")
-            
-            val sqlSecuencia = "SELECT SEQ_NRO_INV.NEXTVAL FROM DUAL"
-            statement = connection.prepareStatement(sqlSecuencia)
-            statement.setQueryTimeout(30)
-            
-            resultSet = statement.executeQuery()
-            resultSet.next()
-            val idCabecera = resultSet.getInt(1)
-            resultSet.close()
-            statement.close()
-            
-            Log.d("ArticuloLoteRepository", "✅ ID de cabecera obtenido: $idCabecera")
-            
-            // 🔄 SEGUNDO: Preparar los valores para la inserción
-            val idGrupo = if (!isFamiliaTodos && subgruposSeleccionados.isNotEmpty()) {
-                subgruposSeleccionados.first().first.toString()
-            } else ""
-            
-            val idFamilia = if (!isFamiliaTodos && familia != null) familia else ""
-            
-            val gruposParcial = if (!isFamiliaTodos && subgruposSeleccionados.isNotEmpty()) {
-                subgruposSeleccionados.map { it.first }.distinct().joinToString(",")
-            } else ""
-            
-            Log.d("ArticuloLoteRepository", "📊 Valores preparados para inserción:")
-            Log.d("ArticuloLoteRepository", "   • ID Cabecera: $idCabecera")
-            Log.d("ArticuloLoteRepository", "   • ID Grupo: '$idGrupo'")
-            Log.d("ArticuloLoteRepository", "   • ID Familia: '$idFamilia'")
-            Log.d("ArticuloLoteRepository", "   • Grupos Parcial: '$gruposParcial'")
-            
-            // 🚀 TERCERO: Insertar la cabecera
-            val sqlInsert = """
-                INSERT INTO ADCS.WEB_INVENTARIO(
-                    WINVE_SUC,                          
-                    WINVE_DEP,                       
-                    WINVE_GRUPO,                 
-                    WINVE_FEC,       
-                    WINVE_LOGIN,
-                    WINVE_TIPO_TOMA,                    
-                    WINVE_SECC,                      
-                    WINVE_AREA,                  
-                    WINVE_DPTO,      
-                    WINVE_FLIA,
-                    WINVE_IND_LOTE,
-                    WINVE_ESTADO,
-                    WINVE_ART_EST,
-                    WINVE_ART_EXIST,
-                    WINVE_CANT_TOMA,
-                    WINVE_EMPR,
-                    WINVE_NUMERO,
-                    WINVE_ESTADO_WEB,
-                    WINVE_CONSOLIDADO,
-                    WINVE_GRUPO_PARCIAL,
-                    WINVE_STOCK_VISIBLE,
-                ) VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?, 'M', ?, ?, ?, ?, 'S', 'A', 'S', 'N', '1', '1', ?, 'A', 'N', ?, ?)
-            """.trimIndent()
-            
-            Log.d("ArticuloLoteRepository", "📝 SQL INSERT preparado:")
-            Log.d("ArticuloLoteRepository", sqlInsert)
-            
-            statement = connection.prepareStatement(sqlInsert)
-            statement.setQueryTimeout(30)
-            
-            // Configurar parámetros
-            statement.setInt(1, sucursal)
-            statement.setInt(2, deposito)
-            statement.setString(3, idGrupo)
-            statement.setString(4, userdb.uppercase())
-            statement.setInt(5, seccion)
-            statement.setInt(6, area)
-            statement.setInt(7, departamento)
-            statement.setString(8, idFamilia)
-            statement.setInt(9, idCabecera)
-            statement.setString(10, gruposParcial)
-            statement.setString(11, if (inventarioVisible) "Y" else "N")
-            
-            Log.d("ArticuloLoteRepository", "🔢 Parámetros configurados:")
-            Log.d("ArticuloLoteRepository", "   • Sucursal: $sucursal")
-            Log.d("ArticuloLoteRepository", "   • Depósito: $deposito")
-            Log.d("ArticuloLoteRepository", "   • Grupo: '$idGrupo'")
-            Log.d("ArticuloLoteRepository", "   • Usuario: ${userdb.uppercase()}")
-            Log.d("ArticuloLoteRepository", "   • Sección: $seccion")
-            Log.d("ArticuloLoteRepository", "   • Área: $area")
-            Log.d("ArticuloLoteRepository", "   • Departamento: $departamento")
-            Log.d("ArticuloLoteRepository", "   • Familia: '$idFamilia'")
-            Log.d("ArticuloLoteRepository", "   • Número: $idCabecera")
-            Log.d("ArticuloLoteRepository", "   • Grupos Parcial: '$gruposParcial'")
-            Log.d("ArticuloLoteRepository", "   • Inventario Visible: ${if (inventarioVisible) "Y" else "N"}")
-            
-            // Ejecutar inserción
-            val filasInsertadas = statement.executeUpdate()
-            
-            if (filasInsertadas == 1) {
-                Log.d("ArticuloLoteRepository", "✅ Cabecera del inventario insertada exitosamente")
-                Log.d("ArticuloLoteRepository", "🎯 ID de cabecera generado: $idCabecera")
-                
-                // Confirmar transacción
-                connection!!.commit()
-                Log.d("ArticuloLoteRepository", "✅ Transacción confirmada")
-                
-                return idCabecera
-            } else {
-                throw Exception("Error al insertar cabecera: se insertaron $filasInsertadas filas en lugar de 1")
-            }
-            
-        } catch (e: Exception) {
-            Log.e("ArticuloLoteRepository", "💥 ERROR al insertar cabecera del inventario: ${e.message}", e)
-            
-            // Revertir transacción en caso de error
-            try {
-                connection?.rollback()
-                Log.d("ArticuloLoteRepository", "🔄 Transacción revertida por error")
-            } catch (rollbackError: Exception) {
-                Log.e("ArticuloLoteRepository", "❌ Error al revertir transacción: ${rollbackError.message}")
-            }
-            
-            throw e
-        } finally {
-            // Cerrar recursos
-            Log.d("ArticuloLoteRepository", "🧹 Cerrando recursos de inserción...")
-            try {
-                resultSet?.close()
-                statement?.close()
-                connection?.close()
-                Log.d("ArticuloLoteRepository", "✅ Recursos de inserción cerrados exitosamente")
-            } catch (e: Exception) {
-                Log.e("ArticuloLoteRepository", "❌ Error al cerrar recursos de inserción: ${e.message}")
-            }
-        }
-    }
-    
-    /**
-     * Inserta el detalle del inventario en Oracle
-     */
-    suspend fun insertarDetalleInventario(
-        idCabecera: Int,
-        articulosSeleccionados: List<ArticuloLote>,
-        sucursal: Int,
-        deposito: Int,
-        area: Int,
-        departamento: Int,
-        seccion: Int,
-        onProgressUpdate: ((current: Int, total: Int) -> Unit)? = null
-    ): Int {
-        var connection: java.sql.Connection? = null
-        var statement: PreparedStatement? = null
-        
-        try {
-            Log.d("ArticuloLoteRepository", "🚀 Iniciando inserción de detalle del inventario...")
-            Log.d("ArticuloLoteRepository", "📊 Total de artículos a insertar: ${articulosSeleccionados.size}")
-            
-            // Conectar a Oracle
-            connection = ConnectionOracle.getConnection(authSessionUseCase)
-            if (connection == null) {
-                throw Exception("No se pudo establecer conexión a Oracle")
-            }
-            Log.d("ArticuloLoteRepository", "✅ Conexión Oracle establecida")
-            
-            // Preparar la consulta SQL para el detalle
-            val sqlInsertDetalle = """
-                INSERT INTO ADCS.WEB_INVENTARIO_DET (
-                    WINVD_NRO_INV,
-                    WINVD_ART,
-                    WINVD_SECU,
-                    WINVD_CANT_ACT,
-                    WINVD_CANT_INV,
-                    WINVD_UBIC,
-                    WINVD_CODIGO_BARRA,
-                    WINVD_CANT_PED_RECEP,
-                    WINVD_LOTE,
-                    WINVD_FEC_VTO,
-                    WINVD_LOTE_CLAVE,
-                    WINVD_UM,
-                    WINVD_AREA,
-                    WINVD_DPTO,
-                    WINVD_SECC,
-                    WINVD_FLIA,
-                    WINVD_GRUPO,
-                    WINVD_SUBGR,
-                    WINVD_INDIV,
-                    WINVD_CONSOLIDADO
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, TO_DATE(?, 'DD-MM-YYYY'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """.trimIndent()
-            
-            Log.d("ArticuloLoteRepository", "📝 SQL INSERT detalle preparado:")
-            Log.d("ArticuloLoteRepository", sqlInsertDetalle)
-            
-            statement = connection.prepareStatement(sqlInsertDetalle)
-            statement.setQueryTimeout(30)
-            
-            var secuencia = 1
-            var totalInsertados = 0
-            
-            // Insertar cada artículo con su secuencia
-            for (articulo in articulosSeleccionados) {
-                try {
-                    // Configurar parámetros para cada artículo
-                    statement.setInt(1, idCabecera)                    // WINVD_NRO_INV
-                    statement.setString(2, articulo.artCodigo)           // WINVD_ART
-                    statement.setInt(3, secuencia)                       // WINVD_SECU
-                    statement.setDouble(4, articulo.cantidad)            // WINVD_CANT_ACT
-                    statement.setString(5, "")                           // WINVD_CANT_INV (vacío)
-                    statement.setString(6, "")                           // WINVD_UBIC (vacío)
-                    statement.setString(7, "")                           // WINVD_CODIGO_BARRA (vacío)
-                    statement.setString(8, "")                           // WINVD_CANT_PED_RECEP (vacío)
-                    statement.setString(9, articulo.ardeLote)            // WINVD_LOTE
-                    
-                    // Convertir fecha de vencimiento al formato correcto
-                    val fechaVto = if (articulo.vencimiento.isNotEmpty()) {
-                        articulo.vencimiento // Formato: DD-MM-YYYY
-                    } else {
-                        "31-12-5000" // Fecha por defecto si no hay vencimiento
-                    }
-                    statement.setString(10, fechaVto)                    // WINVD_FEC_VTO
-                    
-                    statement.setString(11, "")                          // WINVD_LOTE_CLAVE (vacío)
-                    statement.setString(12, "")                          // WINVD_UM (vacío)
-                    statement.setInt(13, area)                           // WINVD_AREA
-                    statement.setInt(14, departamento)                   // WINVD_DPTO
-                    statement.setInt(15, seccion)                        // WINVD_SECC
-                    statement.setString(16, articulo.fliaCodigo)         // WINVD_FLIA
-                    statement.setInt(17, articulo.grupCodigo)            // WINVD_GRUPO
-                    statement.setInt(18, articulo.sugrCodigo)            // WINVD_SUBGR
-                    statement.setString(19, "")                          // WINVD_INDIV (vacío)
-                    statement.setString(20, "N")                         // WINVD_CONSOLIDADO
-                    
-                    // Ejecutar inserción
-                    val filasInsertadas = statement.executeUpdate()
-                    
-                    if (filasInsertadas == 1) {
-                        totalInsertados++
-                        Log.d("ArticuloLoteRepository", "✅ Artículo insertado: ${articulo.artDesc} (Secuencia: $secuencia)")
-                    } else {
-                        Log.w("ArticuloLoteRepository", "⚠️ Error al insertar artículo: ${articulo.artDesc}")
-                    }
-                    
-                    // Incrementar secuencia para el siguiente artículo
-                    secuencia++
-                    
-                    // Notificar progreso cada 10 artículos
-                    if (totalInsertados % 10 == 0) {
-                        onProgressUpdate?.invoke(totalInsertados, articulosSeleccionados.size)
-                        Log.d("ArticuloLoteRepository", "📈 Progreso detalle: $totalInsertados/${articulosSeleccionados.size} artículos insertados...")
-                    }
-                    
-                } catch (e: Exception) {
-                    Log.e("ArticuloLoteRepository", "❌ Error al insertar artículo ${articulo.artDesc}: ${e.message}", e)
-                    // Continuar con el siguiente artículo
+        // Formatear fecha de vencimiento (ISO a formato DD-MM-YYYY)
+        val fechaVencimiento = try {
+            val isoDate = articuloApi.ardeFecVtoLote
+            if (isoDate.contains("T")) {
+                // Formato ISO: 2026-03-28T04:00:00.000+00:00
+                val datePart = isoDate.split("T")[0]
+                val parts = datePart.split("-")
+                if (parts.size == 3) {
+                    "${parts[2]}-${parts[1]}-${parts[0]}"
+                } else {
+                    isoDate
                 }
+            } else {
+                isoDate
             }
-            
-            // Notificar progreso final
-            onProgressUpdate?.invoke(totalInsertados, articulosSeleccionados.size)
-            
-            Log.d("ArticuloLoteRepository", "🎯 DETALLE DEL INVENTARIO COMPLETADO:")
-            Log.d("ArticuloLoteRepository", "   • Total de artículos procesados: ${articulosSeleccionados.size}")
-            Log.d("ArticuloLoteRepository", "   • Total de artículos insertados exitosamente: $totalInsertados")
-            Log.d("ArticuloLoteRepository", "   • Secuencia final: ${secuencia - 1}")
-            
-            // Confirmar transacción
-            connection!!.commit()
-            Log.d("ArticuloLoteRepository", "✅ Transacción de detalle confirmada")
-            
-            return totalInsertados
-            
         } catch (e: Exception) {
-            Log.e("ArticuloLoteRepository", "💥 ERROR al insertar detalle del inventario: ${e.message}", e)
-            
-            // Revertir transacción en caso de error
-            try {
-                connection?.rollback()
-                Log.d("ArticuloLoteRepository", "🔄 Transacción de detalle revertida por error")
-            } catch (rollbackError: Exception) {
-                Log.e("ArticuloLoteRepository", "❌ Error al revertir transacción de detalle: ${rollbackError.message}")
-            }
-            
-            throw e
-        } finally {
-            // Cerrar recursos
-            Log.d("ArticuloLoteRepository", "🧹 Cerrando recursos de detalle...")
-            try {
-                statement?.close()
-                connection?.close()
-                Log.d("ArticuloLoteRepository", "✅ Recursos de detalle cerrados exitosamente")
-            } catch (e: Exception) {
-                Log.e("ArticuloLoteRepository", "❌ Error al cerrar recursos de detalle: ${e.message}")
-            }
-        }
-    }
-    
-    /**
-     * Inserta la cabecera y detalle del inventario en una sola transacción
-     * Garantiza integridad de datos: si falla el detalle, se revierte la cabecera
-     */
-    suspend fun insertarCabeceraYDetalleInventario(
-        sucursal: Int,
-        deposito: Int,
-        area: Int,
-        departamento: Int,
-        seccion: Int,
-        familia: String?,
-        subgruposSeleccionados: List<Pair<Int, Int>>,
-        isFamiliaTodos: Boolean,
-        userdb: String,
-        inventarioVisible: Boolean,
-        articulosSeleccionados: List<ArticuloLote>,
-        tipoToma: String = "M", // "M" = Manual, "C" = Criterio
-        onProgressUpdate: ((current: Int, total: Int) -> Unit)? = null
-    ): Pair<Int, Int> {
-        var connection: java.sql.Connection? = null
-        var statement: PreparedStatement? = null
-        var resultSet: ResultSet? = null
-        
-        try {
-            Log.d("ArticuloLoteRepository", "🚀 Iniciando inserción de cabecera y detalle en transacción única...")
-            
-            // Conectar a Oracle
-            connection = ConnectionOracle.getConnection(authSessionUseCase)
-            if (connection == null) {
-                throw Exception("No se pudo establecer conexión a Oracle")
-            }
-            
-            // Desactivar auto-commit para manejar transacciones manualmente
-            connection.autoCommit = false
-            Log.d("ArticuloLoteRepository", "✅ Conexión Oracle establecida con transacción manual")
-            
-            // 🔍 PRIMERO: Obtener el siguiente ID de la secuencia
-            Log.d("ArticuloLoteRepository", "🔍 Obteniendo siguiente ID de la secuencia SEQ_NRO_INV...")
-            
-            val sqlSecuencia = "SELECT SEQ_NRO_INV.NEXTVAL FROM DUAL"
-            statement = connection.prepareStatement(sqlSecuencia)
-            statement.setQueryTimeout(30)
-            
-            resultSet = statement.executeQuery()
-            resultSet.next()
-            val idCabecera = resultSet.getInt(1)
-            resultSet.close()
-            statement.close()
-            
-            Log.d("ArticuloLoteRepository", "✅ ID de cabecera obtenido: $idCabecera")
-            
-            // 🔄 SEGUNDO: Preparar los valores para la inserción de cabecera
-            val idGrupo = if (!isFamiliaTodos && subgruposSeleccionados.isNotEmpty()) {
-                subgruposSeleccionados.first().first.toString()
-            } else ""
-            
-            val idFamilia = if (!isFamiliaTodos && familia != null) familia else ""
-            
-            val gruposParcial = if (!isFamiliaTodos && subgruposSeleccionados.isNotEmpty()) {
-                subgruposSeleccionados.map { it.first }.distinct().joinToString(",")
-            } else ""
-            
-            Log.d("ArticuloLoteRepository", "📊 Valores preparados para inserción de cabecera:")
-            Log.d("ArticuloLoteRepository", "   • ID Cabecera: $idCabecera")
-            Log.d("ArticuloLoteRepository", "   • ID Grupo: '$idGrupo'")
-            Log.d("ArticuloLoteRepository", "   • ID Familia: '$idFamilia'")
-            Log.d("ArticuloLoteRepository", "   • Grupos Parcial: '$gruposParcial'")
-            
-            // 🚀 TERCERO: Insertar la cabecera
-            val sqlInsertCabecera = """
-                INSERT INTO ADCS.WEB_INVENTARIO(
-                    WINVE_SUC,                          
-                    WINVE_DEP,                       
-                    WINVE_GRUPO,                 
-                    WINVE_FEC,       
-                    WINVE_LOGIN,
-                    WINVE_TIPO_TOMA,                    
-                    WINVE_SECC,                      
-                    WINVE_AREA,                  
-                    WINVE_DPTO,      
-                    WINVE_FLIA,
-                    WINVE_IND_LOTE,
-                    WINVE_ESTADO,
-                    WINVE_ART_EST,
-                    WINVE_ART_EXIST,
-                    WINVE_CANT_TOMA,
-                    WINVE_EMPR,
-                    WINVE_NUMERO,
-                    WINVE_ESTADO_WEB,
-                    WINVE_CONSOLIDADO,
-                    WINVE_GRUPO_PARCIAL,
-                    WINVE_STOCK_VISIBLE
-                ) VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?, ?, 'S', 'A', 'S', 'N', '1', '1', ?, 'A', 'N', ?, ?)
-            """.trimIndent()
-            
-            Log.d("ArticuloLoteRepository", "📝 SQL INSERT cabecera preparado:")
-            Log.d("ArticuloLoteRepository", sqlInsertCabecera)
-            
-            statement = connection.prepareStatement(sqlInsertCabecera)
-            statement.setQueryTimeout(30)
-            
-            // Configurar parámetros de cabecera
-            statement.setInt(1, sucursal)
-            statement.setInt(2, deposito)
-            statement.setString(3, idGrupo)
-            statement.setString(4, userdb.uppercase())
-            statement.setString(5, tipoToma) // ✅ Tipo de toma (M=Manual, C=Criterio)
-            statement.setInt(6, seccion)
-            statement.setInt(7, area)
-            statement.setInt(8, departamento)
-            statement.setString(9, idFamilia)
-            statement.setInt(10, idCabecera)
-            statement.setString(11, gruposParcial)
-            statement.setString(12, if (inventarioVisible) "Y" else "N")
-            
-            Log.d("ArticuloLoteRepository", "🔢 Parámetros de cabecera configurados:")
-            Log.d("ArticuloLoteRepository", "   • Sucursal: $sucursal")
-            Log.d("ArticuloLoteRepository", "   • Depósito: $deposito")
-            Log.d("ArticuloLoteRepository", "   • Grupo: '$idGrupo'")
-            Log.d("ArticuloLoteRepository", "   • Usuario: ${userdb.uppercase()}")
-            Log.d("ArticuloLoteRepository", "   • Tipo de Toma: $tipoToma")
-            Log.d("ArticuloLoteRepository", "   • Sección: $seccion")
-            Log.d("ArticuloLoteRepository", "   • Área: $area")
-            Log.d("ArticuloLoteRepository", "   • Departamento: $departamento")
-            Log.d("ArticuloLoteRepository", "   • Familia: '$idFamilia'")
-            Log.d("ArticuloLoteRepository", "   • Número: $idCabecera")
-            Log.d("ArticuloLoteRepository", "   • Grupos Parcial: '$gruposParcial'")
-            Log.d("ArticuloLoteRepository", "   • Inventario Visible: ${if (inventarioVisible) "Y" else "N"}")
-            
-            // Ejecutar inserción de cabecera
-            val filasInsertadasCabecera = statement.executeUpdate()
-            
-            if (filasInsertadasCabecera != 1) {
-                throw Exception("Error al insertar cabecera: se insertaron $filasInsertadasCabecera filas en lugar de 1")
-            }
-            
-            Log.d("ArticuloLoteRepository", "✅ Cabecera del inventario insertada exitosamente")
-            Log.d("ArticuloLoteRepository", "🎯 ID de cabecera generado: $idCabecera")
-            
-            // 🔄 CUARTO: Insertar el detalle
-            Log.d("ArticuloLoteRepository", "🚀 Iniciando inserción de detalle del inventario...")
-            Log.d("ArticuloLoteRepository", "📊 Total de artículos a insertar: ${articulosSeleccionados.size}")
-            
-            // Preparar la consulta SQL para el detalle
-            val sqlInsertDetalle = """
-                INSERT INTO ADCS.WEB_INVENTARIO_DET (
-                    WINVD_NRO_INV,
-                    WINVD_ART,
-                    WINVD_SECU,
-                    WINVD_CANT_ACT,
-                    WINVD_CANT_INV,
-                    WINVD_UBIC,
-                    WINVD_CODIGO_BARRA,
-                    WINVD_CANT_PED_RECEP,
-                    WINVD_LOTE,
-                    WINVD_FEC_VTO,
-                    WINVD_LOTE_CLAVE,
-                    WINVD_UM,
-                    WINVD_AREA,
-                    WINVD_DPTO,
-                    WINVD_SECC,
-                    WINVD_FLIA,
-                    WINVD_GRUPO,
-                    WINVD_SUBGR,
-                    WINVD_INDIV,
-                    WINVD_CONSOLIDADO
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, TO_DATE(?, 'DD-MM-YYYY'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """.trimIndent()
-            
-            Log.d("ArticuloLoteRepository", "📝 SQL INSERT detalle preparado:")
-            Log.d("ArticuloLoteRepository", sqlInsertDetalle)
-            
-            statement = connection.prepareStatement(sqlInsertDetalle)
-            statement.setQueryTimeout(30)
-            
-            var secuencia = 1
-            var totalInsertados = 0
-            
-            // Insertar cada artículo con su secuencia
-            for (articulo in articulosSeleccionados) {
-                try {
-                    // Configurar parámetros para cada artículo
-                    statement.setInt(1, idCabecera)                    // WINVD_NRO_INV
-                    statement.setString(2, articulo.artCodigo)           // WINVD_ART
-                    statement.setInt(3, secuencia)                       // WINVD_SECU
-                    statement.setDouble(4, articulo.cantidad)            // WINVD_CANT_ACT
-                    statement.setString(5, "")                           // WINVD_CANT_INV (vacío)
-                    statement.setString(6, "")                           // WINVD_UBIC (vacío)
-                    statement.setString(7, "")                           // WINVD_CODIGO_BARRA (vacío)
-                    statement.setString(8, "")                           // WINVD_CANT_PED_RECEP (vacío)
-                    statement.setString(9, articulo.ardeLote)            // WINVD_LOTE
-                    
-                    // Convertir fecha de vencimiento al formato correcto
-                    val fechaVto = if (articulo.vencimiento.isNotEmpty()) {
-                        articulo.vencimiento // Formato: DD-MM-YYYY
-                    } else {
-                        "31-12-5000" // Fecha por defecto si no hay vencimiento
-                    }
-                    statement.setString(10, fechaVto)                    // WINVD_FEC_VTO
-                    
-                    statement.setString(11, "")                          // WINVD_LOTE_CLAVE (vacío)
-                    statement.setString(12, "")                          // WINVD_UM (vacío)
-                    statement.setInt(13, area)                           // WINVD_AREA
-                    statement.setInt(14, departamento)                   // WINVD_DPTO
-                    statement.setInt(15, seccion)                        // WINVD_SECC
-                    statement.setString(16, articulo.fliaCodigo)         // WINVD_FLIA
-                    statement.setInt(17, articulo.grupCodigo)            // WINVD_GRUPO
-                    statement.setInt(18, articulo.sugrCodigo)            // WINVD_SUBGR
-                    statement.setString(19, "")                          // WINVD_INDIV (vacío)
-                    statement.setString(20, "N")                         // WINVD_CONSOLIDADO
-                    
-                    // Ejecutar inserción
-                    val filasInsertadas = statement.executeUpdate()
-                    
-                    if (filasInsertadas == 1) {
-                        totalInsertados++
-                        Log.d("ArticuloLoteRepository", "✅ Artículo insertado: ${articulo.artDesc} (Secuencia: $secuencia)")
-                    } else {
-                        Log.w("ArticuloLoteRepository", "⚠️ Error al insertar artículo: ${articulo.artDesc}")
-                    }
-                    
-                    // Incrementar secuencia para el siguiente artículo
-                    secuencia++
-                    
-                    // Notificar progreso cada 10 artículos
-                    if (totalInsertados % 10 == 0) {
-                        onProgressUpdate?.invoke(totalInsertados, articulosSeleccionados.size)
-                        Log.d("ArticuloLoteRepository", "📈 Progreso detalle: $totalInsertados/${articulosSeleccionados.size} artículos insertados...")
-                    }
-                    
-                } catch (e: Exception) {
-                    Log.e("ArticuloLoteRepository", "❌ Error al insertar artículo ${articulo.artDesc}: ${e.message}", e)
-                    // Continuar con el siguiente artículo
-                }
-            }
-            
-            // Notificar progreso final
-            onProgressUpdate?.invoke(totalInsertados, articulosSeleccionados.size)
-            
-            Log.d("ArticuloLoteRepository", "🎯 DETALLE DEL INVENTARIO COMPLETADO:")
-            Log.d("ArticuloLoteRepository", "📊 Total de artículos procesados: ${articulosSeleccionados.size}")
-            Log.d("ArticuloLoteRepository", "📊 Total de artículos insertados exitosamente: $totalInsertados")
-            Log.d("ArticuloLoteRepository", "📊 Secuencia final: ${secuencia - 1}")
-            
-            // ✅ CONFIRMAR TRANSACCIÓN COMPLETA
-            connection.commit()
-            Log.d("ArticuloLoteRepository", "✅ TRANSACCIÓN COMPLETA CONFIRMADA (Cabecera + Detalle)")
-            
-            return Pair(idCabecera, totalInsertados)
-            
-        } catch (e: Exception) {
-            Log.e("ArticuloLoteRepository", "💥 ERROR en transacción completa: ${e.message}", e)
-            
-            // 🔄 REVERTIR TRANSACCIÓN COMPLETA en caso de error
-            try {
-                connection?.rollback()
-                Log.d("ArticuloLoteRepository", "🔄 TRANSACCIÓN COMPLETA REVERTIDA por error")
-            } catch (rollbackError: Exception) {
-                Log.e("ArticuloLoteRepository", "❌ Error al revertir transacción completa: ${rollbackError.message}")
-            }
-            
-            throw e
-        } finally {
-            // Cerrar recursos
-            Log.d("ArticuloLoteRepository", "🧹 Cerrando recursos de transacción completa...")
-            try {
-                resultSet?.close()
-                statement?.close()
-                connection?.close()
-                Log.d("ArticuloLoteRepository", "✅ Recursos de transacción completa cerrados exitosamente")
-            } catch (e: Exception) {
-                Log.e("ArticuloLoteRepository", "❌ Error al cerrar recursos de transacción completa: ${e.message}")
-            }
-        }
-    }
-    
-    /**
-     * Consulta todos los grupos disponibles para una familia específica
-     */
-    private fun consultarTodosLosGrupos(
-        connection: java.sql.Connection,
-        area: Int,
-        departamento: Int,
-        seccion: Int,
-        familia: Int
-    ): List<Int> {
-        var statement: PreparedStatement? = null
-        var resultSet: ResultSet? = null
-        val grupos = mutableListOf<Int>()
-        
-        try {
-            Log.d("ArticuloLoteRepository", "🔍 Consultando todos los grupos para familia: $familia")
-            
-            val sql = """
-                SELECT DISTINCT grup_codigo 
-                FROM grupo 
-                WHERE grup_area = ? 
-                AND grup_dpto = ? 
-                AND grup_seccion = ? 
-                AND grup_familia = ?
-                ORDER BY grup_codigo
-            """.trimIndent()
-            
-            statement = connection.prepareStatement(sql)
-            statement.setInt(1, area)
-            statement.setInt(2, departamento)
-            statement.setInt(3, seccion)
-            statement.setInt(4, familia)
-            
-            resultSet = statement.executeQuery()
-            
-            while (resultSet.next()) {
-                grupos.add(resultSet.getInt("grup_codigo"))
-            }
-            
-            Log.d("ArticuloLoteRepository", "✅ Grupos encontrados: ${grupos.size} - $grupos")
-            
-        } catch (e: Exception) {
-            Log.e("ArticuloLoteRepository", "❌ Error consultando grupos: ${e.message}")
-        } finally {
-            try {
-                resultSet?.close()
-                statement?.close()
-            } catch (e: Exception) {
-                Log.e("ArticuloLoteRepository", "Error cerrando recursos de consulta de grupos: ${e.message}")
-            }
+            articuloApi.ardeFecVtoLote
         }
         
-        return grupos
+        return ArticuloLote(
+            concatID = concatID,
+            cantidad = articuloApi.ardeCantAct,
+            vencimiento = fechaVencimiento,
+            fliaCodigo = articuloApi.fliaCodigo.toString(),
+            grupCodigo = articuloApi.grupCodigo,
+            grupDesc = articuloApi.grupDesc,
+            fliaDesc = articuloApi.fliaDesc,
+            artDesc = articuloApi.artDesc,
+            ardeLote = articuloApi.ardeLote,
+            artCodigo = articuloApi.artCodigo.toString(),
+            ardeFecVtoLote = fechaVencimiento,
+            sugrCodigo = articuloApi.sugrCodigo,
+            sugrDesc = articuloApi.sugrDesc
+        )
     }
 }

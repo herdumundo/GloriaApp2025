@@ -4,18 +4,19 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gloria.data.entity.LoggedUser
 import com.gloria.domain.model.Sucursal
-import com.gloria.domain.usecase.auth.LoginUseCase
-import com.gloria.domain.usecase.auth.LogoutUseCase
+ import com.gloria.domain.usecase.auth.LogoutUseCase
 import com.gloria.domain.usecase.GetSucursalesUseCase
 import com.gloria.domain.usecase.AuthSessionUseCase
-import com.gloria.repository.AuthResult
-import com.gloria.repository.SucursalResult
+import com.gloria.repository.SincronizacionCompletaRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import android.util.Log
+import com.gloria.domain.usecase.permission.LoginWithPermissionSyncUseCase
+import com.gloria.repository.AuthResult
+import com.gloria.repository.SucursalResult
 import javax.inject.Inject
 
 data class AuthState(
@@ -41,10 +42,11 @@ sealed class AuthEvent {
 
 @HiltViewModel
 class AuthViewModel @Inject constructor(
-    private val loginUseCase: LoginUseCase,
+    private val loginWithPermissionSyncUseCase: LoginWithPermissionSyncUseCase,
     private val logoutUseCase: LogoutUseCase,
     private val getSucursalesUseCase: GetSucursalesUseCase,
-    private val authSessionUseCase: AuthSessionUseCase
+    private val authSessionUseCase: AuthSessionUseCase,
+    private val sincronizacionCompletaRepository: SincronizacionCompletaRepository
 ) : ViewModel() {
     
       val _state = MutableStateFlow(AuthState())
@@ -120,8 +122,8 @@ class AuthViewModel @Inject constructor(
                 return@launch
             }
             
-            // Usar el caso de uso para autenticar (es suspend)
-            when (val result = loginUseCase(username, password)) {
+            // Usar el caso de uso para autenticar con sincronización de permisos
+            when (val result = loginWithPermissionSyncUseCase(username, password)) {
                 is AuthResult.Success -> {
                     Log.d("AuthViewModel", "Login exitoso para: $username, obteniendo sucursales")
                     // NO guardar la sesión aquí - se guardará cuando se seleccione la sucursal
@@ -172,18 +174,6 @@ class AuthViewModel @Inject constructor(
                         errorMessage = result.message
                     )
                 }
-                is SucursalResult.NetworkError -> {
-                    _state.value = _state.value.copy(
-                        isLoading = false,
-                        errorMessage = result.message
-                    )
-                }
-                is SucursalResult.InvalidCredentials -> {
-                    _state.value = _state.value.copy(
-                        isLoading = false,
-                        errorMessage = result.message
-                    )
-                }
             }
         }
     }
@@ -208,6 +198,28 @@ class AuthViewModel @Inject constructor(
                 sucursalId = sucursal.id,
                 sucursalNombre = sucursal.descripcion
             )
+            
+            // Sincronizar datos maestros después de seleccionar sucursal
+            Log.d("AuthViewModel", "Sincronizando datos maestros después de seleccionar sucursal...")
+            try {
+                val syncResult = sincronizacionCompletaRepository.sincronizarTodasLasTablas(
+                    onProgress = { message, current, total ->
+                        Log.d("AuthViewModel", "Sincronización: $message ($current/$total)")
+                    },
+                    userdb = username,
+                    passdb = password
+                )
+                
+                if (syncResult.isSuccess) {
+                    Log.d("AuthViewModel", "✅ Datos maestros sincronizados exitosamente")
+                } else {
+                    Log.w("AuthViewModel", "⚠️ Error al sincronizar datos maestros: ${syncResult.exceptionOrNull()?.message}")
+                    // No fallar el login si hay error en sincronización - el usuario puede usar la app
+                }
+            } catch (e: Exception) {
+                Log.w("AuthViewModel", "⚠️ Error inesperado al sincronizar datos maestros: ${e.message}")
+                // No fallar el login si hay error en sincronización - el usuario puede usar la app
+            }
             
             _state.value = _state.value.copy(
                 selectedSucursal = sucursal,

@@ -7,7 +7,7 @@ import javax.inject.Inject
 
 class InsertarCabeceraInventarioUseCase @Inject constructor(
     private val loggedUserRepository: LoggedUserRepository,
-    private val authSessionUseCase: AuthSessionUseCase
+    private val articuloLoteRepository: ArticuloLoteRepository
 ) {
     suspend operator fun invoke(
         sucursal: Int,
@@ -21,18 +21,8 @@ class InsertarCabeceraInventarioUseCase @Inject constructor(
         userdb: String,
         inventarioVisible: Boolean
     ): Int {
-        val articuloLoteRepository = ArticuloLoteRepository(authSessionUseCase)
-        return articuloLoteRepository.insertarCabeceraInventario(
-            sucursal = sucursal,
-            deposito = deposito,
-            area = area,
-            departamento = departamento,
-            seccion = seccion,
-            familia = familia,
-            subgruposSeleccionados = subgruposSeleccionados,
-            isFamiliaTodos = isFamiliaTodos,
-            userdb = userdb,
-            inventarioVisible = inventarioVisible
-        )
+        // TODO: Este método necesita ser implementado o refactorizado
+        // El ArticuloLoteRepository actual solo maneja consultas API, no inserción de cabeceras
+        throw NotImplementedError("El método insertarCabeceraInventario no está implementado en el nuevo ArticuloLoteRepository basado en API")
     }
 }

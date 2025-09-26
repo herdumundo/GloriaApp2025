@@ -283,7 +283,7 @@ fun MainMenuScreen(
                     successTitle = "¡Sincronización Exitosa!",
                     
                     // Mensajes
-                    message = if (syncError != null) syncError!! else "Se están sincronizando los datos maestros desde Oracle",
+                    message = if (syncError != null) syncError!! else "Se están sincronizando los datos maestros",
                     loadingMessage = syncState.masterDataProgressMessage,
                     successMainMessage = "Datos maestros actualizados",
                     

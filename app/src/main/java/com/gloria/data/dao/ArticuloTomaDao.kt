@@ -1,7 +1,7 @@
 package com.gloria.data.dao
 
 import com.gloria.data.model.ArticuloToma
-import com.gloria.data.repository.DetalleInventarioExportar
+import com.gloria.domain.usecase.exportacion.DetalleInventarioExportar
 import com.gloria.domain.usecase.exportacion.InventarioPendienteExportar
 
 interface ArticuloTomaDao {

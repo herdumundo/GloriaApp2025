@@ -551,7 +551,7 @@ fun SyncDialog(
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = "Se están sincronizando los datos maestros desde Oracle",
+                    text = "Se están sincronizando los datos maestros",
                     fontSize = 14.sp,
                     textAlign = TextAlign.Center,
                     color = Color(0xFF888888)

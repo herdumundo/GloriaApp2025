@@ -1451,7 +1451,7 @@ class TomaManualViewModel @Inject constructor(
                     // Consultar artículos con lotes desde Oracle en hilo de background
                     val articulosLotes = withContext(Dispatchers.IO) {
                         try {
-                            _uiState.value = _uiState.value.copy(loadingMessage = "Ejecutando consulta Oracle...")
+                            _uiState.value = _uiState.value.copy(loadingMessage = "Obteniendo artículos...")
                             android.util.Log.d("TomaManualViewModel", "Ejecutando consulta Oracle en hilo de background...")
                             
                             android.util.Log.d("TomaManualViewModel", "🔄 Llamando al repositorio...")
@@ -1543,7 +1543,7 @@ class TomaManualViewModel @Inject constructor(
                 // Consultar artículos con lotes desde Oracle en hilo de background
                 val articulosLotes = withContext(Dispatchers.IO) {
                     try {
-                        _uiState.value = _uiState.value.copy(loadingMessage = "Ejecutando consulta Oracle...")
+                        _uiState.value = _uiState.value.copy(loadingMessage = "Ejecutando consulta...")
                         android.util.Log.d("TomaManualViewModel", "Ejecutando consulta Oracle para familia específica...")
                         
                         val resultado = getArticulosLotesUseCase(
@@ -1727,7 +1727,7 @@ class TomaManualViewModel @Inject constructor(
                     loadingProgress = 10f
                 )
                 
-                val (idCabecera, totalArticulosInsertados) = withContext(Dispatchers.IO) {
+                val result = withContext(Dispatchers.IO) {
                     try {
                         insertarCabeceraYDetalleInventarioUseCase(
                             sucursal = sucursal,
@@ -1753,6 +1753,14 @@ class TomaManualViewModel @Inject constructor(
                         throw e
                     }
                 }
+                
+                val (idCabecera, totalArticulosInsertados) = result.fold(
+                    onSuccess = { pair -> pair },
+                    onFailure = { error -> 
+                        android.util.Log.e("TomaManualViewModel", "❌ Error en inserción: ${error.message}")
+                        throw error
+                    }
+                )
                 
                 android.util.Log.d("TomaManualViewModel", "✅ TRANSACCIÓN ÚNICA COMPLETADA EXITOSAMENTE")
                 android.util.Log.d("TomaManualViewModel", "🎯 ID de cabecera generado: $idCabecera")

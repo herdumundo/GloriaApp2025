@@ -360,7 +360,7 @@ interface InventarioDetalleDao {
     /**
      * Inserta múltiples inventarios detalle
      */
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertInventariosDetalle(inventariosDetalle: List<InventarioDetalle>): List<Long>
     
     /**
@@ -402,7 +402,7 @@ interface InventarioDetalleDao {
     /**
      * Elimina todos los inventarios detalle
      */
-    @Query("DELETE FROM STKW002INV")
+    @Query("DELETE FROM STKW002INV WHERE estado in ('A','C')")
     suspend fun deleteAllInventariosDetalle()
     
     /**

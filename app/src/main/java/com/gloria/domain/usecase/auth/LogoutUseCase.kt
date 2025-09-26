@@ -1,7 +1,6 @@
 package com.gloria.domain.usecase.auth
 
 import com.gloria.data.repository.LoggedUserRepository
-import com.gloria.repository.AuthRepository
 import javax.inject.Inject
 
 /**
@@ -16,8 +15,8 @@ class LogoutUseCase @Inject constructor(
      */
     suspend operator fun invoke() {
         try {
-            val authRepository = AuthRepository(loggedUserRepository)
-            authRepository.logout()
+            // Solo necesitamos limpiar la sesión local, no hacer llamadas a API
+            loggedUserRepository.clearLoggedUsers()
         } catch (e: Exception) {
             // Log del error si es necesario
         }

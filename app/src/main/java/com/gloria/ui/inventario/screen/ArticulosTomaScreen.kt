@@ -87,7 +87,7 @@ fun ArticulosTomaScreen(
                                 
                                 // Texto descriptivo
                                 Text(
-                                    text = "Ejecutando consulta Oracle...",
+                                    text = "Ejecutando consulta ...",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurface,
                                     textAlign = androidx.compose.ui.text.style.TextAlign.Center
