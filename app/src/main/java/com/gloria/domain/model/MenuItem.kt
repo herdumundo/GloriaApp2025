@@ -53,7 +53,7 @@ object MenuItems {
         ),
         MenuItem(
             id = "informe_conteos_pendientes",
-            title = "Informe de Conteos Pendientes",
+            title = "Confirmacion de ",
             icon = Icons.Default.ExitToApp,
             route = "informe_conteos_pendientes"
         )

@@ -1,4 +1,4 @@
-package com.gloria.data.service
+package com.gloria.data.api
 
 import com.gloria.data.entity.api.ArticulosClasificacionResponse
 import retrofit2.http.GET
@@ -20,7 +20,8 @@ interface ArticulosClasificacionApiService {
         @Query("ardeDep") ardeDep: Int,
         @Query("areaCodigo") areaCodigo: Int,
         @Query("dptoCodigo") dptoCodigo: Int,
-        @Query("seccCodigo") seccCodigo: Int
+        @Query("seccCodigo") seccCodigo: Int,
+        @Query("token") token: String
     ): ArticulosClasificacionResponse
     
     /**
@@ -35,7 +36,8 @@ interface ArticulosClasificacionApiService {
         @Query("areaCodigo") areaCodigo: Int,
         @Query("dptoCodigo") dptoCodigo: Int,
         @Query("seccCodigo") seccCodigo: Int,
-        @Query("fliaCodigo") fliaCodigo: Int
+        @Query("fliaCodigo") fliaCodigo: Int,
+        @Query("token") token: String
     ): ArticulosClasificacionResponse
     
     /**
@@ -52,6 +54,7 @@ interface ArticulosClasificacionApiService {
         @Query("seccCodigo") seccCodigo: Int,
         @Query("fliaCodigo") fliaCodigo: Int,
         @Query("subgruposSeleccionados") subgruposSeleccionados: List<Int>,
-        @Query("gruposCodigos") gruposCodigos: List<Int>
+        @Query("gruposCodigos") gruposCodigos: List<Int>,
+        @Query("token") token: String
     ): ArticulosClasificacionResponse
 }

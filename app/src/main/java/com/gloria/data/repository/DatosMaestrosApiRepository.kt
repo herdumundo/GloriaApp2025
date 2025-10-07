@@ -1,7 +1,8 @@
 package com.gloria.data.repository
 
+import com.gloria.BuildConfig
 import com.gloria.data.entity.api.DatosMaestrosResponse
-import com.gloria.data.service.DatosMaestrosApiService
+import com.gloria.data.api.DatosMaestrosApiService
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -11,7 +12,7 @@ class DatosMaestrosApiRepository @Inject constructor(
 ) {
     suspend fun getDatosMaestros(userdb: String, passdb: String): Result<DatosMaestrosResponse> {
         return try {
-            val response = apiService.getDatosMaestros(userdb, passdb)
+            val response = apiService.getDatosMaestros(userdb, passdb,BuildConfig.TOKEN_BACKEND)
             if (response.isSuccessful && response.body() != null) {
                 val body = response.body()!!
                 if (body.success) {

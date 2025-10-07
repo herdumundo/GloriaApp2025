@@ -1,4 +1,4 @@
-package com.gloria.data.service
+package com.gloria.data.api
 
 import com.gloria.data.entity.api.ProductosInventarioPorNumeroResponse
 import retrofit2.Response
@@ -10,7 +10,8 @@ interface ProductosInventarioPorNumeroApiService {
     suspend fun getProductos(
         @Query("userdb") userdb: String,
         @Query("passdb") passdb: String,
-        @Query("winveNumero") winveNumero: Int
+        @Query("winveNumero") winveNumero: Int,
+        @Query("token") token: String
     ): Response<ProductosInventarioPorNumeroResponse>
 }
 

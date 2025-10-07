@@ -864,7 +864,7 @@ private fun getScreenTitle(selectedMenuItem: String, selectedTipoToma: TipoToma?
         "exportar_parcial" -> "Exportar Inventario Parcial"
         "sincronizar_datos" -> "Sincronizar Datos"
         "informe_conteos_pendientes" -> "Informe de Conteos Pendientes"
-        "articulos_toma" -> "Artículos de Toma"
+         "articulos_toma" -> "Artículos de Toma"
         "menu_principal" -> "Sistema de Inventario"
         else -> "Sistema de Inventario"
     }

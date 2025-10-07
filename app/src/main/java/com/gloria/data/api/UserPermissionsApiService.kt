@@ -1,4 +1,4 @@
-package com.gloria.data.service
+package com.gloria.data.api
 
 import com.gloria.data.entity.api.UserPermissionsResponse
 import retrofit2.Response
@@ -10,6 +10,7 @@ interface UserPermissionsApiService {
     suspend fun getUserPermissions(
         @Query("username") username: String,
         @Query("userdb") userdb: String,
-        @Query("passdb") passdb: String
+        @Query("passdb") passdb: String,
+        @Query("token") token: String
     ): Response<UserPermissionsResponse>
 }

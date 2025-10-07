@@ -35,13 +35,16 @@ class InventarioSincronizacionRepository @Inject constructor(
         try {
             Log.d("PROCESO_LOGIN", "=== INICIANDO sincronizarInventarios ===")
             Log.d("PROCESO_LOGIN", "🔄 Ejecutando en hilo: ${Thread.currentThread().name}")
-            
+
             // 🚀 Iniciando sincronización
             onProgressUpdate("🔄 Iniciando sincronización de inventarios...", 0, 0)
             
             // 📊 Obtener inventarios desde API
             val inventariosApi = obtenerInventariosDesdeApi(onProgressUpdate)
-            
+            // 🗑️ Limpiar inventarios existentes
+        //    onProgressUpdate("🗑️ Limpiando inventarios existentes...", 0, inventariosConvertidos.size)
+            inventarioDetalleDao.deleteAllInventariosDetalle()
+
             if (inventariosApi.isEmpty()) {
                 onProgressUpdate("✅ No se encontraron inventarios para sincronizar", 0, 0)
                 emit(Result.success(0))
@@ -55,10 +58,7 @@ class InventarioSincronizacionRepository @Inject constructor(
             
             Log.d("PROCESO_LOGIN", "🔄 Inventarios convertidos: ${inventariosConvertidos.size}")
             
-            // 🗑️ Limpiar inventarios existentes
-            onProgressUpdate("🗑️ Limpiando inventarios existentes...", 0, inventariosConvertidos.size)
-            inventarioDetalleDao.deleteAllInventariosDetalle()
-            
+
             // 💾 Insertar nuevos inventarios
             onProgressUpdate("💾 Insertando inventarios sincronizados...", 0, inventariosConvertidos.size)
             val inventariosDetalle = convertirInventariosToDetalle(inventariosConvertidos)

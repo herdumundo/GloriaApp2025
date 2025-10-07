@@ -1,6 +1,7 @@
 package com.gloria.data.repository
 
 import android.util.Log
+import com.gloria.BuildConfig
 import com.gloria.data.api.ConteoPendienteApi
 import com.gloria.data.model.ConteoPendienteResponse
 import kotlinx.coroutines.Dispatchers
@@ -17,15 +18,15 @@ class ConteoPendienteRepository @Inject constructor(
 ) {
     
     /**
-     * Obtiene conteos pendientes por fecha
+     * Obtiene conteos pendientes por fechaÏ
      * @param fecha Fecha en formato YYYY-MM-DD
      * @return Result con la respuesta del endpoint
      */
     suspend fun getConteosPendientesByDate(fecha: String): Result<ConteoPendienteResponse> {
         return withContext(Dispatchers.IO) {
             try {
-                // Token fijo sin vencimiento
-                val token = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIzMTUwOWQzYy0yZWZlLTQ3OTItOGYxMS02ZjEzNDRlMzBiZWYiLCJpYXQiOjE3NTg1NzExNDYsImlzcyI6Imdsb3JpYS1zeXN0ZW0ifQ._6XaXZUCCbRHQ6JJJ_bqDgRyVvs_ORwA_RIrmufqPlE"
+                // Token desde BuildConfig
+                val token = BuildConfig.TOKEN_BACKEND
                 
                 Log.d("CONTEO_PENDIENTE_LOG", "🔍 [REPOSITORY] Consultando conteos pendientes para fecha: $fecha")
                 Log.d("CONTEO_PENDIENTE_LOG", "🔍 [REPOSITORY] Usando token: ${token.take(20)}...")

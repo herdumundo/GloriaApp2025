@@ -179,26 +179,42 @@ fun ConteoInventarioScreen(
                         }
                     }
                     
-                    // Información de resultados
-                    if (uiState.searchQuery.isNotEmpty()) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Resultados: ${viewModel.getArticulosFiltradosCount()} de ${uiState.totalArticulos}",
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            
-                            TextButton(
-                                onClick = { viewModel.limpiarBusqueda() }
+                    // Información de total de artículos y resultados
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Total de artículos (siempre visible)
+                        Text(
+                            text = "Total: ${uiState.totalArticulos}",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        
+                        // Información de resultados de búsqueda (solo si hay búsqueda activa)
+                        if (uiState.searchQuery.isNotEmpty()) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "Limpiar búsqueda",
-                                    fontSize = 12.sp
+                                    text = "Encontrados: ${viewModel.getArticulosFiltradosCount()}",
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
+                                
+                                Spacer(modifier = Modifier.width(8.dp))
+                                
+                                TextButton(
+                                    onClick = { viewModel.limpiarBusqueda() },
+                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                                ) {
+                                    Text(
+                                        text = "Limpiar",
+                                        fontSize = 10.sp
+                                    )
+                                }
                             }
                         }
                     }

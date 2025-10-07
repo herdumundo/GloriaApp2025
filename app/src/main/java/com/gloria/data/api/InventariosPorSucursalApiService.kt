@@ -1,4 +1,4 @@
-package com.gloria.data.service
+package com.gloria.data.api
 
 import com.gloria.data.entity.api.InventariosPorSucursalResponse
 import retrofit2.Response
@@ -10,6 +10,7 @@ interface InventariosPorSucursalApiService {
     suspend fun getInventariosPorSucursal(
         @Query("userdb") userdb: String,
         @Query("passdb") passdb: String,
-        @Query("ardeSuc") ardeSuc: Int
+        @Query("ardeSuc") ardeSuc: Int,
+        @Query("token") token: String
     ): Response<InventariosPorSucursalResponse>
 }

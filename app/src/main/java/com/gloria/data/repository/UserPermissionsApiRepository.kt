@@ -1,7 +1,8 @@
 package com.gloria.data.repository
 
+import com.gloria.BuildConfig
 import com.gloria.data.entity.api.UserPermissionsResponse
-import com.gloria.data.service.UserPermissionsApiService
+import com.gloria.data.api.UserPermissionsApiService
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -11,11 +12,11 @@ class UserPermissionsApiRepository @Inject constructor(
 ) {
     suspend fun getUserPermissions(
         username: String, 
-        userdb: String = "invap", 
-        passdb: String = "invext2024"
+        userdb: String  ,
+        passdb: String
     ): Result<UserPermissionsResponse> {
         return try {
-            val response = apiService.getUserPermissions(username, userdb, passdb)
+            val response = apiService.getUserPermissions(username, userdb, passdb,BuildConfig.TOKEN_BACKEND)
             if (response.isSuccessful && response.body() != null) {
                 val body = response.body()!!
                 if (body.success) {

@@ -1,4 +1,4 @@
-package com.gloria.data.service
+package com.gloria.data.api
 
 import com.gloria.data.entity.api.DatosMaestrosResponse
 import retrofit2.Response
@@ -9,6 +9,7 @@ interface DatosMaestrosApiService {
     @GET("api/oracle/datos-maestros")
     suspend fun getDatosMaestros(
         @Query("userdb") userdb: String,
-        @Query("passdb") passdb: String
+        @Query("passdb") passdb: String,
+        @Query("token") token: String
     ): Response<DatosMaestrosResponse>
 }

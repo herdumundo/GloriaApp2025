@@ -1,8 +1,9 @@
 package com.gloria.data.repository
 
+import com.gloria.BuildConfig
 import com.gloria.data.entity.api.CancelarTomaRequest
 import com.gloria.data.entity.api.CancelarTomaResponse
-import com.gloria.data.service.CancelarTomaApiService
+import com.gloria.data.api.CancelarTomaApiService
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -12,7 +13,7 @@ class CancelarTomaApiRepository @Inject constructor(
 ) {
     suspend fun cancelarToma(request: CancelarTomaRequest): Result<CancelarTomaResponse> {
         return try {
-            val response = apiService.cancelarToma(request)
+            val response = apiService.cancelarToma(request,BuildConfig.TOKEN_BACKEND)
             if (response.isSuccessful && response.body() != null) {
                 Result.success(response.body()!!)
             } else {

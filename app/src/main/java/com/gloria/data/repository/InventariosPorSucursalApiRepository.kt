@@ -1,7 +1,8 @@
 package com.gloria.data.repository
 
+import com.gloria.BuildConfig
 import com.gloria.data.entity.api.InventariosPorSucursalResponse
-import com.gloria.data.service.InventariosPorSucursalApiService
+import com.gloria.data.api.InventariosPorSucursalApiService
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -15,7 +16,7 @@ class InventariosPorSucursalApiRepository @Inject constructor(
         ardeSuc: Int
     ): Result<InventariosPorSucursalResponse> {
         return try {
-            val response = apiService.getInventariosPorSucursal(userdb, passdb, ardeSuc)
+            val response = apiService.getInventariosPorSucursal(userdb, passdb, ardeSuc,BuildConfig.TOKEN_BACKEND)
             if (response.isSuccessful && response.body() != null) {
                 val body = response.body()!!
                 if (body.success) {

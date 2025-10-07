@@ -1,9 +1,10 @@
 package com.gloria.data.repository
 
 import com.gloria.data.entity.api.InsertarCabeceraYDetalleRequest
-import com.gloria.data.service.InsertarCabeceraYDetalleApiService
-import com.gloria.data.service.InsertarCabeceraYDetalleResponse
+import com.gloria.data.api.InsertarCabeceraYDetalleApiService
+import com.gloria.data.api.InsertarCabeceraYDetalleResponse
 import android.util.Log
+import com.gloria.BuildConfig
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -20,7 +21,7 @@ class InsertarCabeceraYDetalleApiRepository @Inject constructor(
             Log.d("InsertarCabeceraYDetalleApi", "📊 Cabecera: sucursal=${request.cabecera.sucursal}, deposito=${request.cabecera.deposito}")
             Log.d("InsertarCabeceraYDetalleApi", "📋 Detalles: ${request.detalle.size} elementos")
             
-            val response = apiService.insertarCabeceraYDetalle(request)
+            val response = apiService.insertarCabeceraYDetalle(request,BuildConfig.TOKEN_BACKEND)
             
             if (response.isSuccessful && response.body() != null) {
                 val body = response.body()!!

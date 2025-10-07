@@ -1,6 +1,7 @@
 package com.gloria.data.repository
 
 import android.util.Log
+import com.gloria.BuildConfig
 import com.gloria.data.api.EnviarConteoVerificacionApi
 import com.gloria.data.model.ConteoRequest
 import com.gloria.data.model.ConteoRequestResponse
@@ -35,8 +36,8 @@ class EnviarConteoRepository @Inject constructor(
                 
                 Log.d("ENVIAR_CONTEO_LOG", "🌐 Enviando conteos al endpoint...")
                 
-                // Token fijo sin vencimiento
-                val token = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIzMTUwOWQzYy0yZWZlLTQ3OTItOGYxMS02ZjEzNDRlMzBiZWYiLCJpYXQiOjE3NTg1NzExNDYsImlzcyI6Imdsb3JpYS1zeXN0ZW0ifQ._6XaXZUCCbRHQ6JJJ_bqDgRyVvs_ORwA_RIrmufqPlE"
+                // Token desde BuildConfig
+                val token = BuildConfig.TOKEN_BACKEND
                 Log.d("ENVIAR_CONTEO_LOG", "🔑 Usando token: ${token.take(20)}...")
                 
                 val response = enviarConteoVerificacionApi.enviar(conteos, token)

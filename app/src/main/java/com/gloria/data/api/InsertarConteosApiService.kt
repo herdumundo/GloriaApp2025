@@ -1,14 +1,16 @@
-package com.gloria.data.service
+package com.gloria.data.api
 
 import com.gloria.data.entity.api.InsertarConteosRequest
 import com.gloria.data.entity.api.InsertarConteosResponse
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.POST
+import retrofit2.http.Query
 
 interface InsertarConteosApiService {
     @POST("api/oracle/insertar-conteos")
     suspend fun insertarConteos(
-        @Body request: InsertarConteosRequest
+        @Body request: InsertarConteosRequest,
+        @Query("token") token: String
     ): Response<InsertarConteosResponse>
 }

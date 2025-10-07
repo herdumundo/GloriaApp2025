@@ -1,8 +1,9 @@
 package com.gloria.data.repository
 
 import com.gloria.data.entity.api.ArticulosClasificacionResponse
-import com.gloria.data.service.ArticulosClasificacionApiService
+import com.gloria.data.api.ArticulosClasificacionApiService
 import android.util.Log
+import com.gloria.BuildConfig
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -35,7 +36,8 @@ class ArticulosClasificacionApiRepository @Inject constructor(
                 ardeDep = ardeDep,
                 areaCodigo = areaCodigo,
                 dptoCodigo = dptoCodigo,
-                seccCodigo = seccCodigo
+                seccCodigo = seccCodigo,
+                BuildConfig.TOKEN_BACKEND
             )
             
             if (response.success) {
@@ -74,7 +76,8 @@ class ArticulosClasificacionApiRepository @Inject constructor(
                 areaCodigo = areaCodigo,
                 dptoCodigo = dptoCodigo,
                 seccCodigo = seccCodigo,
-                fliaCodigo = fliaCodigo
+                fliaCodigo = fliaCodigo,
+                BuildConfig.TOKEN_BACKEND
             )
             
             if (response.success) {
@@ -117,7 +120,8 @@ class ArticulosClasificacionApiRepository @Inject constructor(
                 seccCodigo = seccCodigo,
                 fliaCodigo = fliaCodigo,
                 subgruposSeleccionados = subgruposSeleccionados,
-                gruposCodigos = gruposCodigos
+                gruposCodigos = gruposCodigos,
+                token =BuildConfig.TOKEN_BACKEND
             )
             
             if (response.success) {

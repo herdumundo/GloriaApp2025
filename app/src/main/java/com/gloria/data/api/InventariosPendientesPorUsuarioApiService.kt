@@ -1,4 +1,4 @@
-package com.gloria.data.service
+package com.gloria.data.api
 
 import com.gloria.data.entity.api.InventariosPendientesPorUsuarioResponse
 import retrofit2.Response
@@ -10,7 +10,8 @@ interface InventariosPendientesPorUsuarioApiService {
     suspend fun getInventariosPendientes(
         @Query("userdb") userdb: String,
         @Query("passdb") passdb: String,
-        @Query("usuarioCreador") usuarioCreador: String
+        @Query("usuarioCreador") usuarioCreador: String,
+        @Query("token") token: String
     ): Response<InventariosPendientesPorUsuarioResponse>
 }
 

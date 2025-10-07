@@ -206,11 +206,11 @@ fun ArticulosEncontradosDialog(
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     val allSelected = filteredArticulos.isNotEmpty() && filteredArticulos.all { it in selectedArticulosLotes }
-                    
-                    // Checkbox para stock cero
+
+                    // Checkbox para marcar inventario simultaneo
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.clickable { 
+                        modifier = Modifier.clickable {
                             showZeroStock = !showZeroStock
                             // Si es toma por criterio, mantener selección automática
                             if (autoSelectAll && articulosLotes.isNotEmpty()) {
@@ -220,7 +220,36 @@ fun ArticulosEncontradosDialog(
                     ) {
                         Checkbox(
                             checked = showZeroStock,
-                            onCheckedChange = { 
+                            onCheckedChange = {
+                                showZeroStock = it
+                                // Si es toma por criterio, mantener selección automática
+                                if (autoSelectAll && articulosLotes.isNotEmpty()) {
+                                    onSelectAll(articulosLotes)
+                                }
+                            },
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Permitir toma para conteo en simultaneo",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    // Checkbox para stock cero
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.clickable {
+                            showZeroStock = !showZeroStock
+                            // Si es toma por criterio, mantener selección automática
+                            if (autoSelectAll && articulosLotes.isNotEmpty()) {
+                                onSelectAll(articulosLotes)
+                            }
+                        }
+                    ) {
+                        Checkbox(
+                            checked = showZeroStock,
+                            onCheckedChange = {
                                 showZeroStock = it
                                 // Si es toma por criterio, mantener selección automática
                                 if (autoSelectAll && articulosLotes.isNotEmpty()) {
@@ -236,7 +265,6 @@ fun ArticulosEncontradosDialog(
                             color = MaterialTheme.colorScheme.onSurface
                         )
                     }
-                    
                     // Checkbox para consolidar
                     Row(
                         verticalAlignment = Alignment.CenterVertically,

@@ -37,15 +37,16 @@ android {
 
     buildTypes {
         debug {
-           buildConfigField "String", "BASE_URL", "\"http://192.168.6.111:8081/backend-gloria/\""
-            //   buildConfigField "String", "BASE_URL", "\"http://190.128.196.166:9001/backend-gloria/\""
+           buildConfigField "String", "BASE_URL", "\"http://192.168.6.103:8081/backend-gloria/\""
+            buildConfigField "String", "TOKEN_BACKEND", "\"eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIzMTUwOWQzYy0yZWZlLTQ3OTItOGYxMS02ZjEzNDRlMzBiZWYiLCJpYXQiOjE3NTg1NzExNDYsImlzcyI6Imdsb3JpYS1zeXN0ZW0ifQ._6XaXZUCCbRHQ6JJJ_bqDgRyVvs_ORwA_RIrmufqPlE\""
 
             signingConfig signingConfigs.debug
         }
         release {
             buildConfigField "String", "BASE_URL", "\"http://190.128.196.166:9001/backend-gloria/\""
+            buildConfigField "String", "TOKEN_BACKEND", "\"eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIzMTUwOWQzYy0yZWZlLTQ3OTItOGYxMS02ZjEzNDRlMzBiZWYiLCJpYXQiOjE3NTg1NzExNDYsImlzcyI6Imdsb3JpYS1zeXN0ZW0ifQ._6XaXZUCCbRHQ6JJJ_bqDgRyVvs_ORwA_RIrmufqPlE\""
 
-            minifyEnabled false
+             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             signingConfig signingConfigs.release
             // Deshabilitar Baseline Profiles para evitar errores de instalación

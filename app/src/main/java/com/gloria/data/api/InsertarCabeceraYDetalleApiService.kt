@@ -1,15 +1,17 @@
-package com.gloria.data.service
+package com.gloria.data.api
 
 import com.gloria.data.entity.api.InsertarCabeceraYDetalleRequest
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.POST
+import retrofit2.http.Query
 
 interface InsertarCabeceraYDetalleApiService {
 
     @POST("api/oracle/insertar-cabecera-y-detalle")
     suspend fun insertarCabeceraYDetalle(
-        @Body request: InsertarCabeceraYDetalleRequest
+        @Body request: InsertarCabeceraYDetalleRequest,
+        @Query("token") token: String
     ): Response<InsertarCabeceraYDetalleResponse>
 }
 

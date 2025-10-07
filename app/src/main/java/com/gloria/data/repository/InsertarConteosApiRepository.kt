@@ -1,9 +1,10 @@
 package com.gloria.data.repository
 
 import android.util.Log
+import com.gloria.BuildConfig
 import com.gloria.data.entity.api.InsertarConteosRequest
 import com.gloria.data.entity.api.InsertarConteosResponse
-import com.gloria.data.service.InsertarConteosApiService
+import com.gloria.data.api.InsertarConteosApiService
 import com.google.gson.Gson
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -27,7 +28,7 @@ class InsertarConteosApiRepository @Inject constructor(
                 Log.w("InsertarConteosApi", "⚠️ No se pudo serializar el payload a JSON para logging: ${e.message}")
             }
             
-            val response = apiService.insertarConteos(request)
+            val response = apiService.insertarConteos(request,BuildConfig.TOKEN_BACKEND)
             
             if (response.isSuccessful && response.body() != null) {
                 val body = response.body()!!

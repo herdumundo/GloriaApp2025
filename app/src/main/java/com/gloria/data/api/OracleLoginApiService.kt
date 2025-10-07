@@ -1,4 +1,4 @@
-package com.gloria.data.service
+package com.gloria.data.api
 
 import com.gloria.data.entity.api.OracleLoginResponse
 import retrofit2.Response
@@ -9,6 +9,7 @@ interface OracleLoginApiService {
     @GET("api/oracle/login")
     suspend fun oracleLogin(
         @Query("userdb") userdb: String,
-        @Query("passdb") passdb: String
+        @Query("passdb") passdb: String,
+        @Query("token") token: String
     ): Response<OracleLoginResponse>
 }

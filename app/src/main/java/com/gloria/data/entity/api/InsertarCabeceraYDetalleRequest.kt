@@ -17,7 +17,8 @@ data class CabeceraInventario(
     val idGrupo: String,
     val gruposParcial: String,
     val inventarioVisible: Boolean,
-    val tipoToma: String
+    val tipoToma: String,
+    val tipoInventario: String  // VALOR "S" SI SERA SIMULTANEO, VALOR "I" SI SERA INDIVIDUAL
 )
 
 data class DetalleInventario(
