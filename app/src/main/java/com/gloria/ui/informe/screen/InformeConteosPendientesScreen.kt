@@ -377,6 +377,7 @@ fun DetalleInventarioDialog(
             cumpleArticulo && cumpleFamilia && cumpleGrupo && cumpleCantidad
         }
     }
+    val detallesAgrupados = remember(detallesFiltrados) { detallesFiltrados.groupBy { it.winvdArt } }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -660,7 +661,10 @@ fun DetalleInventarioDialog(
                             }
                         }
                     } else {
-                        items(detallesFiltrados) { detalle ->
+                        items(detallesAgrupados.entries.toList()) { entry ->
+                            val winvdArt = entry.key
+                            val listaDetalles = entry.value
+                            val first = listaDetalles.first()
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -672,190 +676,187 @@ fun DetalleInventarioDialog(
                                 Column(
                                     modifier = Modifier.padding(8.dp)
                                 ) {
-                                var expanded by remember { mutableStateOf(false) }
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = detalle.artDesc,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    IconButton(onClick = { expanded = !expanded }) {
-                                        Icon(
-                                            imageVector = if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
-                                            contentDescription = if (expanded) "Colapsar" else "Expandir"
-                                        )
-                                    }
-                                }
-                                
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text(
-                                        text = "Lote:",
-                                        fontWeight = FontWeight.Medium,
-                                        style = MaterialTheme.typography.bodySmall
-                                    )
-                                    Text(
-                                        text = detalle.winvdLote,
-                                        style = MaterialTheme.typography.bodySmall
-                                    )
-                                }
-                                Spacer(modifier = Modifier.height(2.dp))
-                                
-                                // Campo "Artículo" se muestra en sección expandible
-                                    
+                                    var expanded by remember { mutableStateOf(false) }
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Text(
-                                            text = "Cant. Actual:",
-                                            fontWeight = FontWeight.Medium,
-                                            style = MaterialTheme.typography.bodySmall
+                                            text = first.artDesc,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Bold
                                         )
-                                        Text(
-                                            text = "${detalle.winvdCantAct}",
-                                            style = MaterialTheme.typography.bodySmall
-                                        )
-                                    }
-                                    
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Text(
-                                            text = "Cant. Contada:",
-                                            fontWeight = FontWeight.Bold,
-                                            style = MaterialTheme.typography.bodySmall
-                                        )
-                                        val colorContada = if (detalle.winvdCantInv < detalle.winvdCantAct) {
-                                            MaterialTheme.colorScheme.error
-                                        } else if (detalle.winvdCantInv > detalle.winvdCantAct) {
-                                            Color(0xFF0D6CD2)
-                                        } else {
-                                            MaterialTheme.colorScheme.onSurface
-                                        }
-                                        val diferenciaContada = detalle.winvdCantInv - detalle.winvdCantAct
-                                        Text(
-                                            text = "${detalle.winvdCantInv}",
-                                            color = colorContada,
-                                            fontWeight = if (diferenciaContada != 0) FontWeight.SemiBold else FontWeight.Normal,
-                                            style = MaterialTheme.typography.bodySmall
-                                        )
-                                    }
-                                Divider(
-                                    thickness = 0.5.dp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                                )
-                                
-                                // Diferencia entre actual e inventario
-                                val diferencia = detalle.winvdCantInv - detalle.winvdCantAct
-                                val colorDiferencia = if (diferencia < 0) {
-                                    MaterialTheme.colorScheme.error
-                                } else if (diferencia > 0) {
-                                    Color(0xFF0AB22D)
-                                } else {
-                                    MaterialTheme.colorScheme.onSurface
-                                }
-                                val diferenciaTexto = if (diferencia > 0) "+$diferencia" else "$diferencia"
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text(
-                                        text = "Diferencia:",
-                                        fontWeight = FontWeight.Medium,
-                                        style = MaterialTheme.typography.bodySmall
-                                    )
-                                    Text(
-                                        text = diferenciaTexto,
-                                        color = colorDiferencia,
-                                        fontWeight = if (diferencia != 0) FontWeight.SemiBold else FontWeight.Normal,
-                                        style = MaterialTheme.typography.bodySmall
-                                    )
-                                }
-                                
-                                // Detalle colapsable: Artículo, Familia, Grupo, Código Barras
-                                AnimatedVisibility(
-                                    visible = expanded,
-                                    enter = expandVertically(),
-                                    exit = shrinkVertically()
-                                ) {
-                                    Column(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(top = 4.dp),
-                                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                                    ) {
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween
-                                        ) {
-                                            Text(
-                                                text = "Artículo:",
-                                                fontWeight = FontWeight.Medium,
-                                                style = MaterialTheme.typography.bodySmall
-                                            )
-                                            Text(
-                                                text = detalle.winvdArt,
-                                                style = MaterialTheme.typography.bodySmall
-                                            )
-                                        }
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween
-                                        ) {
-                                            Text(
-                                                text = "Familia:",
-                                                fontWeight = FontWeight.Medium,
-                                                style = MaterialTheme.typography.bodySmall
-                                            )
-                                            Text(
-                                                text = detalle.fliaDesc,
-                                                style = MaterialTheme.typography.bodySmall
-                                            )
-                                        }
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween
-                                        ) {
-                                            Text(
-                                                text = "Grupo:",
-                                                fontWeight = FontWeight.Medium,
-                                                style = MaterialTheme.typography.bodySmall
-                                            )
-                                            Text(
-                                                text = detalle.grupDesc,
-                                                style = MaterialTheme.typography.bodySmall
-                                            )
-                                        }
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween
-                                        ) {
-                                            Text(
-                                                text = "Código Barras:",
-                                                fontWeight = FontWeight.Medium,
-                                                style = MaterialTheme.typography.bodySmall
-                                            )
-                                            Text(
-                                                text = detalle.codBarra,
-                                                style = MaterialTheme.typography.bodySmall
+                                        IconButton(onClick = { expanded = !expanded }) {
+                                            Icon(
+                                                imageVector = if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                                                contentDescription = if (expanded) "Colapsar" else "Expandir"
                                             )
                                         }
                                     }
-                                }
-                                // Campo "Familia" se muestra en sección expandible
-                                    
-                                    // Campo "Grupo" se muestra en sección expandible
-                                    
-                                    // Campo "Código Barras" se muestra en sección expandible
+                                    listaDetalles.forEach { detalle ->
+                                        OutlinedCard(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(vertical = 4.dp),
+                                            colors = CardDefaults.outlinedCardColors(
+                                                containerColor = MaterialTheme.colorScheme.surface
+                                            )
+                                        ) {
+                                            Column(modifier = Modifier.padding(8.dp)) {
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    horizontalArrangement = Arrangement.SpaceBetween
+                                                ) {
+                                                    Text(
+                                                        text = "Lote:",
+                                                        fontWeight = FontWeight.Medium,
+                                                        style = MaterialTheme.typography.bodySmall
+                                                    )
+                                                    Text(
+                                                        text = detalle.winvdLote,
+                                                        style = MaterialTheme.typography.bodySmall
+                                                    )
+                                                }
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    horizontalArrangement = Arrangement.SpaceBetween
+                                                ) {
+                                                    Text(
+                                                        text = "Cant. Actual:",
+                                                        fontWeight = FontWeight.Medium,
+                                                        style = MaterialTheme.typography.bodySmall
+                                                    )
+                                                    Text(
+                                                        text = "${detalle.winvdCantAct}",
+                                                        style = MaterialTheme.typography.bodySmall
+                                                    )
+                                                }
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    horizontalArrangement = Arrangement.SpaceBetween
+                                                ) {
+                                                    Text(
+                                                        text = "Cant. Contada:",
+                                                        fontWeight = FontWeight.Bold,
+                                                        style = MaterialTheme.typography.bodySmall
+                                                    )
+                                                    val colorContada = if (detalle.winvdCantInv < detalle.winvdCantAct) {
+                                                        MaterialTheme.colorScheme.error
+                                                    } else if (detalle.winvdCantInv > detalle.winvdCantAct) {
+                                                        Color(0xFF0D6CD2)
+                                                    } else {
+                                                        MaterialTheme.colorScheme.onSurface
+                                                    }
+                                                    val diferenciaContada = detalle.winvdCantInv - detalle.winvdCantAct
+                                                    Text(
+                                                        text = "${detalle.winvdCantInv}",
+                                                        color = colorContada,
+                                                        fontWeight = if (diferenciaContada != 0) FontWeight.SemiBold else FontWeight.Normal,
+                                                        style = MaterialTheme.typography.bodySmall
+                                                    )
+                                                }
+                                                Divider(
+                                                    thickness = 0.5.dp,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                                )
+                                                val diferencia = detalle.winvdCantInv - detalle.winvdCantAct
+                                                val colorDiferencia = if (diferencia < 0) {
+                                                    MaterialTheme.colorScheme.error
+                                                } else if (diferencia > 0) {
+                                                    Color(0xFF0AB22D)
+                                                } else {
+                                                    MaterialTheme.colorScheme.onSurface
+                                                }
+                                                val diferenciaTexto = if (diferencia > 0) "+$diferencia" else "$diferencia"
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    horizontalArrangement = Arrangement.SpaceBetween
+                                                ) {
+                                                    Text(
+                                                        text = "Diferencia:",
+                                                        fontWeight = FontWeight.Medium,
+                                                        style = MaterialTheme.typography.bodySmall
+                                                    )
+                                                    Text(
+                                                        text = diferenciaTexto,
+                                                        color = colorDiferencia,
+                                                        fontWeight = if (diferencia != 0) FontWeight.SemiBold else FontWeight.Normal,
+                                                        style = MaterialTheme.typography.bodySmall
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                    AnimatedVisibility(
+                                        visible = expanded,
+                                        enter = expandVertically(),
+                                        exit = shrinkVertically()
+                                    ) {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(top = 4.dp),
+                                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            ) {
+                                                Text(
+                                                    text = "Artículo:",
+                                                    fontWeight = FontWeight.Medium,
+                                                    style = MaterialTheme.typography.bodySmall
+                                                )
+                                                Text(
+                                                    text = winvdArt,
+                                                    style = MaterialTheme.typography.bodySmall
+                                                )
+                                            }
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            ) {
+                                                Text(
+                                                    text = "Familia:",
+                                                    fontWeight = FontWeight.Medium,
+                                                    style = MaterialTheme.typography.bodySmall
+                                                )
+                                                Text(
+                                                    text = first.fliaDesc,
+                                                    style = MaterialTheme.typography.bodySmall
+                                                )
+                                            }
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            ) {
+                                                Text(
+                                                    text = "Grupo:",
+                                                    fontWeight = FontWeight.Medium,
+                                                    style = MaterialTheme.typography.bodySmall
+                                                )
+                                                Text(
+                                                    text = first.grupDesc,
+                                                    style = MaterialTheme.typography.bodySmall
+                                                )
+                                            }
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            ) {
+                                                Text(
+                                                    text = "Código Barra:",
+                                                    fontWeight = FontWeight.Medium,
+                                                    style = MaterialTheme.typography.bodySmall
+                                                )
+                                                Text(
+                                                    text = first.codBarra,
+                                                    style = MaterialTheme.typography.bodySmall
+                                                )
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
