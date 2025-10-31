@@ -481,6 +481,14 @@ fun MainMenuScreen(
                             navController = navController
                         )
                     }
+
+                    "confirmacion_conteo_simultaneo" -> {
+                        ProcesarConteosPendientesScreen(
+                            navController = navController
+                        )
+                    }
+
+
                     "articulos_toma" -> {
                         nroTomaSeleccionado?.let { nroToma ->
                             val articulosViewModel: ArticulosTomaViewModel = hiltViewModel()

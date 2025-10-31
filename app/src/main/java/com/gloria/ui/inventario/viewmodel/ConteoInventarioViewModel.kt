@@ -7,6 +7,7 @@ import com.gloria.domain.usecase.inventario.GetArticulosInventarioUseCase
 import com.gloria.domain.usecase.inventario.ActualizarCantidadInventarioUseCase
 import com.gloria.domain.usecase.inventario.ActualizarEstadoInventarioUseCase
 import com.gloria.data.model.ArticuloInventario
+import com.gloria.data.repository.InventarioDetalleRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -34,7 +35,8 @@ data class ConteoInventarioState(
     val showAlertNoContados: Boolean = false,
     val showConfirmRegistro: Boolean = false, // Para confirmar registro sin contar todo
     val estadosConteo: Map<String, EstadoConteo> = emptyMap(), // Estado de conteo por artículo
-    val registroExitoso: Boolean = false // Indica si el registro fue exitoso
+    val registroExitoso: Boolean = false, // Indica si el registro fue exitoso
+    val tipoInventario: String = "I" // Tipo de inventario: "I" = Individual, "S" = Simultáneo
 )
 
 data class EstadoConteo(
@@ -53,7 +55,9 @@ data class EstadoConteo(
 class ConteoInventarioViewModel @Inject constructor(
     private val getArticulosInventarioUseCase: GetArticulosInventarioUseCase,
     private val actualizarCantidadInventarioUseCase: ActualizarCantidadInventarioUseCase,
-    private val actualizarEstadoInventarioUseCase: ActualizarEstadoInventarioUseCase
+    private val actualizarEstadoInventarioUseCase: ActualizarEstadoInventarioUseCase,
+    private val inventarioDetalleRepository: InventarioDetalleRepository,
+    private val authSessionUseCase: com.gloria.domain.usecase.AuthSessionUseCase
 ) : ViewModel() {
     
     private val _uiState = MutableStateFlow(ConteoInventarioState())
@@ -70,6 +74,9 @@ class ConteoInventarioViewModel @Inject constructor(
             )
             
             try {
+                // Cargar el tipo de inventario
+                val tipoInventario = inventarioDetalleRepository.getTipoInventario(nroInventario) ?: "I"
+                
                 getArticulosInventarioUseCase(nroInventario).collect { articulos ->
                     // Inicializar artículos contados y cantidades basado en winvdCantInv
                     val articulosContados = mutableSetOf<Int>()
@@ -112,6 +119,7 @@ class ConteoInventarioViewModel @Inject constructor(
                         articulosContados = articulosContados,
                         cantidadesContadas = cantidadesContadas,
                         estadosConteo = estadosConteo,
+                        tipoInventario = tipoInventario,
                         errorMessage = null
                     )
                 }
@@ -328,13 +336,31 @@ class ConteoInventarioViewModel @Inject constructor(
                 Log.d("LogConteo", "Snapshot de cantidades: $cantidadesContadasSnapshot")
                 Log.d("LogConteo", "Total artículos a procesar: ${articulosFiltrados.size}")
                 
+                // Determinar el estado según el tipo de inventario
+                val tipoInventario = _uiState.value.tipoInventario
+                val estadoFinal = if (tipoInventario == "S") "S" else "P"
+                
+                Log.d("LogConteo", "Tipo de inventario: $tipoInventario")
+                Log.d("LogConteo", "Estado a aplicar: $estadoFinal")
+                
                 // Actualizar cada artículo en la base de datos (en hilo de fondo)
                 withContext(Dispatchers.IO) {
-                    // Primero, actualizar el estado de todos los artículos a "P"
-                    Log.d("LogConteo", "Actualizando estado de todos los artículos a 'P'")
+                    // Obtener usuario logueado
+                    val usuarioLogueado = authSessionUseCase.getCurrentUser()
+                    val usuarioCerrado = usuarioLogueado?.username ?: "UNKNOWN"
+                    
+                    Log.d("LogConteo", "=== DEBUG USUARIO CERRADO ===")
+                    Log.d("LogConteo", "Usuario logueado completo: $usuarioLogueado")
+                    Log.d("LogConteo", "Username extraído: ${usuarioLogueado?.username}")
+                    Log.d("LogConteo", "Usuario final para WINVE_LOGIN_CERRADO_WEB: '$usuarioCerrado'")
+                    Log.d("LogConteo", "Longitud del usuario: ${usuarioCerrado.length}")
+                    Log.d("LogConteo", "=== FIN DEBUG USUARIO ===")
+                    
+                    // Primero, actualizar el estado de todos los artículos
+                    Log.d("LogConteo", "Actualizando estado de todos los artículos a '$estadoFinal'")
                     actualizarEstadoInventarioUseCase(
                         numeroInventario = nroInventario,
-                        estado = "P"
+                        estado = estadoFinal
                     )
                     
                     // Luego, actualizar solo las cantidades de los artículos contados
@@ -353,7 +379,8 @@ class ConteoInventarioViewModel @Inject constructor(
                                     numeroInventario = nroInventario,
                                     secuencia = secuencia,
                                     cantidad = cantidad,
-                                    estado = "P"
+                                    estado = estadoFinal,
+                                    usuarioCerrado = usuarioCerrado
                                 )
                                 
                                 contador++

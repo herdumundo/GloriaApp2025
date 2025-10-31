@@ -53,9 +53,15 @@ object MenuItems {
         ),
         MenuItem(
             id = "informe_conteos_pendientes",
-            title = "Confirmacion de ",
-            icon = Icons.Default.ExitToApp,
+            title = "Informe de Conteos en proceso",
+            icon = Icons.Default.ConnectedTv,
             route = "informe_conteos_pendientes"
+        ),
+          MenuItem(
+            id = "confirmacion_conteo_simultaneo",
+            title = "Confirmacion de conteo simultaneo",
+            icon = Icons.Default.BackHand,
+            route = "confirmacion_conteo_simultaneo"
         )
     )
 }

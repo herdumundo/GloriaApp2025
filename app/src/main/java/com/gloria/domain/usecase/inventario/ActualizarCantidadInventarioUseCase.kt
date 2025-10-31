@@ -13,10 +13,11 @@ class ActualizarCantidadInventarioUseCase @Inject constructor(
         numeroInventario: Int,
         secuencia: Int,
         cantidad: Int,
-        estado: String
+        estado: String,
+        usuarioCerrado: String
     ) {
         return inventarioDetalleRepository.actualizarCantidadInventario(
-            numeroInventario, secuencia, cantidad, estado
+            numeroInventario, secuencia, cantidad, estado, usuarioCerrado
         )
     }
 }

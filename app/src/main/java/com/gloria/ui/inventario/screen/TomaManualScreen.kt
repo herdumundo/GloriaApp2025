@@ -621,8 +621,10 @@ fun TomaManualScreen(
             onSelectAll = { articulos -> viewModel.selectSpecificArticulosLotes(articulos) },
             onDeselectAll = { viewModel.clearArticulosLotesSelection() },
             onUpdateInventarioVisible = { inventarioVisible -> viewModel.updateInventarioVisibleMark(inventarioVisible) },
+            onUpdateTipoInventario = { tipoInventario -> viewModel.updateTipoInventario(tipoInventario) },
             onDismiss = { viewModel.hideArticulosLotesDialog() },
             inventarioVisible = uiState.inventarioVisible,
+            tipoInventario = uiState.tipoInventario,
             autoSelectAll = tipoToma?.id == "criterio_seleccion", // Selección automática para toma por criterio
             disableDeselection = tipoToma?.id == "criterio_seleccion" // Deshabilitar deselección para toma por criterio
          )

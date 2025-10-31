@@ -25,6 +25,7 @@ data class InventarioPendienteExportar(
     val tipoToma: String,
     val tomaRegistro: String,
     val winveFecha: String,
-    val winveSucursal: String
+    val winveSucursal: String,
+    val estado : String
 )
 

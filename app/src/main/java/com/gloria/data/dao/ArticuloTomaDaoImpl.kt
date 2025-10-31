@@ -99,7 +99,8 @@ class ArticuloTomaDaoImpl @Inject constructor(
                                 tipoToma = rs.getString("tipo_toma") ?: "",
                                 tomaRegistro = rs.getString("toma_registro") ?: "",
                                 winveFecha = rs.getString("winve_fec") ?: "",
-                                winveSucursal = rs.getString("winve_sucursal") ?: ""
+                                winveSucursal = rs.getString("winve_sucursal") ?: "",
+                                estado = rs.getString("estado")
                             )
                         )
                     }

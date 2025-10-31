@@ -25,6 +25,7 @@ class InsertarCabeceraYDetalleInventarioUseCase @Inject constructor(
         isFamiliaTodos: Boolean,
         userdb: String,
         inventarioVisible: Boolean,
+        tipoInventario: String = "I", // "I" = Individual, "S" = Simultáneo
         articulosSeleccionados: List<ArticuloLote>,
         tipoToma: String = "M", // "M" = Manual, "C" = Criterio
         onProgressUpdate: ((current: Int, total: Int) -> Unit)? = null
@@ -52,7 +53,8 @@ class InsertarCabeceraYDetalleInventarioUseCase @Inject constructor(
                 idGrupo = subgruposSeleccionados.firstOrNull()?.first?.toString() ?: "0",
                 gruposParcial = if (isFamiliaTodos) "S" else "N",
                 inventarioVisible = inventarioVisible,
-                tipoToma = tipoToma
+                tipoToma = tipoToma,
+                tipoInventario = tipoInventario
             )
             
             // Crear detalles

@@ -77,6 +77,7 @@ data class TomaManualUiState(
     val successMessage: String? = null,
     val showConfirmarTomaDialog: Boolean = false,
     val inventarioVisible: Boolean = false,
+    val tipoInventario: String = "I", // "I" = Individual (por defecto), "S" = Simultáneo
     val tipoToma: String = "M" // "M" = Manual, "C" = Criterio
 )
 
@@ -1352,6 +1353,17 @@ class TomaManualViewModel @Inject constructor(
         android.util.Log.d("TomaManualViewModel", "📊 Artículos seleccionados: ${_uiState.value.selectedArticulosLotes.size}")
     }
     
+    // Función para actualizar el tipo de inventario (Simultáneo o Individual)
+    fun updateTipoInventario(tipoInventario: String) {
+        android.util.Log.d("TomaManualViewModel", "🔄 Actualizando tipo de inventario: $tipoInventario")
+        
+        _uiState.value = _uiState.value.copy(
+            tipoInventario = tipoInventario
+        )
+        
+        android.util.Log.d("TomaManualViewModel", "✅ Tipo de inventario actualizado: ${_uiState.value.tipoInventario}")
+    }
+    
     // Función para establecer el tipo de toma (Manual o Criterio)
     fun setTipoToma(tipoToma: String) {
         android.util.Log.d("TomaManualViewModel", "🔄 Estableciendo tipo de toma: $tipoToma")
@@ -1740,6 +1752,7 @@ class TomaManualViewModel @Inject constructor(
                             isFamiliaTodos = isFamiliaTodos,
                             userdb = usuarioLogueado.username, // ✅ Usuario real del login
                             inventarioVisible = _uiState.value.inventarioVisible,
+                            tipoInventario = _uiState.value.tipoInventario, // ✅ Tipo de inventario (I=Individual, S=Simultáneo)
                             articulosSeleccionados = _uiState.value.selectedArticulosLotes,
                             tipoToma = _uiState.value.tipoToma, // ✅ Tipo de toma (M=Manual, C=Criterio)
                             onProgressUpdate = { current, total ->

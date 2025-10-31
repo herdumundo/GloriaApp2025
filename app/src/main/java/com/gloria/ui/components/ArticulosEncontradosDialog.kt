@@ -23,8 +23,10 @@ fun ArticulosEncontradosDialog(
     onSelectAll: (List<ArticuloLote>) -> Unit,
     onDeselectAll: () -> Unit,
     onUpdateInventarioVisible: (Boolean) -> Unit,
+    onUpdateTipoInventario: (String) -> Unit, // Nuevo callback para tipo de inventario
     onDismiss: () -> Unit,
     inventarioVisible: Boolean = false,
+    tipoInventario: String = "I", // Nuevo parámetro para tipo de inventario
     autoSelectAll: Boolean = false, // Nuevo parámetro para selección automática
     disableDeselection: Boolean = false, // Nuevo parámetro para deshabilitar deselección
     modifier: Modifier = Modifier
@@ -207,33 +209,28 @@ fun ArticulosEncontradosDialog(
                 ) {
                     val allSelected = filteredArticulos.isNotEmpty() && filteredArticulos.all { it in selectedArticulosLotes }
 
-                    // Checkbox para marcar inventario simultaneo
+                    // Checkbox para INVENTARIO SIMULTÁNEO
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.clickable {
-                            showZeroStock = !showZeroStock
-                            // Si es toma por criterio, mantener selección automática
-                            if (autoSelectAll && articulosLotes.isNotEmpty()) {
-                                onSelectAll(articulosLotes)
-                            }
+                            val nuevoTipo = if (tipoInventario == "I") "S" else "I"
+                            onUpdateTipoInventario(nuevoTipo)
                         }
                     ) {
                         Checkbox(
-                            checked = showZeroStock,
-                            onCheckedChange = {
-                                showZeroStock = it
-                                // Si es toma por criterio, mantener selección automática
-                                if (autoSelectAll && articulosLotes.isNotEmpty()) {
-                                    onSelectAll(articulosLotes)
-                                }
+                            checked = tipoInventario == "S",
+                            onCheckedChange = { isChecked ->
+                                val nuevoTipo = if (isChecked) "S" else "I"
+                                onUpdateTipoInventario(nuevoTipo)
                             },
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Permitir toma para conteo en simultaneo",
+                            text = "INVENTARIO SIMULTÁNEO",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontWeight = FontWeight.Medium
                         )
                     }
                     // Checkbox para stock cero

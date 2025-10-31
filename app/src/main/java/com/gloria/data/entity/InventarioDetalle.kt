@@ -79,11 +79,12 @@ data class InventarioDetalle(
     val toma_registro: String,        // Registro de la toma
     val cod_barra: String,            // Código de barras
     val caja: Int,                    // Caja
-    val GRUESA: Int,                  // Gruesa
+    val GRUESA: Double,                // Gruesa
     val UNID_IND: Int,                // Unidad individual
     
     // Descripciones de ubicación
     val sucursal: String,             // Descripción de la sucursal
     val deposito: String,              // Descripción del depósito
     val stockVisible: String,         // Indicador de visibilidad del stock
+    val winveTipo: String               // valor S = simultaneo  o I= individual
 )

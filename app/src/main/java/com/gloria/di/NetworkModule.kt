@@ -14,6 +14,7 @@ import com.gloria.data.repository.ProductosInventarioPorNumeroApiRepository
 import com.gloria.data.repository.CancelarTomaApiRepository
 import com.gloria.data.repository.OracleLoginApiRepository
 import com.gloria.data.repository.UserPermissionsApiRepository
+import com.gloria.data.repository.InventariosPendientesSimultaneosRepository
 import com.gloria.data.api.ArticulosClasificacionApiService
 import com.gloria.data.api.DatosMaestrosApiService
 import com.gloria.data.api.InsertarCabeceraYDetalleApiService
@@ -24,11 +25,13 @@ import com.gloria.data.api.ProductosInventarioPorNumeroApiService
 import com.gloria.data.api.CancelarTomaApiService
 import com.gloria.data.api.OracleLoginApiService
 import com.gloria.data.api.UserPermissionsApiService
+import com.gloria.data.api.InventariosPendientesSimultaneosApiService
  import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
@@ -60,6 +63,16 @@ object NetworkModule {
     @Provides
     fun provideRetrofit(): Retrofit {
         val timeoutValue = 180L
+        
+        // Configurar logging interceptor
+        val loggingInterceptor = HttpLoggingInterceptor().apply {
+            level = if (BuildConfig.DEBUG) {
+                HttpLoggingInterceptor.Level.BODY
+            } else {
+                HttpLoggingInterceptor.Level.NONE
+            }
+        }
+        
         return Retrofit.Builder()
             .baseUrl(BuildConfig.BASE_URL)
             .addConverterFactory(GsonConverterFactory.create())
@@ -69,6 +82,7 @@ object NetworkModule {
                     .readTimeout(timeoutValue, TimeUnit.SECONDS)
                     .writeTimeout(timeoutValue, TimeUnit.SECONDS)
                     .callTimeout(timeoutValue, TimeUnit.SECONDS)
+                    .addInterceptor(loggingInterceptor)
                     .build()
             )
             .build()
@@ -193,5 +207,6 @@ object NetworkModule {
     fun provideCancelarTomaApiRepository(apiService: CancelarTomaApiService): CancelarTomaApiRepository {
         return CancelarTomaApiRepository(apiService)
     }
+
 
 }

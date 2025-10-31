@@ -1,5 +1,9 @@
 package com.gloria.ui.informe.screen
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -353,21 +357,24 @@ fun DetalleInventarioDialog(
     inventario: InventarioConteo,
     onDismiss: () -> Unit
 ) {
-    var textoBusqueda by remember { mutableStateOf("") }
-    val detallesFiltrados = remember(textoBusqueda, inventario.details) {
-        if (textoBusqueda.isBlank()) {
-            inventario.details
-        } else {
-            inventario.details.filter { detalle ->
-                detalle.artDesc.contains(textoBusqueda, ignoreCase = true) ||
-                detalle.winvdArt.contains(textoBusqueda, ignoreCase = true) ||
-                detalle.winvdLote.contains(textoBusqueda, ignoreCase = true) ||
-                detalle.fliaDesc.contains(textoBusqueda, ignoreCase = true) ||
-                detalle.grupDesc.contains(textoBusqueda, ignoreCase = true) ||
-                detalle.codBarra.contains(textoBusqueda, ignoreCase = true) ||
-                detalle.winvdCantAct.toString().contains(textoBusqueda, ignoreCase = true) ||
-                detalle.winvdCantInv.toString().contains(textoBusqueda, ignoreCase = true)
-            }
+    var filtroArticulo by remember { mutableStateOf("") }
+    var filtroFamilia by remember { mutableStateOf("") }
+    var filtroGrupo by remember { mutableStateOf("") }
+    var filtroCantidadMayorCero by remember { mutableStateOf(false) }
+    
+    val detallesFiltrados = remember(
+        filtroArticulo, filtroFamilia, filtroGrupo, filtroCantidadMayorCero, inventario.details
+    ) {
+        inventario.details.filter { detalle ->
+            val cumpleArticulo = filtroArticulo.isBlank() || 
+                detalle.winvdArt.contains(filtroArticulo, ignoreCase = true)
+            val cumpleFamilia = filtroFamilia.isBlank() || 
+                detalle.fliaDesc.contains(filtroFamilia, ignoreCase = true)
+            val cumpleGrupo = filtroGrupo.isBlank() || 
+                detalle.grupDesc.contains(filtroGrupo, ignoreCase = true)
+            val cumpleCantidad = !filtroCantidadMayorCero || detalle.winvdCantInv > 0
+            
+            cumpleArticulo && cumpleFamilia && cumpleGrupo && cumpleCantidad
         }
     }
 
@@ -375,33 +382,239 @@ fun DetalleInventarioDialog(
         onDismissRequest = onDismiss,
         title = {
             Column {
-                Text("Detalle del Inventario #${inventario.header.winvdNroInv}")
+                Text(
+                    "Detalle del Inventario #${inventario.header.winvdNroInv}",
+                    style = MaterialTheme.typography.titleSmall
+                )
                 Text(
                     text = "Total: ${detallesFiltrados.size} de ${inventario.details.size} productos",
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                )   
             }
         },
         text = {
             Column {
-                // Campo de búsqueda
-                OutlinedTextField(
-                    value = textoBusqueda,
-                    onValueChange = { textoBusqueda = it },
-                    label = { Text("Buscar productos...") },
-                    leadingIcon = {
-                        Icon(Icons.Default.Search, contentDescription = "Buscar")
-                    },
-                    trailingIcon = {
-                        if (textoBusqueda.isNotEmpty()) {
-                            IconButton(onClick = { textoBusqueda = "" }) {
-                                Icon(Icons.Default.Clear, contentDescription = "Limpiar")
+                // Botón para expandir/contraer filtros
+                var filtrosExpandidos by remember { mutableStateOf(false) }
+                
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { filtrosExpandidos = !filtrosExpandidos }
+                            .padding(8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.Search,
+                                contentDescription = "Filtros",
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Filtros de búsqueda",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
+                        Icon(
+                            if (filtrosExpandidos) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                            contentDescription = if (filtrosExpandidos) "Contraer" else "Expandir",
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
+                
+                // Panel de filtros expandible
+                AnimatedVisibility(
+                    visible = filtrosExpandidos,
+                    enter = expandVertically(),
+                    exit = shrinkVertically()
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
+                    ) {
+                        // Filtro por artículo
+                        OutlinedTextField(
+                            value = filtroArticulo,
+                            onValueChange = { filtroArticulo = it },
+                            label = { Text("Artículo", style = MaterialTheme.typography.bodySmall) },
+                            placeholder = { Text("Código...", style = MaterialTheme.typography.bodySmall) },
+                            trailingIcon = {
+                                if (filtroArticulo.isNotEmpty()) {
+                                    IconButton(
+                                        onClick = { filtroArticulo = "" },
+                                        modifier = Modifier.size(28.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Clear, 
+                                            contentDescription = "Limpiar",
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp),
+                            singleLine = true,
+                            textStyle = MaterialTheme.typography.bodySmall
+                        )
+                        
+                        Spacer(modifier = Modifier.height(4.dp))
+                        
+                        // Filtros de Familia y Grupo en dos columnas
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            OutlinedTextField(
+                                value = filtroFamilia,
+                                onValueChange = { filtroFamilia = it },
+                                label = { Text("Familia", style = MaterialTheme.typography.bodySmall) },
+                                placeholder = { Text("Familia...", style = MaterialTheme.typography.bodySmall) },
+                                trailingIcon = {
+                                    if (filtroFamilia.isNotEmpty()) {
+                                        IconButton(
+                                            onClick = { filtroFamilia = "" },
+                                            modifier = Modifier.size(28.dp)
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Clear, 
+                                                contentDescription = "Limpiar",
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    }
+                                },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(56.dp),
+                                singleLine = true,
+                                textStyle = MaterialTheme.typography.bodySmall
+                            )
+                            
+                            OutlinedTextField(
+                                value = filtroGrupo,
+                                onValueChange = { filtroGrupo = it },
+                                label = { Text("Grupo", style = MaterialTheme.typography.bodySmall) },
+                                placeholder = { Text("Grupo...", style = MaterialTheme.typography.bodySmall) },
+                                trailingIcon = {
+                                    if (filtroGrupo.isNotEmpty()) {
+                                        IconButton(
+                                            onClick = { filtroGrupo = "" },
+                                            modifier = Modifier.size(28.dp)
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Clear, 
+                                                contentDescription = "Limpiar",
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    }
+                                },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(56.dp),
+                                singleLine = true,
+                                textStyle = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                        
+                        Spacer(modifier = Modifier.height(6.dp))
+                        
+                        // Checkbox para filtrar por cantidad mayor a 0
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { filtroCantidadMayorCero = !filtroCantidadMayorCero }
+                                    .padding(6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        Icons.Default.Check,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp),
+                                        tint = if (filtroCantidadMayorCero) 
+                                            MaterialTheme.colorScheme.primary 
+                                        else 
+                                            MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Column {
+                                        Text(
+                                            text = "Solo con inventario",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                        Text(
+                                            text = "Cant. Inv. > 0",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                                Checkbox(
+                                    checked = filtroCantidadMayorCero,
+                                    onCheckedChange = { filtroCantidadMayorCero = it },
+                                    modifier = Modifier.size(28.dp)
+                                )
                             }
                         }
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                )
+                        
+                        // Botón para limpiar todos los filtros
+                        Spacer(modifier = Modifier.height(2.dp))
+                        
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            TextButton(
+                                onClick = {
+                                    filtroArticulo = ""
+                                    filtroFamilia = ""
+                                    filtroGrupo = ""
+                                    filtroCantidadMayorCero = false
+                                },
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Clear, 
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    "Limpiar filtros",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        }
+                    }
+                }
                 
                 Spacer(modifier = Modifier.height(8.dp))
                 
@@ -409,7 +622,12 @@ fun DetalleInventarioDialog(
                 LazyColumn(
                     modifier = Modifier.heightIn(max = 400.dp)
                 ) {
-                    if (detallesFiltrados.isEmpty() && textoBusqueda.isNotEmpty()) {
+                    val hayFiltrosActivos = filtroArticulo.isNotEmpty() || 
+                        filtroFamilia.isNotEmpty() || 
+                        filtroGrupo.isNotEmpty() || 
+                        filtroCantidadMayorCero
+                    
+                    if (detallesFiltrados.isEmpty() && hayFiltrosActivos) {
                         item {
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
@@ -434,7 +652,7 @@ fun DetalleInventarioDialog(
                                         fontWeight = FontWeight.Medium
                                     )
                                     Text(
-                                        text = "Intenta con otros términos de búsqueda",
+                                        text = "Intenta con otros filtros",
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -446,36 +664,51 @@ fun DetalleInventarioDialog(
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(vertical = 4.dp),
+                                    .padding(vertical = 2.dp),
                                 colors = CardDefaults.cardColors(
                                     containerColor = MaterialTheme.colorScheme.surfaceVariant
                                 )
                             ) {
                                 Column(
-                                    modifier = Modifier.padding(12.dp)
+                                    modifier = Modifier.padding(8.dp)
+                                ) {
+                                var expanded by remember { mutableStateOf(false) }
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
                                         text = detalle.artDesc,
-                                        style = MaterialTheme.typography.titleSmall,
+                                        style = MaterialTheme.typography.bodyMedium,
                                         fontWeight = FontWeight.Bold
                                     )
-                                    
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Text(
-                                            text = "Artículo:",
-                                            fontWeight = FontWeight.Medium,
-                                            style = MaterialTheme.typography.bodySmall
-                                        )
-                                        Text(
-                                            text = detalle.winvdArt,
-                                            style = MaterialTheme.typography.bodySmall
+                                    IconButton(onClick = { expanded = !expanded }) {
+                                        Icon(
+                                            imageVector = if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                                            contentDescription = if (expanded) "Colapsar" else "Expandir"
                                         )
                                     }
+                                }
+                                
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = "Lote:",
+                                        fontWeight = FontWeight.Medium,
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                    Text(
+                                        text = detalle.winvdLote,
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(2.dp))
+                                
+                                // Campo "Artículo" se muestra en sección expandible
                                     
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
@@ -497,75 +730,132 @@ fun DetalleInventarioDialog(
                                         horizontalArrangement = Arrangement.SpaceBetween
                                     ) {
                                         Text(
-                                            text = "Cant. Inventario:",
-                                            fontWeight = FontWeight.Medium,
+                                            text = "Cant. Contada:",
+                                            fontWeight = FontWeight.Bold,
                                             style = MaterialTheme.typography.bodySmall
                                         )
+                                        val colorContada = if (detalle.winvdCantInv < detalle.winvdCantAct) {
+                                            MaterialTheme.colorScheme.error
+                                        } else if (detalle.winvdCantInv > detalle.winvdCantAct) {
+                                            Color(0xFF0D6CD2)
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurface
+                                        }
+                                        val diferenciaContada = detalle.winvdCantInv - detalle.winvdCantAct
                                         Text(
                                             text = "${detalle.winvdCantInv}",
+                                            color = colorContada,
+                                            fontWeight = if (diferenciaContada != 0) FontWeight.SemiBold else FontWeight.Normal,
                                             style = MaterialTheme.typography.bodySmall
                                         )
                                     }
-                                    
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween
+                                Divider(
+                                    thickness = 0.5.dp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                )
+                                
+                                // Diferencia entre actual e inventario
+                                val diferencia = detalle.winvdCantInv - detalle.winvdCantAct
+                                val colorDiferencia = if (diferencia < 0) {
+                                    MaterialTheme.colorScheme.error
+                                } else if (diferencia > 0) {
+                                    Color(0xFF0AB22D)
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface
+                                }
+                                val diferenciaTexto = if (diferencia > 0) "+$diferencia" else "$diferencia"
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = "Diferencia:",
+                                        fontWeight = FontWeight.Medium,
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                    Text(
+                                        text = diferenciaTexto,
+                                        color = colorDiferencia,
+                                        fontWeight = if (diferencia != 0) FontWeight.SemiBold else FontWeight.Normal,
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
+                                
+                                // Detalle colapsable: Artículo, Familia, Grupo, Código Barras
+                                AnimatedVisibility(
+                                    visible = expanded,
+                                    enter = expandVertically(),
+                                    exit = shrinkVertically()
+                                ) {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(top = 4.dp),
+                                        verticalArrangement = Arrangement.spacedBy(6.dp)
                                     ) {
-                                        Text(
-                                            text = "Lote:",
-                                            fontWeight = FontWeight.Medium,
-                                            style = MaterialTheme.typography.bodySmall
-                                        )
-                                        Text(
-                                            text = detalle.winvdLote,
-                                            style = MaterialTheme.typography.bodySmall
-                                        )
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Text(
+                                                text = "Artículo:",
+                                                fontWeight = FontWeight.Medium,
+                                                style = MaterialTheme.typography.bodySmall
+                                            )
+                                            Text(
+                                                text = detalle.winvdArt,
+                                                style = MaterialTheme.typography.bodySmall
+                                            )
+                                        }
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Text(
+                                                text = "Familia:",
+                                                fontWeight = FontWeight.Medium,
+                                                style = MaterialTheme.typography.bodySmall
+                                            )
+                                            Text(
+                                                text = detalle.fliaDesc,
+                                                style = MaterialTheme.typography.bodySmall
+                                            )
+                                        }
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Text(
+                                                text = "Grupo:",
+                                                fontWeight = FontWeight.Medium,
+                                                style = MaterialTheme.typography.bodySmall
+                                            )
+                                            Text(
+                                                text = detalle.grupDesc,
+                                                style = MaterialTheme.typography.bodySmall
+                                            )
+                                        }
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Text(
+                                                text = "Código Barras:",
+                                                fontWeight = FontWeight.Medium,
+                                                style = MaterialTheme.typography.bodySmall
+                                            )
+                                            Text(
+                                                text = detalle.codBarra,
+                                                style = MaterialTheme.typography.bodySmall
+                                            )
+                                        }
                                     }
+                                }
+                                // Campo "Familia" se muestra en sección expandible
                                     
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Text(
-                                            text = "Familia:",
-                                            fontWeight = FontWeight.Medium,
-                                            style = MaterialTheme.typography.bodySmall
-                                        )
-                                        Text(
-                                            text = detalle.fliaDesc,
-                                            style = MaterialTheme.typography.bodySmall
-                                        )
-                                    }
+                                    // Campo "Grupo" se muestra en sección expandible
                                     
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Text(
-                                            text = "Grupo:",
-                                            fontWeight = FontWeight.Medium,
-                                            style = MaterialTheme.typography.bodySmall
-                                        )
-                                        Text(
-                                            text = detalle.grupDesc,
-                                            style = MaterialTheme.typography.bodySmall
-                                        )
-                                    }
-                                    
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Text(
-                                            text = "Código Barras:",
-                                            fontWeight = FontWeight.Medium,
-                                            style = MaterialTheme.typography.bodySmall
-                                        )
-                                        Text(
-                                            text = detalle.codBarra,
-                                            style = MaterialTheme.typography.bodySmall
-                                        )
-                                    }
+                                    // Campo "Código Barras" se muestra en sección expandible
                                 }
                             }
                         }

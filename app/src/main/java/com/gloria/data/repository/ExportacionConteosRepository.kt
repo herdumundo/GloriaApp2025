@@ -158,7 +158,7 @@ class ExportacionConteosRepository @Inject constructor(
         Log.d("EXPORTACIONES_LOG", "🔍 [SQLITE] Usuario: '$userLogin'")
         
         // Obtener inventarios con estado 'P' (Pendiente)
-        val inventariosDetalle = inventarioDetalleDao.getInventariosDetalleByEstado("P").first()
+        val inventariosDetalle = inventarioDetalleDao.getInventariosDetalleByEstado().first()
         
         Log.d("EXPORTACIONES_LOG", "🔍 [SQLITE] Inventarios encontrados: ${inventariosDetalle.size}")
         
@@ -175,7 +175,8 @@ class ExportacionConteosRepository @Inject constructor(
                     tipoToma = primerDetalle.tipo_toma,
                     tomaRegistro = primerDetalle.toma_registro,
                     winveFecha = primerDetalle.winve_fec,
-                    winveSucursal = primerDetalle.sucursal
+                    winveSucursal = primerDetalle.sucursal,
+                    estado = primerDetalle.estado
                 )
             }
         
@@ -225,7 +226,7 @@ class ExportacionConteosRepository @Inject constructor(
                 winveDep = detalle.winve_dep.toIntOrNull() ?: 0,
                 winveSuc = detalle.ARDE_SUC,
                 caja = detalle.caja,
-                gruesa = detalle.GRUESA,
+                gruesa = detalle.GRUESA.toInt(),
                 unidInd = detalle.UNID_IND,
                 artDesc = detalle.art_desc,
                 areaDesc = detalle.area_desc,
@@ -276,7 +277,8 @@ class ExportacionConteosRepository @Inject constructor(
                     winveLoginCerradoWeb = inventario.winveLoginCerradoWeb,
                     usuarioQueConteo = inventario.winveLoginCerradoWeb,
                     tipoToma = if (inventario.tipoToma == "MANUAL") "M" else "C",
-                    winvdNroInv = inventario.winvdNroInv
+                    winvdNroInv = inventario.winvdNroInv,
+                    estado = inventario.estado
                 )
 
                 val detalle = detallesInventario.map { d ->

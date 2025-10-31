@@ -54,10 +54,18 @@ class RegistroInventarioViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(isLoading = true)
             
             try {
+                // Usar la sucursal del usuario logueado si está disponible
+                val loggedUser = getLoggedUserSyncUseCase()
+                val sucursalId = loggedUser?.sucursalId ?: uiState.value.sucursalLogueada
+                Log.d("PROCESO_LOGIN", "📍 Consultando inventarios para sucursal: $sucursalId")
+                _uiState.value = _uiState.value.copy(sucursalLogueada = sucursalId)
+                
                 // Obtener inventarios DISTINCT con el query corregido
                 getInventariosCardsUseCase(
-                    sucursal = uiState.value.sucursalLogueada
+                    sucursal = sucursalId
                 ).collect { inventariosCards ->
+                    Log.d("PROCESO_LOGIN", "📋 Inventarios cargados desde BD: ${inventariosCards.size}")
+                    Log.d("PROCESO_LOGIN", "🔍 Primer inventario card: ${inventariosCards.firstOrNull()?.winvd_nro_inv}")
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         inventarios = inventariosCards,
@@ -143,6 +151,7 @@ class RegistroInventarioViewModel @Inject constructor(
                             syncMessage = "✅ Sincronización completada"
                         )
                         // Recargar inventarios después de la sincronización exitosa
+                        Log.d("PROCESO_LOGIN", "🔄 Recargando inventarios después de sincronización...")
                         cargarInventarios()
                     } else {
                         val error = result.exceptionOrNull()?.message ?: "Error desconocido"

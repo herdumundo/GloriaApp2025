@@ -62,7 +62,12 @@ class InventarioSincronizacionRepository @Inject constructor(
             // 💾 Insertar nuevos inventarios
             onProgressUpdate("💾 Insertando inventarios sincronizados...", 0, inventariosConvertidos.size)
             val inventariosDetalle = convertirInventariosToDetalle(inventariosConvertidos)
-            inventarioDetalleDao.insertInventariosDetalle(inventariosDetalle)
+            
+            Log.d("PROCESO_LOGIN", "📊 Inventarios a insertar: ${inventariosDetalle.size}")
+            Log.d("PROCESO_LOGIN", "🔍 Primer inventario: ${inventariosDetalle.firstOrNull()?.winvd_nro_inv}")
+            
+            val insertResult = inventarioDetalleDao.insertInventariosDetalle(inventariosDetalle)
+            Log.d("PROCESO_LOGIN", "📝 Resultado inserción: ${insertResult.size} registros insertados")
             
             Log.d("PROCESO_LOGIN", "✅ Inventarios sincronizados exitosamente: ${inventariosDetalle.size}")
             
@@ -174,7 +179,8 @@ class InventarioSincronizacionRepository @Inject constructor(
                 UNID_IND = api.unidInd,
                 SUC_DESC = api.sucDesc,
                 DEP_DESC = api.depDesc,
-                WINVE_STOCK_VISIBLE = api.winveStockVisible
+                WINVE_STOCK_VISIBLE = api.winveStockVisible,
+                WINVE_TIPO = api.winveTipo
             )
         }
     }
@@ -222,7 +228,9 @@ class InventarioSincronizacionRepository @Inject constructor(
                 UNID_IND = oracle.UNID_IND,
                 sucursal = oracle.SUC_DESC,
                 deposito = oracle.DEP_DESC,
-                stockVisible = oracle.WINVE_STOCK_VISIBLE ?: "N"
+                stockVisible = oracle.WINVE_STOCK_VISIBLE ?: "N",
+                winveTipo=oracle.WINVE_TIPO
+
             )
         }
     }

@@ -52,8 +52,8 @@ interface InventarioDetalleDao {
     /**
      * Obtiene inventarios por estado
      */
-    @Query("SELECT * FROM STKW002INV WHERE estado = :estado ORDER BY winvd_nro_inv DESC, winvd_secu ASC")
-    fun getInventariosDetalleByEstado(estado: String): Flow<List<InventarioDetalle>>
+    @Query("SELECT * FROM STKW002INV WHERE estado IN ('P','S') ORDER BY winvd_nro_inv DESC, winvd_secu ASC")
+    fun getInventariosDetalleByEstado(): Flow<List<InventarioDetalle>>
     
     /**
      * Obtiene inventarios por fecha
@@ -177,9 +177,10 @@ interface InventarioDetalleDao {
             END as desc_familia,
             sucursal,
             deposito,
-            estado
+            estado,
+            winveTipo
         FROM STKW002INV 
-        WHERE estado in ('A','P') 
+        WHERE estado in ('A','P','S') 
         AND ARDE_SUC = :sucursal
         GROUP BY winvd_nro_inv, strftime('%d/%m/%Y %H:%M', winve_fec), area_desc, dpto_desc, tipo_toma, secc_desc, winvd_consolidado, desc_grupo_parcial, sucursal, deposito, estado
         ORDER BY winvd_nro_inv DESC
@@ -221,6 +222,12 @@ interface InventarioDetalleDao {
         ORDER BY CAST(winvd_art as integer) ASC
     """)
     fun getArticulosInventario(nroInventario: Int): Flow<List<ArticuloInventario>>
+    
+    /**
+     * Obtiene el tipo de inventario (winveTipo) para un inventario específico
+     */
+    @Query("SELECT winveTipo FROM STKW002INV WHERE winvd_nro_inv = :nroInventario LIMIT 1")
+    suspend fun getTipoInventario(nroInventario: Int): String?
     
     /**
      * Obtiene el conteo total de inventarios detalle
@@ -526,7 +533,8 @@ interface InventarioDetalleDao {
     @Query("""
         UPDATE STKW002INV 
         SET winvd_cant_inv = :cantidad,
-            estado = :estado
+            estado = :estado,
+            WINVE_LOGIN_CERRADO_WEB = :usuarioCerrado
         WHERE winvd_nro_inv = :numeroInventario 
         AND winvd_secu = :secuencia
     """)
@@ -534,7 +542,8 @@ interface InventarioDetalleDao {
         numeroInventario: Int,
         secuencia: Int,
         cantidad: Int,
-        estado: String
+        estado: String,
+        usuarioCerrado: String
     )
     
     /**

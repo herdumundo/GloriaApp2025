@@ -36,9 +36,10 @@ data class InventarioSincronizacion(
     val winve_suc: String,              // winve_suc
     val coba_codigo_barra: String,      // a.coba_codigo_barra
     val caja: Int,                      // a.caja
-    val GRUESA: Int,                    // a.GRUESA
+    val GRUESA: Double,                  // a.GRUESA
     val UNID_IND: Int,                  // a.UNID_IND
     val SUC_DESC: String,               // suc.SUC_DESC
     val DEP_DESC: String,               // suc.DEP_DESC
-    val WINVE_STOCK_VISIBLE: String     // c.WINVE_STOCK_VISIBLE
+    val WINVE_STOCK_VISIBLE: String,     // c.WINVE_STOCK_VISIBLE
+    val WINVE_TIPO :String
 )

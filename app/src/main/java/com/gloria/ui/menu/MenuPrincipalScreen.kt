@@ -43,6 +43,7 @@ import com.gloria.ui.inventario.screen.SincronizarDatosScreen
 import com.gloria.ui.inventario.screen.TomaCriterioScreen
 import com.gloria.ui.inventario.screen.TomaManualScreen
 import com.gloria.ui.informe.screen.InformeConteosPendientesScreen
+import com.gloria.ui.inventario.screen.ProcesarConteosPendientesScreen
 import com.gloria.ui.inventario.viewmodel.ConteoInventarioViewModel
 import com.gloria.ui.inventario.viewmodel.RegistroInventarioViewModel
 import com.gloria.ui.inventario.viewmodel.SincronizacionViewModel
@@ -135,10 +136,15 @@ fun MenuPrincipalScreen(
                             "informe_conteos_pendientes" -> {
                                 currentScreen = "informe_conteos_pendientes"
                             }
+                            "confirmacion_conteo_simultaneo" -> {
+                                android.util.Log.d("NAVIGATION", "Setting currentScreen to: confirmacion_conteo_simultaneo")
+                                currentScreen = "confirmacion_conteo_simultaneo"
+                            }
                             else -> {
                                 currentScreen = "main"
                             }
                         }
+                        android.util.Log.d("NAVIGATION", "Current screen after click: $currentScreen")
                         scope.launch { 
                             drawerState.close() 
                         }
@@ -232,6 +238,7 @@ fun MenuPrincipalScreen(
                     .background(MaterialTheme.colorScheme.background)
             ) {
                 // Contenido principal
+                android.util.Log.d("NAVIGATION", "Rendering screen: $currentScreen")
                 when (currentScreen) {
                     "toma" -> {
                         when (selectedTipoToma?.id) {
@@ -380,6 +387,12 @@ fun MenuPrincipalScreen(
                     "informe_conteos_pendientes" -> {
                         InformeConteosPendientesScreen(
                             navController = navController
+                        )
+                    }
+                    "confirmacion_conteo_simultaneo" -> {
+                        ProcesarConteosPendientesScreen(
+                            navController = navController
+
                         )
                     }
                     else -> {
@@ -748,6 +761,8 @@ private fun getScreenTitle(selectedMenuItem: String): String {
         "exportar_parcial" -> "Exportar Inventario Parcial"
         "sincronizar_datos" -> "Sincronizar Datos"
         "informe_conteos_pendientes" -> "Informe de Conteos Pendientes"
+        "confirmacion_conteo_simultaneo" -> "Procesar Conteos Pendientes"
+        "procesar_conteos_pendientes" -> "Procesar Conteos Pendientes"
         else -> "Sistema de Inventario"
     }
 }

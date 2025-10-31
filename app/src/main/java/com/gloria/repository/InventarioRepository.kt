@@ -4,6 +4,7 @@ import com.gloria.data.dao.InventarioDetalleDao
 import com.gloria.data.entity.InventarioDetalle
 import com.gloria.data.repository.LoggedUserRepository
 import com.gloria.data.model.ArticuloInventario
+import com.gloria.data.model.ArticuloLote
 import com.gloria.data.model.InventarioCard
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -66,7 +67,7 @@ class InventarioRepository @Inject constructor(
                     tomaRegistro = detalle.toma_registro.toString(),
                     codBarra = detalle.cod_barra,
                     caja = detalle.caja,
-                    gruesa = detalle.GRUESA,
+                    gruesa = detalle.GRUESA.toInt(),
                     stockVisible = detalle.stockVisible
                 )
             }
@@ -100,7 +101,7 @@ class InventarioRepository @Inject constructor(
                     tomaRegistro = detalle.toma_registro.toString(),
                     codBarra = detalle.cod_barra,
                     caja = detalle.caja,
-                    gruesa = detalle.GRUESA,
+                    gruesa = detalle.GRUESA.toInt(),
                     stockVisible=detalle.stockVisible
                 )
             }
@@ -140,7 +141,7 @@ class InventarioRepository @Inject constructor(
      * Guarda una toma manual
      */
     suspend fun saveTomaManual(
-        articulosSeleccionados: List<com.gloria.data.model.ArticuloLote>,
+        articulosSeleccionados: List< ArticuloLote>,
         nroInventario: Int,
         username: String
     ): Result<Unit> {
@@ -181,11 +182,12 @@ class InventarioRepository @Inject constructor(
                     toma_registro = "0",
                     cod_barra = "",
                     caja = 0,
-                    GRUESA = 0,
+                    GRUESA = 0.0,
                     UNID_IND = 0,
                     sucursal = "",
                     deposito = "",
-                    stockVisible =articulo.inventarioVisible
+                    stockVisible =articulo.inventarioVisible,
+                    winveTipo = articulo.winveTipo
                 )
             }
             

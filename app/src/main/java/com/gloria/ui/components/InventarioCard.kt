@@ -5,15 +5,16 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.SupervisorAccount
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.gloria.data.model.InventarioCard
@@ -33,16 +34,17 @@ fun InventarioCard(
     // Determinar el color del card según el estado
     val cardColor = when (inventario.estado) {
         "P" -> Color(0xFF2E7D32) // Verde oscuro para procesado
+        "S" -> Color(0xFF2E7D32) // Verde oscuro para procesado
         else -> Color(0xFF8B0000) // Rojo oscuro para activo
     }
     
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .padding(horizontal = 12.dp, vertical = 4.dp)
             .clickable { onCardClick() },
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        shape = RoundedCornerShape(8.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
         colors = CardDefaults.cardColors(
             containerColor = cardColor
         )
@@ -50,85 +52,145 @@ fun InventarioCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(10.dp),
+                .padding(8.dp),
             verticalAlignment = Alignment.Top
         ) {
-            // Columna izquierda: Iconos
+            // Columna izquierda: Icono de tipo de conteo
             Column(
-                modifier = Modifier.width(0.dp),
+                modifier = Modifier.padding(end = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Icono de check
-                IconButton(
-                    onClick = onCheckClick,
+                // Icono según tipo de conteo
+                Box(
                     modifier = Modifier
-                        .size(28.dp)
+                        .size(36.dp)
                         .background(
-                            color = Color.White.copy(alpha = 0.2f),
-                            shape = RoundedCornerShape(6.dp)
-                        )
+                            color = Color.White.copy(alpha = 0.25f),
+                            shape = RoundedCornerShape(8.dp)
+                        ),
+                    contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Check,
-                        contentDescription = "Verificado",
+                        imageVector = if (inventario.winveTipo == "S") Icons.Default.SupervisorAccount   else Icons.Default.Person,
+                        contentDescription = if (inventario.winveTipo == "S") "Simultáneo" else "Individual",
                         tint = Color.White,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(24.dp)
                     )
                 }
             }
             
-            Spacer(modifier = Modifier.width(0.dp))
-            
-            // Columna derecha: Detalles del inventario
+            // Columna derecha: Detalles del inventario (más compacto)
             Column(
                 modifier = Modifier.weight(1f)
             ) {
-                // Número de toma
-                DetailRow(
-                    label = "NRO. DE TOMA:",
-                    value = inventario.winvd_nro_inv.toString(),
-                    isBold = true
-                )
+                // Encabezado: Número y Fecha en la misma línea
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "TOMA #${inventario.winvd_nro_inv}",
+                        color = Color.White,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = inventario.fecha_toma.ifEmpty { "N/A" },
+                        color = Color.White,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Normal
+                    )
+                }
                 
-                // Fecha de toma
-                DetailRow(
-                    label = "FECHA TOMA:",
-                    value = inventario.fecha_toma.ifEmpty { "N/A" }
-                )
-                // Versión compacta: menos filas
-                DetailRow(label = "SUCURSAL:", value = inventario.sucursal.ifEmpty { "N/A" })
-                DetailRow(label = "DEPÓSITO:", value = inventario.deposito.ifEmpty { "N/A" })
-                DetailRow(label = "ÁREA:", value = inventario.area_desc.ifEmpty { "N/A" })
-                DetailRow(label = "FAMILIA:", value = inventario.desc_familia.ifEmpty { "N/A" })
-                DetailRow(label = "TOMA:", value = inventario.tipo_toma.ifEmpty { "N/A" })
+                Spacer(modifier = Modifier.height(4.dp))
                 
+                // Primera fila: SUC a la izquierda y badge a la derecha
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // SUC a la izquierda
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "SUC:",
+                            color = Color.White.copy(alpha = 0.85f),
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.width(60.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = inventario.sucursal.ifEmpty { "N/A" },
+                            color = Color.White,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Normal
+                        )
+                    }
+                    
+                    // Badge a la derecha
+                    Row(
+                        modifier = Modifier
+                            .background(
+                                color = Color.White.copy(alpha = 0.2f),
+                                shape = RoundedCornerShape(4.dp)
+                            )
+                            .padding(horizontal = 6.dp, vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = if (inventario.winveTipo == "S") Icons.Default.SupervisorAccount else Icons.Default.Person,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(12.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = if (inventario.winveTipo == "S") "SIMULTÁNEO" else "INDIVIDUAL",
+                            color = Color.White,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+                
+                // Resto de detalles en filas compactas
+                CompactDetailRow(label = "DEP:", value = inventario.deposito.ifEmpty { "N/A" })
+                CompactDetailRow(label = "ÁREA:", value = inventario.area_desc.ifEmpty { "N/A" })
+                CompactDetailRow(label = "FAMILIA:", value = inventario.desc_familia.ifEmpty { "N/A" })
+                CompactDetailRow(label = "TOMA:", value = inventario.tipo_toma.ifEmpty { "N/A" })
+
                 // Mensaje de estado si está procesado
-                if (inventario.estado == "P") {
-                    Spacer(modifier = Modifier.height(8.dp))
+                if (inventario.estado == "P" || inventario.estado == "S") {
+                    Spacer(modifier = Modifier.height(4.dp))
                     
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .background(
                                 color = Color.White.copy(alpha = 0.2f),
-                                shape = RoundedCornerShape(8.dp)
+                                shape = RoundedCornerShape(4.dp)
                             )
-                            .padding(8.dp),
+                            .padding(6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
                             imageVector = Icons.Default.Info,
                             contentDescription = "Información",
                             tint = Color.White,
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(14.dp)
                         )
                         
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
                         
                         Text(
-                            text = "Ya se contó - Se puede continuar con el conteo",
+                            text = "Ya se contó - Puede continuar",
                             color = Color.White,
-                            fontSize = 12.sp,
+                            fontSize = 10.sp,
                             fontWeight = FontWeight.Medium
                         )
                     }
@@ -139,63 +201,37 @@ fun InventarioCard(
 }
 
 /**
- * Fila de detalle con label y valor
+ * Fila de detalle compacta con label y valor
  */
 @Composable
-private fun DetailRow(
+private fun CompactDetailRow(
     label: String,
-    value: String,
-    isBold: Boolean = false
+    value: String
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 1.dp),
+            .padding(vertical = 0.5.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = label,
-            color = Color.White,
-            fontSize = 11.sp,
+            color = Color.White.copy(alpha = 0.85f),
+            fontSize = 9.sp,
             fontWeight = FontWeight.Medium,
-            modifier = Modifier.width(110.dp)
+            modifier = Modifier.width(60.dp)
         )
         
-        Spacer(modifier = Modifier.width(6.dp))
+        Spacer(modifier = Modifier.width(4.dp))
         
         Text(
             text = value,
             color = Color.White,
-            fontSize = 11.sp,
-            fontWeight = if (isBold) FontWeight.Bold else FontWeight.Normal,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Normal,
             modifier = Modifier.weight(1f)
         )
     }
 }
 
-/**
- * Preview del card de inventario
- */
-@Composable
-fun InventarioCardPreview() {
-    val inventarioEjemplo = InventarioCard(
-        winvd_nro_inv = 861,
-        fecha_toma = "22/08/2025 09:54",
-        area_desc = "GENERAL",
-        dpto_desc = "GENERAL",
-        tipo_toma = "MANUAL",
-        secc_desc = "GENERAL",
-        winvd_consolidado = "N",
-        desc_grupo_parcial = "TODOS",
-        desc_familia = "CERVEZA",
-        sucursal = "CASA CENTRAL",
-        deposito = "D1",
-        estado = "A"
-    )
-    
-    InventarioCard(
-        inventario = inventarioEjemplo,
-        onMenuClick = { /* TODO */ },
-        onCheckClick = { /* TODO */ }
-    )
-}
+

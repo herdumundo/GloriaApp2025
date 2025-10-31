@@ -16,5 +16,6 @@ data class InventarioCard(
     val desc_familia: String,                  // Descripción de familia
     val sucursal: String,                      // Descripción de la sucursal
     val deposito: String,                      // Descripción del depósito
+    val winveTipo: String,                      // Descripción del depósito
     val estado: String                         // Estado del inventario (A=Activo, P=Procesado)
 )

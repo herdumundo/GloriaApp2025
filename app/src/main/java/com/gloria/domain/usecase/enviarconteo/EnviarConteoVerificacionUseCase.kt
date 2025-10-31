@@ -33,17 +33,17 @@ class EnviarConteoVerificacionUseCase @Inject constructor(
                     return@withContext Result.failure(Exception("No hay conteos para enviar"))
                 }
                 
-                // Filtrar solo conteos con estado P
-                val conteosEstadoP = conteos.filter { it.estado == "P" }
-                Log.d("ENVIAR_CONTEO_LOG", "📊 Conteos con estado P: ${conteosEstadoP.size} de ${conteos.size}")
+                // Filtrar conteos con estado P o S
+                val conteosEstadoPS = conteos.filter { it.estado == "P" || it.estado == "S" }
+                Log.d("ENVIAR_CONTEO_LOG", "📊 Conteos con estado P o S: ${conteosEstadoPS.size} de ${conteos.size}")
                 
-                if (conteosEstadoP.isEmpty()) {
-                    Log.w("ENVIAR_CONTEO_LOG", "⚠️ No hay conteos con estado P para enviar")
-                    return@withContext Result.failure(Exception("No hay conteos con estado P para enviar"))
+                if (conteosEstadoPS.isEmpty()) {
+                    Log.w("ENVIAR_CONTEO_LOG", "⚠️ No hay conteos con estado P o S para enviar")
+                    return@withContext Result.failure(Exception("No hay conteos con estado P o S para enviar"))
                 }
                 
                 // Enviar al repositorio
-                val result = enviarConteoRepository.enviarConteos(conteosEstadoP)
+                val result = enviarConteoRepository.enviarConteos(conteosEstadoPS)
                 
                 if (result.isSuccess) {
                     Log.d("ENVIAR_CONTEO_LOG", "✅ Envío exitoso")

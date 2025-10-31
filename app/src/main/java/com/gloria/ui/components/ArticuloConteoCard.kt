@@ -310,6 +310,32 @@ fun ArticuloConteoCard(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontWeight = FontWeight.Medium
                         )
+                        
+                        // Mostrar diferencia entre stock y total contado
+                        val totalParaDiferencia = if (haSidoContado) totalFinal else totalCalculado
+                        val diferencia = totalParaDiferencia - articulo.winvdCantAct
+                        
+                        if (diferencia != 0) {
+                            val (colorDiferencia, signoDiferencia) = when {
+                                diferencia > 0 -> Pair(Color(0xFF1976D2), "+") // Azul si hay más
+                                else -> Pair(Color(0xFFD32F2F), "") // Rojo si hay menos
+                            }
+                            
+                            Text(
+                                text = "$signoDiferencia$diferencia",
+                                fontSize = 11.sp,
+                                color = colorDiferencia,
+                                fontWeight = FontWeight.Bold
+                            )
+                        } else {
+                            // Diferencia exacta (0)
+                            Text(
+                                text = "✓ Exacto",
+                                fontSize = 10.sp,
+                                color = Color(0xFF2E7D32), // Verde
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
                 

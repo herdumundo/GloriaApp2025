@@ -78,10 +78,15 @@ import com.gloria.data.dao.UserPermissionOracleDao
 import com.gloria.data.dao.UserPermissionDao
 import com.gloria.data.repository.ArticuloLoteRepository
 import com.gloria.data.repository.UserPermissionRepository
+import com.gloria.data.repository.InventariosPendientesSimultaneosRepository
 import com.gloria.domain.usecase.auth.LoginUseCase
 import com.gloria.domain.usecase.auth.LogoutUseCase
 import com.gloria.domain.usecase.auth.RegisterUseCase
 import com.gloria.domain.usecase.permission.LoginWithPermissionSyncUseCase
+import com.gloria.domain.usecase.inventario.GetInventariosPendientesSimultaneosUseCase
+import com.gloria.domain.usecase.inventario.ConfirmarConteoSimultaneoUseCase
+import com.gloria.data.repository.ConfirmarConteoSimultaneoRepository
+import com.gloria.di.DefaultRetrofit
 import retrofit2.Retrofit
 import dagger.Module
 import dagger.Provides
@@ -606,6 +611,60 @@ object UseCaseModule {
         userPermissionRepository: UserPermissionRepository
     ): SyncUserPermissionsFromOracleUseCase {
         return SyncUserPermissionsFromOracleUseCase(oracleLoginApiRepository, userPermissionRepository)
+    }
+
+    // ==================== PROVIDERS PARA INVENTARIOS PENDIENTES SIMULTÁNEOS ====================
+    
+    @Provides
+    @Singleton
+    fun provideInventariosPendientesSimultaneosApiService(
+        @DefaultRetrofit retrofit: Retrofit
+    ): com.gloria.data.api.InventariosPendientesSimultaneosApiService {
+        return retrofit.create(com.gloria.data.api.InventariosPendientesSimultaneosApiService::class.java)
+    }
+    
+    @Provides
+    @Singleton
+    fun provideInventariosPendientesSimultaneosRepository(
+        apiService: com.gloria.data.api.InventariosPendientesSimultaneosApiService,
+        loggedUserRepository: LoggedUserRepository
+    ): InventariosPendientesSimultaneosRepository {
+        return InventariosPendientesSimultaneosRepository(apiService, loggedUserRepository)
+    }
+    
+    @Provides
+    @Singleton
+    fun provideGetInventariosPendientesSimultaneosUseCase(
+        inventariosPendientesSimultaneosRepository: InventariosPendientesSimultaneosRepository
+    ): GetInventariosPendientesSimultaneosUseCase {
+        return GetInventariosPendientesSimultaneosUseCase(inventariosPendientesSimultaneosRepository)
+    }
+
+    // ==================== PROVIDERS PARA CONFIRMAR CONTEO SIMULTÁNEO ====================
+    
+    @Provides
+    @Singleton
+    fun provideConfirmarConteoSimultaneoApiService(
+        @DefaultRetrofit retrofit: Retrofit
+    ): com.gloria.data.api.ConfirmarConteoSimultaneoApiService {
+        return retrofit.create(com.gloria.data.api.ConfirmarConteoSimultaneoApiService::class.java)
+    }
+    
+    @Provides
+    @Singleton
+    fun provideConfirmarConteoSimultaneoRepository(
+        apiService: com.gloria.data.api.ConfirmarConteoSimultaneoApiService,
+        loggedUserRepository: LoggedUserRepository
+    ): ConfirmarConteoSimultaneoRepository {
+        return ConfirmarConteoSimultaneoRepository(apiService, loggedUserRepository)
+    }
+    
+    @Provides
+    @Singleton
+    fun provideConfirmarConteoSimultaneoUseCase(
+        confirmarConteoSimultaneoRepository: ConfirmarConteoSimultaneoRepository
+    ): ConfirmarConteoSimultaneoUseCase {
+        return ConfirmarConteoSimultaneoUseCase(confirmarConteoSimultaneoRepository)
     }
 
 }

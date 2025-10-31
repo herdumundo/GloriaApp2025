@@ -75,7 +75,7 @@ data class InventarioSincronizacionApi(
     @SerializedName("CAJA")
     val caja: Int,
     @SerializedName("GRUESA")
-    val gruesa: Int,
+    val gruesa: Double,
     @SerializedName("UNID_IND")
     val unidInd: Int,
     @SerializedName("SUC_DESC")
@@ -83,5 +83,7 @@ data class InventarioSincronizacionApi(
     @SerializedName("DEP_DESC")
     val depDesc: String,
     @SerializedName("WINVE_STOCK_VISIBLE")
-    val winveStockVisible: String
+    val winveStockVisible: String,
+    @SerializedName("WINVE_TIPO")
+    val winveTipo: String
 )

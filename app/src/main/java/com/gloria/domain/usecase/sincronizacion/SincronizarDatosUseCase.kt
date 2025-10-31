@@ -1,6 +1,7 @@
 package com.gloria.domain.usecase.sincronizacion
 
 import com.gloria.repository.SincronizacionCompletaRepository
+import com.gloria.repository.SincronizacionResult
 import javax.inject.Inject
 
 /**
@@ -11,7 +12,7 @@ class SincronizarDatosUseCase @Inject constructor(
 ) {
     suspend operator fun invoke(
         onProgress: (message: String, current: Int, total: Int) -> Unit = { _, _, _ -> }
-    ): Result<com.gloria.repository.SincronizacionResult> {
+    ): Result< SincronizacionResult> {
         return try {
             val result = sincronizacionCompletaRepository.sincronizarTodasLasTablas(onProgress)
             if (result.isSuccess) {

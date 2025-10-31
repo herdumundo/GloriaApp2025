@@ -51,7 +51,7 @@ object ConteoRequestMapper {
                 tomaRegistro = inventario.toma_registro,
                 codBarra = inventario.cod_barra,
                 caja = inventario.caja,
-                gruesa = inventario.GRUESA,
+                gruesa = inventario.GRUESA.toInt(),
                 unidInd = inventario.UNID_IND,
                 sucursal = inventario.sucursal,
                 deposito = inventario.deposito
@@ -99,7 +99,7 @@ object ConteoRequestMapper {
             tomaRegistro = inventario.toma_registro,
             codBarra = inventario.cod_barra,
             caja = inventario.caja,
-            gruesa = inventario.GRUESA,
+            gruesa = inventario.GRUESA.toInt(),
             unidInd = inventario.UNID_IND,
             sucursal = inventario.sucursal,
             deposito = inventario.deposito

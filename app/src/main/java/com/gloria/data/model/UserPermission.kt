@@ -26,13 +26,14 @@ object PermissionMapper {
         "cancelacion_inventario" to "STKW004",
         "exportar_inventario" to "STKW002",
         "sincronizar_datos" to "STKW001", // o STKW002 según necesidad
-        "informe_conteos_pendientes" to "STKW005"
+        "informe_conteos_pendientes" to "STKW005",
+        "confirmacion_conteo_simultaneo" to "STKW005"
     )
     
     val formularioToScreen = mapOf(
         "STKW001" to listOf("registro_toma", "sincronizar_datos"),
         "STKW002" to listOf("registro_inventario", "exportar_inventario"),
         "STKW004" to listOf("cancelacion_inventario"),
-        "STKW005" to listOf("informe_conteos_pendientes")
+        "STKW005" to listOf("informe_conteos_pendientes","confirmacion_conteo_simultaneo")
     )
 }

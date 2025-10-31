@@ -29,9 +29,9 @@ data class CabeceraConteo(
     @SerializedName("winveLoginCerradoWeb") val winveLoginCerradoWeb: String,
     @SerializedName("usuarioQueConteo") val usuarioQueConteo: String,
     @SerializedName("tipoToma") val tipoToma: String,
-    @SerializedName("winvdNroInv") val winvdNroInv: Int
+    @SerializedName("winvdNroInv") val winvdNroInv: Int,
+    @SerializedName("estado") val estado: String
 )
-
 /**
  * Detalle del conteo
  */
