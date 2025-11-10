@@ -412,7 +412,7 @@ fun LoginDivider() {
             color = Color.White.copy(alpha = 0.3f)
         )
         Text(
-            text = "App Inventario v1.0.0",
+            text = "App Inventario  ${BuildConfig.VERSION_NAME}",
             modifier = Modifier.padding(horizontal = 16.dp),
             fontSize = 12.sp,
             fontWeight = FontWeight.Bold,

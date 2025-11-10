@@ -566,13 +566,9 @@ fun DetalleInventarioDialog(
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Column {
+                                       
                                         Text(
-                                            text = "Solo con inventario",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            fontWeight = FontWeight.Medium
-                                        )
-                                        Text(
-                                            text = "Cant. Inv. > 0",
+                                            text = "Articulos contados > 0",
                                             style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
@@ -694,73 +690,62 @@ fun DetalleInventarioDialog(
                                             )
                                         }
                                     }
-                                    listaDetalles.forEach { detalle ->
-                                        OutlinedCard(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(vertical = 4.dp),
-                                            colors = CardDefaults.outlinedCardColors(
-                                                containerColor = MaterialTheme.colorScheme.surface
-                                            )
-                                        ) {
-                                            Column(modifier = Modifier.padding(8.dp)) {
-                                                Row(
-                                                    modifier = Modifier.fillMaxWidth(),
-                                                    horizontalArrangement = Arrangement.SpaceBetween
-                                                ) {
-                                                    Text(
-                                                        text = "Lote:",
-                                                        fontWeight = FontWeight.Medium,
-                                                        style = MaterialTheme.typography.bodySmall
-                                                    )
-                                                    Text(
-                                                        text = detalle.winvdLote,
-                                                        style = MaterialTheme.typography.bodySmall
-                                                    )
-                                                }
-                                                Row(
-                                                    modifier = Modifier.fillMaxWidth(),
-                                                    horizontalArrangement = Arrangement.SpaceBetween
-                                                ) {
-                                                    Text(
-                                                        text = "Cant. Actual:",
-                                                        fontWeight = FontWeight.Medium,
-                                                        style = MaterialTheme.typography.bodySmall
-                                                    )
-                                                    Text(
-                                                        text = "${detalle.winvdCantAct}",
-                                                        style = MaterialTheme.typography.bodySmall
-                                                    )
-                                                }
-                                                Row(
-                                                    modifier = Modifier.fillMaxWidth(),
-                                                    horizontalArrangement = Arrangement.SpaceBetween
-                                                ) {
-                                                    Text(
-                                                        text = "Cant. Contada:",
-                                                        fontWeight = FontWeight.Bold,
-                                                        style = MaterialTheme.typography.bodySmall
-                                                    )
-                                                    val colorContada = if (detalle.winvdCantInv < detalle.winvdCantAct) {
-                                                        MaterialTheme.colorScheme.error
-                                                    } else if (detalle.winvdCantInv > detalle.winvdCantAct) {
-                                                        Color(0xFF0D6CD2)
-                                                    } else {
-                                                        MaterialTheme.colorScheme.onSurface
-                                                    }
-                                                    val diferenciaContada = detalle.winvdCantInv - detalle.winvdCantAct
-                                                    Text(
-                                                        text = "${detalle.winvdCantInv}",
-                                                        color = colorContada,
-                                                        fontWeight = if (diferenciaContada != 0) FontWeight.SemiBold else FontWeight.Normal,
-                                                        style = MaterialTheme.typography.bodySmall
-                                                    )
-                                                }
-                                                Divider(
-                                                    thickness = 0.5.dp,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                    OutlinedCard(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 4.dp),
+                                        colors = CardDefaults.outlinedCardColors(
+                                            containerColor = MaterialTheme.colorScheme.surface
+                                        )
+                                    ) {
+                                        Column(modifier = Modifier.padding(8.dp)) {
+                                            // Encabezados de columnas
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            ) {
+                                                Text(
+                                                    text = "Lote",
+                                                    fontWeight = FontWeight.Medium,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    modifier = Modifier.weight(1f)
                                                 )
+                                                Text(
+                                                    text = "Cant. Act.",
+                                                    fontWeight = FontWeight.Medium,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    textAlign = TextAlign.End,
+                                                    modifier = Modifier.weight(1f)
+                                                )
+                                                Text(
+                                                    text = "Contada",
+                                                    fontWeight = FontWeight.Bold,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    textAlign = TextAlign.End,
+                                                    modifier = Modifier.weight(1f)
+                                                )
+                                                Text(
+                                                    text = "Dif.",
+                                                    fontWeight = FontWeight.Medium,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    textAlign = TextAlign.End,
+                                                    modifier = Modifier.weight(0.8f)
+                                                )
+                                            }
+                                            Divider(
+                                                thickness = 0.5.dp,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                            )
+                                            // Filas por lote
+                                            listaDetalles.forEachIndexed { index, detalle ->
                                                 val diferencia = detalle.winvdCantInv - detalle.winvdCantAct
+                                                val colorContada = if (detalle.winvdCantInv < detalle.winvdCantAct) {
+                                                    MaterialTheme.colorScheme.error
+                                                } else if (detalle.winvdCantInv > detalle.winvdCantAct) {
+                                                    Color(0xFF0D6CD2)
+                                                } else {
+                                                    MaterialTheme.colorScheme.onSurface
+                                                }
                                                 val colorDiferencia = if (diferencia < 0) {
                                                     MaterialTheme.colorScheme.error
                                                 } else if (diferencia > 0) {
@@ -774,15 +759,37 @@ fun DetalleInventarioDialog(
                                                     horizontalArrangement = Arrangement.SpaceBetween
                                                 ) {
                                                     Text(
-                                                        text = "Diferencia:",
-                                                        fontWeight = FontWeight.Medium,
-                                                        style = MaterialTheme.typography.bodySmall
+                                                        text = detalle.winvdLote,
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        modifier = Modifier.weight(1f)
+                                                    )
+                                                    Text(
+                                                        text = "${detalle.winvdCantAct}",
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        textAlign = TextAlign.End,
+                                                        modifier = Modifier.weight(1f)
+                                                    )
+                                                    Text(
+                                                        text = "${detalle.winvdCantInv}",
+                                                        color = colorContada,
+                                                        fontWeight = if (diferencia != 0) FontWeight.SemiBold else FontWeight.Normal,
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        textAlign = TextAlign.End,
+                                                        modifier = Modifier.weight(1f)
                                                     )
                                                     Text(
                                                         text = diferenciaTexto,
                                                         color = colorDiferencia,
                                                         fontWeight = if (diferencia != 0) FontWeight.SemiBold else FontWeight.Normal,
-                                                        style = MaterialTheme.typography.bodySmall
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        textAlign = TextAlign.End,
+                                                        modifier = Modifier.weight(0.8f)
+                                                    )
+                                                }
+                                                if (index < listaDetalles.lastIndex) {
+                                                    Divider(
+                                                        thickness = 0.5.dp,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
                                                     )
                                                 }
                                             }

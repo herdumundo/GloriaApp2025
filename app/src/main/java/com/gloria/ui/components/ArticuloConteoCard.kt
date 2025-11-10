@@ -5,6 +5,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
@@ -15,6 +16,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -22,6 +24,7 @@ import android.util.Log
 import androidx.compose.ui.text.style.TextOverflow
 import com.gloria.data.model.ArticuloInventario
 import com.gloria.ui.inventario.viewmodel.EstadoConteo
+import kotlin.math.max
 
 /**
  * Card para mostrar un artículo del inventario con campos de entrada para conteo
@@ -66,8 +69,36 @@ fun ArticuloConteoCard(
         (cajas * articulo.caja) + unidades
     }
     
-    // Total final (acumulado + actual)
-    val totalFinal = totalAcumulado + totalCalculado
+    // Totales con tope inferior 0 para evitar negativos en UI
+    val totalFinal = max(0, totalAcumulado + totalCalculado)
+    val totalCalculadoClamped = max(0, totalCalculado)
+
+    val handleContar = {
+        ultimaCantidadCajas = cajasInput
+        ultimaCantidadUnidades = unidadesInput
+        totalAcumulado = max(0, totalAcumulado + totalCalculado)
+        ultimoValorIngresado = totalCalculado
+        haSidoContado = true
+        Log.d("LogConteo", "=== ENVIANDO CONTEO DESDE CARD ===")
+        Log.d("LogConteo", "Artículo ID: ${articulo.winvdSecu}")
+        Log.d("LogConteo", "Total acumulado enviado: $totalAcumulado")
+        Log.d("LogConteo", "Total calculado: $totalCalculado")
+        Log.d("LogConteo", "Cantidad base (winvdCantInv): ${articulo.winvdCantInv}")
+        val nuevoEstado = EstadoConteo(
+            totalAcumulado = totalAcumulado,
+            cajasInput = "0",
+            unidadesInput = "0",
+            haSidoContado = true,
+            ultimaCantidadCajas = ultimaCantidadCajas,
+            ultimaCantidadUnidades = ultimaCantidadUnidades
+        )
+        onEstadoConteoChanged(nuevoEstado)
+        onArticuloContado(articulo.winvdSecu, totalAcumulado)
+        cajasInput = "0"
+        unidadesInput = "0"
+        onCajasChanged(0)
+        onUnidadesChanged(0)
+    }
     
     Card(
         modifier = modifier
@@ -206,7 +237,8 @@ fun ArticuloConteoCard(
                             onEstadoConteoChanged(nuevoEstado)
                         },
                         modifier = Modifier.fillMaxWidth(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(onDone = { handleContar() }),
                         singleLine = true,
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = Color.Transparent,
@@ -263,7 +295,8 @@ fun ArticuloConteoCard(
                             onEstadoConteoChanged(nuevoEstado)
                         },
                         modifier = Modifier.fillMaxWidth(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(onDone = { handleContar() }),
                         singleLine = true,
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = Color.Transparent,
@@ -296,7 +329,7 @@ fun ArticuloConteoCard(
                 // Total o estado
                 Column {
                     Text(
-                        text = if (haSidoContado) "Total: $totalFinal" else "Total: $totalCalculado",
+                        text = if (haSidoContado) "Total: $totalFinal" else "Total: $totalCalculadoClamped",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = if (haSidoContado) Color(0xFF2E7D32) else Color(0xFF2E7D32)
@@ -312,7 +345,7 @@ fun ArticuloConteoCard(
                         )
                         
                         // Mostrar diferencia entre stock y total contado
-                        val totalParaDiferencia = if (haSidoContado) totalFinal else totalCalculado
+                        val totalParaDiferencia = if (haSidoContado) totalFinal else totalCalculadoClamped
                         val diferencia = totalParaDiferencia - articulo.winvdCantAct
                         
                         if (diferencia != 0) {
@@ -341,46 +374,7 @@ fun ArticuloConteoCard(
                 
                 // Botón Contar
                 Button(
-                    onClick = {
-                        // Guardar las últimas cantidades ingresadas antes de limpiar
-                        ultimaCantidadCajas = cajasInput
-                        ultimaCantidadUnidades = unidadesInput
-                        
-                        // Agregar al total acumulado (ya incluye la cantidad base si existe)
-                        totalAcumulado += totalCalculado
-                        // Guardar como último valor ingresado
-                        ultimoValorIngresado = totalCalculado
-                        // Marcar como contado
-                        haSidoContado = true
-                        
-                        // Log para debug
-                        Log.d("LogConteo", "=== ENVIANDO CONTEO DESDE CARD ===")
-                        Log.d("LogConteo", "Artículo ID: ${articulo.winvdSecu}")
-                        Log.d("LogConteo", "Total acumulado enviado: $totalAcumulado")
-                        Log.d("LogConteo", "Total calculado: $totalCalculado")
-                        Log.d("LogConteo", "Cantidad base (winvdCantInv): ${articulo.winvdCantInv}")
-                        
-                        // Actualizar estado en el ViewModel
-                        val nuevoEstado = EstadoConteo(
-                            totalAcumulado = totalAcumulado,
-                            cajasInput = "0",
-                            unidadesInput = "0",
-                            haSidoContado = true,
-                            ultimaCantidadCajas = ultimaCantidadCajas,
-                            ultimaCantidadUnidades = ultimaCantidadUnidades
-                        )
-                        onEstadoConteoChanged(nuevoEstado)
-                        
-                        // Notificar al ViewModel que este artículo fue contado con la cantidad total final
-                        onArticuloContado(articulo.winvdSecu, totalAcumulado)
-                        
-                        // Limpiar campos de entrada
-                        cajasInput = "0"
-                        unidadesInput = "0"
-                        // Notificar cambios
-                        onCajasChanged(0)
-                        onUnidadesChanged(0)
-                    },
+                    onClick = { handleContar() },
                     modifier = Modifier
                         .height(28.dp)
                         .width(60.dp),

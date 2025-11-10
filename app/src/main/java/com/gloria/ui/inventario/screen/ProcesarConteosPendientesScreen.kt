@@ -223,7 +223,7 @@ private fun InventarioPendienteCard(
                 // Menús colapsables
                 DetalleArticulosSection(inventario.detalleArticulos)
                 Spacer(modifier = Modifier.height(8.dp))
-                AuditoriaUsuariosSection(inventario.auditoriaUsuarios)
+                AuditoriaUsuariosSection(inventario.auditoriaUsuarios, inventario.detalleArticulos)
                 
                 Spacer(modifier = Modifier.height(16.dp))
                 
@@ -283,7 +283,7 @@ private fun InventarioPendienteDetailDialog(
                 // Menús colapsables
                 DetalleArticulosSection(inventario.detalleArticulos)
                 Spacer(modifier = Modifier.height(8.dp))
-                AuditoriaUsuariosSection(inventario.auditoriaUsuarios)
+                AuditoriaUsuariosSection(inventario.auditoriaUsuarios, inventario.detalleArticulos)
             }
         }
     }
@@ -564,15 +564,96 @@ private fun DetalleArticulosSection(detalleArticulos: List<DetalleArticuloPendie
                     
                     Spacer(modifier = Modifier.height(8.dp))
                     
-                    // Lista de artículos filtrados
+                    // Lista de artículos filtrados en formato columnas/filas agrupado por artículo
+                    val articulosAgrupados = remember(articulosFiltrados) { articulosFiltrados.groupBy { it.winvdArt } }
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxWidth()
                             .heightIn(max = 300.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        items(articulosFiltrados) { articulo ->
-                            DetalleArticuloItem(articulo)
+                        items(articulosAgrupados.entries.toList()) { entry ->
+                            val winvdArt = entry.key
+                            val lista = entry.value
+                            val first = lista.first()
+                            OutlinedCard(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.outlinedCardColors(
+                                    containerColor = MaterialTheme.colorScheme.surface
+                                )
+                            ) {
+                                Column(modifier = Modifier.padding(8.dp)) {
+                                    // Título del artículo
+                                    Text(
+                                        text = "$winvdArt - ${first.artDesc}",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    // Encabezados columnas
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(
+                                            text = "Lote",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            fontWeight = FontWeight.Medium,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        Text(
+                                            text = "Contada",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            fontWeight = FontWeight.Medium,
+                                            textAlign = TextAlign.End,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        Text(
+                                            text = "Vto",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            fontWeight = FontWeight.Medium,
+                                            textAlign = TextAlign.End,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                    }
+                                    Divider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+                                    // Filas por lote con borde
+                                    lista.forEach { det ->
+                                        OutlinedCard(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(vertical = 4.dp),
+                                            colors = CardDefaults.outlinedCardColors(
+                                                containerColor = MaterialTheme.colorScheme.surface
+                                            )
+                                        ) {
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            ) {
+                                                Text(
+                                                    text = det.winvdLote,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    modifier = Modifier.weight(1f)
+                                                )
+                                                Text(
+                                                    text = "${det.cantidadTotalContada}",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    textAlign = TextAlign.End,
+                                                    modifier = Modifier.weight(1f)
+                                                )
+                                                Text(
+                                                    text = det.winvdFecVto,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    textAlign = TextAlign.End,
+                                                    modifier = Modifier.weight(1f)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -585,7 +666,10 @@ private fun DetalleArticulosSection(detalleArticulos: List<DetalleArticuloPendie
  * Sección colapsable para mostrar la auditoría de usuarios
  */
 @Composable
-private fun AuditoriaUsuariosSection(auditoriaUsuarios: List<AuditoriaUsuarioPendiente>) {
+private fun AuditoriaUsuariosSection(
+    auditoriaUsuarios: List<AuditoriaUsuarioPendiente>,
+    detalleArticulos: List<DetalleArticuloPendiente>
+) {
     var expanded by remember { mutableStateOf(false) }
     var filtroUsuario by remember { mutableStateOf("") }
     var filtroArticulo by remember { mutableStateOf("") }
@@ -856,15 +940,98 @@ private fun AuditoriaUsuariosSection(auditoriaUsuarios: List<AuditoriaUsuarioPen
                     
                     Spacer(modifier = Modifier.height(8.dp))
                     
-                    // Lista de auditorías filtradas
+                    // Mapa código -> descripción desde detalle de artículos
+                    val codigoADescripcion = remember(detalleArticulos) { detalleArticulos.associate { it.winvdArt to it.artDesc } }
+                    // Lista de auditorías agrupadas por descripción (fallback al código si no hay descripción)
+                    val auditoriasAgrupadas = remember(auditoriasFiltradas, detalleArticulos) {
+                        auditoriasFiltradas.groupBy { codigoADescripcion[it.winvdArt] ?: it.winvdArt }
+                    }
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(max = 300.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                            .heightIn(max = 300.dp)
                     ) {
-                        items(auditoriasFiltradas) { auditoria ->
-                            AuditoriaUsuarioItem(auditoria)
+                        items(auditoriasAgrupadas.entries.toList()) { entry ->
+                            val descripcionArticulo = entry.key
+                            val listaAud = entry.value
+                            OutlinedCard(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.outlinedCardColors(
+                                    containerColor = MaterialTheme.colorScheme.surface
+                                )
+                            ) {
+                                Column(modifier = Modifier.padding(8.dp)) {
+                                    // Título del artículo
+                                    Text(
+                                        text = descripcionArticulo,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    // Encabezados columnas
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(
+                                            text = "Usuario",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            fontWeight = FontWeight.Medium,
+                                            modifier = Modifier.weight(1.2f)
+                                        )
+                                        Text(
+                                            text = "Lote",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            fontWeight = FontWeight.Medium,
+                                            textAlign = TextAlign.End,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        Text(
+                                            text = "Contada",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            fontWeight = FontWeight.Medium,
+                                            textAlign = TextAlign.End,
+                                            modifier = Modifier.weight(0.8f)
+                                        )
+                                    }
+                                    Divider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+                                    // Filas de auditoría por artículo
+                                    listaAud.forEach { a ->
+                                        OutlinedCard(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(vertical = 4.dp),
+                                            colors = CardDefaults.outlinedCardColors(
+                                                containerColor = MaterialTheme.colorScheme.surface
+                                            )
+                                        ) {
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            ) {
+                                                Text(
+                                                    text = a.usuarioContador,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    modifier = Modifier.weight(1.2f)
+                                                )
+                                                Text(
+                                                    text = a.winvdLote,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    textAlign = TextAlign.End,
+                                                    modifier = Modifier.weight(1f)
+                                                )
+                                                Text(
+                                                    text = "${a.cantidadContada}",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    textAlign = TextAlign.End,
+                                                    modifier = Modifier.weight(0.8f)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }

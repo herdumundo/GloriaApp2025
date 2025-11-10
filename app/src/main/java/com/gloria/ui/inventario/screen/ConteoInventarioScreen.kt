@@ -185,13 +185,21 @@ fun ConteoInventarioScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Total de artículos (siempre visible)
-                        Text(
-                            text = "Total: ${uiState.totalArticulos}",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.primary
-                        )
+                        // Total y contado (siempre visible)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "Total: ${uiState.totalArticulos}",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Contado: ${uiState.articulosContados.size} / ${uiState.totalArticulos}",
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                         
                         // Información de resultados de búsqueda (solo si hay búsqueda activa)
                         if (uiState.searchQuery.isNotEmpty()) {

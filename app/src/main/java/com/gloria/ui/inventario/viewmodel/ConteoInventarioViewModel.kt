@@ -373,12 +373,13 @@ class ConteoInventarioViewModel @Inject constructor(
                         cantidadesContadasSnapshot.forEach { (clave, cantidad) ->
                             // Extraer secuencia de la clave "secuencia_inventario"
                             val secuencia = clave.split("_").first().toIntOrNull()
-                            
-                            if (secuencia != null && cantidad > 0) {
+                            // Aceptar cantidad 0 (para permitir "poner en cero") y normalizar negativos a 0
+                            val cantidadNormalizada = if (cantidad < 0) 0 else cantidad
+                            if (secuencia != null) {
                                 actualizarCantidadInventarioUseCase(
                                     numeroInventario = nroInventario,
                                     secuencia = secuencia,
-                                    cantidad = cantidad,
+                                    cantidad = cantidadNormalizada,
                                     estado = estadoFinal,
                                     usuarioCerrado = usuarioCerrado
                                 )
