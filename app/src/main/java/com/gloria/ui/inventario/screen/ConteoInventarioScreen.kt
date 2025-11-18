@@ -10,6 +10,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Warning
@@ -30,6 +32,11 @@ import com.gloria.ui.inventario.PortraitCaptureActivity
 import com.gloria.ui.inventario.viewmodel.ConteoInventarioViewModel
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 /**
  * Pantalla de Conteo de Inventario
@@ -62,7 +69,10 @@ fun ConteoInventarioScreen(
     
     // Cargar artículos al iniciar la pantalla
     LaunchedEffect(nroInventario) {
-        viewModel.cargarArticulosInventario(nroInventario)
+        if (nroInventario > 0) {
+            viewModel.eliminarConteosEstadoN(nroInventario)
+            viewModel.cargarArticulosInventario(nroInventario)
+        }
     }
     
     // Manejar navegación después de registro exitoso
@@ -365,11 +375,14 @@ fun ConteoInventarioScreen(
                                     onUnidadesChanged = { unidades ->
                                         // TODO: Actualizar cantidad de unidades
                                     },
-                                    onArticuloContado = { articuloId, cantidad ->
-                                        viewModel.marcarArticuloContado(articuloId, cantidad)
+                                    onArticuloContado = { articuloId, total, cajasRegistradas, unidadesRegistradas ->
+                                        viewModel.marcarArticuloContado(articuloId, total, cajasRegistradas, unidadesRegistradas)
                                     },
                                     onEstadoConteoChanged = { estado ->
                                         viewModel.actualizarEstadoConteo(articulo.winvdSecu, estado)
+                                    },
+                                    onDetalleClick = {
+                                        viewModel.mostrarDetalleConteo(articulo)
                                     }
                                 )
                             }
@@ -377,6 +390,185 @@ fun ConteoInventarioScreen(
                     }
                 }
             }
+    }
+    
+    if (uiState.showDetalleConteo) {
+        val detalleArticulo = uiState.detalleArticulo
+        val formatter = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
+
+        AlertDialog(
+            onDismissRequest = { viewModel.cerrarDetalleConteo() },
+            title = {
+                Column {
+                    Text(
+                        text = "Detalle de conteos",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    detalleArticulo?.let { articulo ->
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "${articulo.winvdArt} - ${articulo.artDesc}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            maxLines = 2
+                        )
+                        Text(
+                            text = "Lote: ${articulo.winvdLote}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            },
+            text = {
+                if (uiState.detalleConteos.isEmpty()) {
+                    Text(
+                        text = "No se registraron conteos para este artículo.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        )
+                    ) {
+                        var expanded by remember { mutableStateOf(true) }
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Historial de conteos (${uiState.detalleConteos.size})",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                IconButton(onClick = { expanded = !expanded }) {
+                                    Icon(
+                                        imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                        contentDescription = if (expanded) "Colapsar" else "Expandir"
+                                    )
+                                }
+                            }
+                            if (expanded) {
+                                OutlinedCard(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = 8.dp),
+                                    colors = CardDefaults.outlinedCardColors(
+                                        containerColor = MaterialTheme.colorScheme.surface
+                                    )
+                                ) {
+                                    Column(
+                                        modifier = Modifier
+                                            .padding(12.dp)
+                                            .verticalScroll(rememberScrollState())
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                        ) {
+                                            Text(
+                                                text = "Orden",
+                                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 9.sp),
+                                                fontWeight = FontWeight.Medium,
+                                                modifier = Modifier.weight(0.7f)
+                                            )
+                                            Text(
+                                                text = "Tipo",
+                                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 9.sp),
+                                                fontWeight = FontWeight.Medium,
+                                                modifier = Modifier.weight(0.9f)
+                                            )
+                                            Text(
+                                                text = "Contado",
+                                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 9.sp),
+                                                fontWeight = FontWeight.Medium,
+                                                textAlign = TextAlign.End,
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                            Text(
+                                                text = "Unidad",
+                                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 9.sp),
+                                                fontWeight = FontWeight.Medium,
+                                                textAlign = TextAlign.End,
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                            Text(
+                                                text = "Hora",
+                                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 9.sp),
+                                                fontWeight = FontWeight.Medium,
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                        }
+                                        Divider(
+                                            modifier = Modifier.padding(vertical = 6.dp),
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                        )
+
+                                        uiState.detalleConteos.forEachIndexed { index, log ->
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(vertical = 4.dp),
+                                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                            ) {
+                                                Text(
+                                                    text = log.orden.toString(),
+                                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 9.sp, fontWeight = FontWeight.SemiBold),
+                                                    modifier = Modifier.weight(0.7f)
+                                                )
+                                                Text(
+                                                    text = log.tipo,
+                                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 9.sp, fontWeight = FontWeight.SemiBold),
+                                                    modifier = Modifier.weight(0.9f)
+                                                )
+                                                Text(
+                                                    text = log.cantidadIngresada.toString(),
+                                                    style = MaterialTheme.typography.bodySmall.copy(
+                                                        fontSize = 9.sp,
+                                                        fontWeight = FontWeight.SemiBold,
+                                                        color = if (log.cantidadIngresada < 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+                                                    ),
+                                                    textAlign = TextAlign.End,
+                                                    modifier = Modifier.weight(1f)
+                                                )
+                                                Text(
+                                                    text = log.cantidadConvertida.toString(),
+                                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 9.sp, fontWeight = FontWeight.SemiBold),
+                                                    textAlign = TextAlign.End,
+                                                    modifier = Modifier.weight(1f)
+                                                )
+                                                Text(
+                                                    text = formatter.format(Date(log.createdAt)),
+                                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 9.sp, fontWeight = FontWeight.SemiBold),
+                                                    textAlign = TextAlign.End,
+                                                    modifier = Modifier.weight(1f)
+                                                )
+                                            }
+                                            if (index < uiState.detalleConteos.lastIndex) {
+                                                Divider(
+                                                    thickness = 0.5.dp,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { viewModel.cerrarDetalleConteo() }) {
+                    Text("Cerrar")
+                }
+            }
+        )
     }
     
     // Alerta de productos no contados
@@ -545,8 +737,12 @@ fun ConteoInventarioScreen(
     ExitConfirmationDialog(
         showDialog = showExitDialog,
         onDismiss = { showExitDialog = false },
-        navController = navController,
-        route = "menu_principal",
+        onConfirm = {
+            viewModel.eliminarConteosEstadoN(uiState.nroInventario)
+            navController.navigate("menu_principal") {
+                popUpTo("menu_principal") { inclusive = true }
+            }
+        },
         title = "Salir del conteo",
         message = "¿Estás seguro de que deseas salir del conteo de inventario?",
         warningMessage = "Los cambios no guardados se perderán.",

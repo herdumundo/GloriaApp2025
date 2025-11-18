@@ -11,12 +11,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.gloria.data.model.ConteoPendienteResponse
@@ -26,6 +28,7 @@ import android.util.Log
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.Calendar
+import com.gloria.data.model.ConteosLogPayload
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -174,7 +177,10 @@ fun InformeConteosPendientesScreen(
                 // Mostrar resultados
                 ConteosPendientesResultados(
                     conteosPendientes = uiState.conteosPendientes!!,
-                    onDetalleClick = { viewModel.mostrarDetalleInventario(it) }
+                    onDetalleClick = {
+                        viewModel.mostrarDetalleInventario(it)
+                        viewModel.consultarLogsRemotos(it.header.winvdNroInv)
+                    }
                 )
             }
             
@@ -268,6 +274,7 @@ fun InformeConteosPendientesScreen(
     if (uiState.mostrarDetalle && uiState.detalleSeleccionado != null) {
         DetalleInventarioDialog(
             inventario = uiState.detalleSeleccionado!!,
+            logsRemotos = uiState.logsRemotos,
             onDismiss = { viewModel.ocultarDetalleInventario() }
         )
     }
@@ -355,6 +362,7 @@ fun InventarioCard(
 @Composable
 fun DetalleInventarioDialog(
     inventario: InventarioConteo,
+    logsRemotos: Map<String, List<ConteosLogPayload>>,
     onDismiss: () -> Unit
 ) {
     var filtroArticulo by remember { mutableStateOf("") }
@@ -702,34 +710,41 @@ fun DetalleInventarioDialog(
                                             // Encabezados de columnas
                                             Row(
                                                 modifier = Modifier.fillMaxWidth(),
-                                                horizontalArrangement = Arrangement.SpaceBetween
+                                                horizontalArrangement = Arrangement.spacedBy(12.dp)
                                             ) {
                                                 Text(
                                                     text = "Lote",
                                                     fontWeight = FontWeight.Medium,
-                                                    style = MaterialTheme.typography.bodySmall,
+                                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 8.sp),
                                                     modifier = Modifier.weight(1f)
                                                 )
                                                 Text(
                                                     text = "Cant. Act.",
                                                     fontWeight = FontWeight.Medium,
-                                                    style = MaterialTheme.typography.bodySmall,
+                                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 8.sp),
                                                     textAlign = TextAlign.End,
                                                     modifier = Modifier.weight(1f)
                                                 )
                                                 Text(
-                                                    text = "Contada",
+                                                    text = "Conteo",
                                                     fontWeight = FontWeight.Bold,
-                                                    style = MaterialTheme.typography.bodySmall,
+                                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 8.sp),
                                                     textAlign = TextAlign.End,
                                                     modifier = Modifier.weight(1f)
                                                 )
                                                 Text(
                                                     text = "Dif.",
                                                     fontWeight = FontWeight.Medium,
-                                                    style = MaterialTheme.typography.bodySmall,
+                                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 8.sp),
                                                     textAlign = TextAlign.End,
                                                     modifier = Modifier.weight(0.8f)
+                                                )
+                                                Text(
+                                                    text = "Detalle",
+                                                    fontWeight = FontWeight.Medium,
+                                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 8.sp),
+                                                    textAlign = TextAlign.Center,
+                                                    modifier = Modifier.weight(1.1f)
                                                 )
                                             }
                                             Divider(
@@ -737,7 +752,9 @@ fun DetalleInventarioDialog(
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                                             )
                                             // Filas por lote
-                                            listaDetalles.forEachIndexed { index, detalle ->
+                                            listaDetalles.forEachIndexed { detalleIndex, detalle ->
+                                                val key = "${detalle.winvdSecu}_${detalle.winvdArt}"
+                                                val logsLinea = logsRemotos[key].orEmpty().sortedBy { it.orden }
                                                 val diferencia = detalle.winvdCantInv - detalle.winvdCantAct
                                                 val colorContada = if (detalle.winvdCantInv < detalle.winvdCantAct) {
                                                     MaterialTheme.colorScheme.error
@@ -754,43 +771,190 @@ fun DetalleInventarioDialog(
                                                     MaterialTheme.colorScheme.onSurface
                                                 }
                                                 val diferenciaTexto = if (diferencia > 0) "+$diferencia" else "$diferencia"
-                                                Row(
-                                                    modifier = Modifier.fillMaxWidth(),
-                                                    horizontalArrangement = Arrangement.SpaceBetween
-                                                ) {
-                                                    Text(
-                                                        text = detalle.winvdLote,
-                                                        style = MaterialTheme.typography.bodySmall,
-                                                        modifier = Modifier.weight(1f)
-                                                    )
-                                                    Text(
-                                                        text = "${detalle.winvdCantAct}",
-                                                        style = MaterialTheme.typography.bodySmall,
-                                                        textAlign = TextAlign.End,
-                                                        modifier = Modifier.weight(1f)
-                                                    )
-                                                    Text(
-                                                        text = "${detalle.winvdCantInv}",
-                                                        color = colorContada,
-                                                        fontWeight = if (diferencia != 0) FontWeight.SemiBold else FontWeight.Normal,
-                                                        style = MaterialTheme.typography.bodySmall,
-                                                        textAlign = TextAlign.End,
-                                                        modifier = Modifier.weight(1f)
-                                                    )
-                                                    Text(
-                                                        text = diferenciaTexto,
-                                                        color = colorDiferencia,
-                                                        fontWeight = if (diferencia != 0) FontWeight.SemiBold else FontWeight.Normal,
-                                                        style = MaterialTheme.typography.bodySmall,
-                                                        textAlign = TextAlign.End,
-                                                        modifier = Modifier.weight(0.8f)
-                                                    )
-                                                }
-                                                if (index < listaDetalles.lastIndex) {
-                                                    Divider(
-                                                        thickness = 0.5.dp,
-                                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
-                                                    )
+
+                                                key(key) {
+                                                    var expanded by remember { mutableStateOf(false) }
+                                                    Column(
+                                                        modifier = Modifier
+                                                            .fillMaxWidth()
+                                                            .padding(vertical = 4.dp)
+                                                    ) {
+                                                        Row(
+                                                            modifier = Modifier.fillMaxWidth(),
+                                                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                                            verticalAlignment = Alignment.CenterVertically
+                                                        ) {
+                                                            Text(
+                                                                text = detalle.winvdLote,
+                                                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 8.sp),
+                                                                modifier = Modifier.weight(1f)
+                                                            )
+                                                            Text(
+                                                                text = "${detalle.winvdCantAct}",
+                                                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 8.sp),
+                                                                textAlign = TextAlign.End,
+                                                                modifier = Modifier.weight(1f)
+                                                            )
+                                                            Text(
+                                                                text = "${detalle.winvdCantInv}",
+                                                                color = colorContada,
+                                                                fontWeight = if (diferencia != 0) FontWeight.SemiBold else FontWeight.Normal,
+                                                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 8.sp),
+                                                                textAlign = TextAlign.End,
+                                                                modifier = Modifier.weight(1f)
+                                                            )
+                                                            Text(
+                                                                text = diferenciaTexto,
+                                                                color = colorDiferencia,
+                                                                fontWeight = if (diferencia != 0) FontWeight.SemiBold else FontWeight.Normal,
+                                                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 8.sp),
+                                                                textAlign = TextAlign.End,
+                                                                modifier = Modifier.weight(0.8f)
+                                                            )
+                                                            IconButton(
+                                                                onClick = { expanded = !expanded },
+                                                                modifier = Modifier.size(32.dp)
+                                                            ) {
+                                                                Icon(
+                                                                    imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                                                    contentDescription = if (expanded) "Ocultar detalle" else "Ver detalle"
+                                                                )
+                                                            }
+                                                        }
+
+                                                        AnimatedVisibility(visible = expanded) {
+                                                            if (logsLinea.isEmpty()) {
+                                                                Text(
+                                                                    text = "Sin registros remotos.",
+                                                                    style = MaterialTheme.typography.bodySmall,
+                                                                    modifier = Modifier
+                                                                        .fillMaxWidth()
+                                                                        .padding(start = 4.dp, top = 4.dp)
+                                                                )
+                                                            } else {
+                                                                val totalConvertida = logsLinea.sumOf { it.cantidadConvertida }
+                                                                Column(
+                                                                    modifier = Modifier
+                                                                        .fillMaxWidth()
+                                                                        .padding(top = 6.dp, start = 4.dp, end = 4.dp)
+                                                                    ) {
+                                                                    Row(
+                                                                        modifier = Modifier.fillMaxWidth(),
+                                                                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                                                    ) {
+                                                                        Text(
+                                                                            text = "Sec",
+                                                                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 9.sp),
+                                                                            fontWeight = FontWeight.SemiBold,
+                                                                            modifier = Modifier.weight(0.4f)
+                                                                        )
+                                                                        Text(
+                                                                            text = "Tipo",
+                                                                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 9.sp),
+                                                                            fontWeight = FontWeight.SemiBold,
+                                                                            modifier = Modifier.weight(0.7f)
+                                                                        )
+                                                                        Text(
+                                                                            text = "Usuario",
+                                                                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 9.sp),
+                                                                            fontWeight = FontWeight.SemiBold,
+                                                                            modifier = Modifier.weight(1f)
+                                                                        )
+                                                                        Text(
+                                                                            text = "Conteo",
+                                                                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 9.sp),
+                                                                            fontWeight = FontWeight.SemiBold,
+                                                                            textAlign = TextAlign.End,
+                                                                            modifier = Modifier.weight(0.8f)
+                                                                        )
+                                                                        Text(
+                                                                            text = "Unidad",
+                                                                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 9.sp),
+                                                                            fontWeight = FontWeight.SemiBold,
+                                                                            textAlign = TextAlign.End,
+                                                                            modifier = Modifier.weight(0.9f)
+                                                                        )
+                                                                    }
+                                                                    logsLinea.forEachIndexed { idx, log ->
+                                                                        Row(
+                                                                            modifier = Modifier
+                                                                                .fillMaxWidth()
+                                                                                .padding(vertical = 2.dp),
+                                                                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                                                        ) {
+                                                                            Text(
+                                                                                text = log.orden.toString(),
+                                                                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 8.sp),
+                                                                                modifier = Modifier.weight(0.4f)
+                                                                            )
+                                                                            Text(
+                                                                                text = if(log.tipo=="CAJAS") {"Caj"} else {"Uni"},
+                                                                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 8.sp),
+                                                                                modifier = Modifier.weight(0.7f)
+                                                                            )
+                                                                            Text(
+                                                                                text = log.usuario,
+                                                                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 8.sp),
+                                                                                modifier = Modifier.weight(1f)
+                                                                            )
+                                                                            Text(
+                                                                                text = log.cantidadIngresada.toString(),
+                                                                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 8.sp),
+                                                                                textAlign = TextAlign.End,
+                                                                                modifier = Modifier.weight(0.8f)
+                                                                            )
+                                                                            Text(
+                                                                                text = log.cantidadConvertida.toString(),
+                                                                                 style = MaterialTheme.typography.bodySmall.copy(fontSize = 8.sp),
+
+                                                                                textAlign = TextAlign.End,
+                                                                                modifier = Modifier.weight(0.9f)
+                                                                            )
+                                                                        }
+                                                                        if (idx < logsLinea.lastIndex) {
+                                                                            Divider(
+                                                                                thickness = 0.25.dp,
+                                                                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)
+                                                                            )
+                                                                        }
+                                                                    }
+                                                                    Divider(
+                                                                        thickness = 0.5.dp,
+                                                                        color = Color(0xFFB71C1C)
+                                                                    )
+                                                                    Row(
+                                                                        modifier = Modifier
+                                                                            .fillMaxWidth()
+                                                                            .padding(top = 2.dp),
+                                                                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                                                    ) {
+                                                                        Text(
+                                                                            text = "Total",
+                                                                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 9.sp),
+                                                                            fontWeight = FontWeight.SemiBold,
+                                                                            modifier = Modifier.weight(1.1f)
+                                                                        )
+                                                                        Spacer(modifier = Modifier.weight(1.9f))
+                                                                        Text(
+                                                                            text = totalConvertida.toString(),
+                                                                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 9.sp),
+                                                                            fontWeight = FontWeight.SemiBold,
+                                                                            textAlign = TextAlign.End,
+                                                                            modifier = Modifier.weight(0.9f)
+                                                                        )
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+
+                                                        if (detalleIndex < listaDetalles.lastIndex) {
+                                                            Spacer(modifier = Modifier.height(6.dp))
+                                                            Divider(
+                                                                thickness = 0.5.dp,
+                                                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                                                            )
+                                                        }
+                                                    }
                                                 }
                                             }
                                         }

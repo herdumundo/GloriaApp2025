@@ -4,7 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gloria.data.model.ConteoPendienteResponse
 import com.gloria.data.model.InventarioConteo
+import com.gloria.data.model.ConteosLogPayload
 import com.gloria.domain.usecase.conteopendiente.GetConteosPendientesByDateUseCase
+import com.gloria.domain.usecase.inventario.GetConteosLogsRemotosUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -24,7 +26,8 @@ data class InformeConteosPendientesState(
     val conteosPendientes: ConteoPendienteResponse? = null,
     val errorMessage: String? = null,
     val mostrarDetalle: Boolean = false,
-    val detalleSeleccionado: InventarioConteo? = null
+    val detalleSeleccionado: InventarioConteo? = null,
+    val logsRemotos: Map<String, List<ConteosLogPayload>> = emptyMap()
 )
 
 /**
@@ -32,7 +35,8 @@ data class InformeConteosPendientesState(
  */
 @HiltViewModel
 class InformeConteosPendientesViewModel @Inject constructor(
-    private val getConteosPendientesByDateUseCase: GetConteosPendientesByDateUseCase
+    private val getConteosPendientesByDateUseCase: GetConteosPendientesByDateUseCase,
+    private val getConteosLogsRemotosUseCase: GetConteosLogsRemotosUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(InformeConteosPendientesState())
@@ -82,8 +86,27 @@ class InformeConteosPendientesViewModel @Inject constructor(
     fun mostrarDetalleInventario(inventario: InventarioConteo) {
         _uiState.value = _uiState.value.copy(
             mostrarDetalle = true,
-            detalleSeleccionado = inventario
+            detalleSeleccionado = inventario,
+            logsRemotos = emptyMap()
         )
+    }
+
+    fun consultarLogsRemotos(winvdNroInv: Int) {
+        viewModelScope.launch {
+            getConteosLogsRemotosUseCase(winvdNroInv)
+                .onSuccess { logs ->
+                    val agrupados = logs.groupBy { "${it.winvdSecu}_${it.winvdArt}" }
+                    _uiState.value = _uiState.value.copy(logsRemotos = agrupados)
+                }
+                .onFailure { error ->
+                    android.util.Log.e(
+                        "InformeConteosLogs",
+                        "Error consultando logs del inventario $winvdNroInv",
+                        error
+                    )
+                    _uiState.value = _uiState.value.copy(logsRemotos = emptyMap())
+                }
+        }
     }
 
     /**

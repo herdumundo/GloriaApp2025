@@ -14,9 +14,11 @@ import com.gloria.data.dao.GrupoDao
 import com.gloria.data.dao.SubgrupoDao
 import com.gloria.data.dao.InventarioDetalleDao
 import com.gloria.data.dao.UserPermissionDao
+import com.gloria.data.dao.ConteosLogsDao
 import com.gloria.data.entity.LoggedUser
 import com.gloria.data.entity.SucursalDepartamento
 import com.gloria.data.entity.Area
+import com.gloria.data.entity.ConteosLogs
 import com.gloria.data.entity.Departamento
 import com.gloria.data.entity.Seccion
 import com.gloria.data.entity.Familia
@@ -39,9 +41,10 @@ import com.gloria.data.model.UserPermission
         Grupo::class,
         Subgrupo::class,
         InventarioDetalle::class,
-        UserPermission::class
+        UserPermission::class,
+        ConteosLogs::class
     ],
-    version = 9,
+    version = 1,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -56,6 +59,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun subgrupoDao(): SubgrupoDao
     abstract fun inventarioDetalleDao(): InventarioDetalleDao
     abstract fun userPermissionDao(): UserPermissionDao
+    abstract fun conteosLogsDao(): ConteosLogsDao
     
     companion object {
         @Volatile

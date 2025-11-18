@@ -95,5 +95,10 @@ object DatabaseModule {
     fun provideUserPermissionOracleDao(authSessionUseCase: AuthSessionUseCase): UserPermissionOracleDao {
         return UserPermissionOracleDao(authSessionUseCase)
     }
+
+    @Provides
+    fun provideConteosLogsDao(database: AppDatabase): ConteosLogsDao {
+        return database.conteosLogsDao()
+    }
 }
 

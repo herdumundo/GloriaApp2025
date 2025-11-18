@@ -42,6 +42,24 @@ class InventarioDetalleRepository @Inject constructor(
             numeroInventario, secuencia, cantidad, estado, usuarioCerrado
         )
     }
+
+    suspend fun actualizarCantidadInventarioSoloCantidad(
+        numeroInventario: Int,
+        secuencia: Int,
+        codigoArticulo: String,
+        cantidad: Int
+    ) {
+        Log.d("LogConteo", "=== DEBUG REPOSITORY SOLO CANTIDAD ===")
+        Log.d("LogConteo", "- numeroInventario: $numeroInventario")
+        Log.d("LogConteo", "- secuencia: $secuencia")
+        Log.d("LogConteo", "- codigoArticulo: $codigoArticulo")
+        Log.d("LogConteo", "- cantidad: $cantidad")
+        Log.d("LogConteo", "=== FIN DEBUG REPOSITORIO SOLO CANTIDAD ===")
+
+        return inventarioDetalleDao.actualizarCantidadInventarioSoloCantidad(
+            numeroInventario, secuencia, codigoArticulo, cantidad
+        )
+    }
     
     suspend fun actualizarEstadoInventario(
         numeroInventario: Int,
@@ -49,6 +67,15 @@ class InventarioDetalleRepository @Inject constructor(
     ) {
         return inventarioDetalleDao.actualizarEstadoInventario(
             numeroInventario, estado
+        )
+    }
+
+    suspend fun actualizarUsuarioCerradoPorInventario(
+        numeroInventario: Int,
+        usuarioCerrado: String
+    ) {
+        inventarioDetalleDao.actualizarUsuarioCerradoPorInventario(
+            numeroInventario, usuarioCerrado
         )
     }
     

@@ -3,8 +3,10 @@ package com.gloria.ui.inventario.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gloria.data.entity.api.InventarioPendienteSimultaneo
+import com.gloria.data.model.ConteosLogPayload
 import com.gloria.domain.usecase.inventario.GetInventariosPendientesSimultaneosUseCase
 import com.gloria.domain.usecase.inventario.ConfirmarConteoSimultaneoUseCase
+import com.gloria.domain.usecase.inventario.GetConteosLogsRemotosUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -18,7 +20,8 @@ import javax.inject.Inject
 @HiltViewModel
 class ProcesarConteosPendientesViewModel @Inject constructor(
     private val getInventariosPendientesSimultaneosUseCase: GetInventariosPendientesSimultaneosUseCase,
-    private val confirmarConteoSimultaneoUseCase: ConfirmarConteoSimultaneoUseCase
+    private val confirmarConteoSimultaneoUseCase: ConfirmarConteoSimultaneoUseCase,
+    private val getConteosLogsRemotosUseCase: GetConteosLogsRemotosUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ProcesarConteosPendientesUiState())
@@ -64,8 +67,31 @@ class ProcesarConteosPendientesViewModel @Inject constructor(
     fun selectInventario(inventario: InventarioPendienteSimultaneo) {
         _uiState.value = _uiState.value.copy(
             selectedInventario = inventario,
-            showDetailDialog = true
+            showDetailDialog = true,
+            logsRemotos = emptyMap()
         )
+        consultarLogsRemotos(inventario.cabecera.winvdNroInv)
+    }
+
+    /**
+     * Consulta los logs remotos para un inventario
+     */
+    fun consultarLogsRemotos(winvdNroInv: Int) {
+        viewModelScope.launch {
+            getConteosLogsRemotosUseCase(winvdNroInv)
+                .onSuccess { logs ->
+                    val agrupados = logs.groupBy { "${it.winvdSecu}_${it.winvdArt}" }
+                    _uiState.value = _uiState.value.copy(logsRemotos = agrupados)
+                }
+                .onFailure { error ->
+                    android.util.Log.e(
+                        "ProcesarConteosLogs",
+                        "Error consultando logs del inventario $winvdNroInv",
+                        error
+                    )
+                    _uiState.value = _uiState.value.copy(logsRemotos = emptyMap())
+                }
+        }
     }
 
     /**
@@ -74,7 +100,8 @@ class ProcesarConteosPendientesViewModel @Inject constructor(
     fun closeDetailDialog() {
         _uiState.value = _uiState.value.copy(
             showDetailDialog = false,
-            selectedInventario = null
+            selectedInventario = null,
+            logsRemotos = emptyMap()
         )
     }
 
@@ -173,5 +200,6 @@ data class ProcesarConteosPendientesUiState(
     val inventarioToConfirm: Int? = null,
     val isConfirming: Boolean = false,
     val confirmSuccess: String? = null,
-    val error: String? = null
+    val error: String? = null,
+    val logsRemotos: Map<String, List<ConteosLogPayload>> = emptyMap()
 )

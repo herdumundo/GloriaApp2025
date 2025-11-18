@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.gloria.domain.usecase.GetSucursalesUseCase
 import com.gloria.domain.usecase.exportacion.ExportarConteosRealizadosUseCase
 import com.gloria.domain.usecase.exportacion.ExportarConteosParaVerificacionUseCase
+import com.gloria.domain.usecase.inventario.EnviarConteosLogsUseCase
 import com.gloria.domain.usecase.AuthSessionUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,6 +18,7 @@ import javax.inject.Inject
 class ExportacionesViewModel @Inject constructor(
     private val exportarConteosRealizadosUseCase: ExportarConteosRealizadosUseCase,
     private val exportarConteosParaVerificacionUseCase: ExportarConteosParaVerificacionUseCase,
+    private val enviarConteosLogsUseCase: EnviarConteosLogsUseCase,
     private val getSucursalesUseCase: GetSucursalesUseCase,
     private val authSessionUseCase: AuthSessionUseCase
 ) : ViewModel() {
@@ -53,9 +55,16 @@ class ExportacionesViewModel @Inject constructor(
                 
                 resultado.fold(
                     onSuccess = { mensaje ->
+                        val logsResult = enviarConteosLogsUseCase()
+                        val mensajeLogs = logsResult.fold(
+                            onSuccess = { enviados ->
+                                if (enviados > 0) "$enviados conteos locales sincronizados." else "No había conteos locales pendientes."
+                            },
+                            onFailure = { error -> "Error al sincronizar conteos locales: ${error.message ?: "desconocido"}" }
+                        )
                         _uiState.value = _uiState.value.copy(
                             isExportando = false,
-                            mensajeResultado = mensaje,
+                            mensajeResultado = "$mensaje\n$mensajeLogs",
                             exportacionExitosa = true
                         )
                     },
@@ -106,9 +115,16 @@ class ExportacionesViewModel @Inject constructor(
                 
                 resultado.fold(
                     onSuccess = { mensaje ->
+                        val logsResult = enviarConteosLogsUseCase()
+                        val mensajeLogs = logsResult.fold(
+                            onSuccess = { enviados ->
+                                if (enviados > 0) "$enviados conteos locales sincronizados." else "No había conteos locales pendientes."
+                            },
+                            onFailure = { error -> "Error al sincronizar conteos locales: ${error.message ?: "desconocido"}" }
+                        )
                         _uiState.value = _uiState.value.copy(
                             isExportando = false,
-                            mensajeResultado = mensaje,
+                            mensajeResultado = "$mensaje\n$mensajeLogs",
                             exportacionExitosa = true
                         )
                     },

@@ -5,9 +5,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gloria.domain.usecase.inventario.GetArticulosInventarioUseCase
 import com.gloria.domain.usecase.inventario.ActualizarCantidadInventarioUseCase
+import com.gloria.domain.usecase.inventario.ActualizarCantidadInventarioSoloCantidadUseCase
 import com.gloria.domain.usecase.inventario.ActualizarEstadoInventarioUseCase
 import com.gloria.data.model.ArticuloInventario
+import com.gloria.data.entity.ConteosLogs
 import com.gloria.data.repository.InventarioDetalleRepository
+import com.gloria.domain.usecase.inventario.ConteosLogsUseCase
+import com.gloria.domain.usecase.inventario.EnviarConteosLogsUseCase
+import com.gloria.domain.usecase.inventario.ActualizarUsuarioCerradoInventarioUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,6 +21,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import java.util.Locale
 import javax.inject.Inject
 
 /**
@@ -36,7 +42,10 @@ data class ConteoInventarioState(
     val showConfirmRegistro: Boolean = false, // Para confirmar registro sin contar todo
     val estadosConteo: Map<String, EstadoConteo> = emptyMap(), // Estado de conteo por artículo
     val registroExitoso: Boolean = false, // Indica si el registro fue exitoso
-    val tipoInventario: String = "I" // Tipo de inventario: "I" = Individual, "S" = Simultáneo
+    val tipoInventario: String = "I", // Tipo de inventario: "I" = Individual, "S" = Simultáneo
+    val showDetalleConteo: Boolean = false,
+    val detalleConteos: List<ConteosLogs> = emptyList(),
+    val detalleArticulo: ArticuloInventario? = null
 )
 
 data class EstadoConteo(
@@ -57,7 +66,10 @@ class ConteoInventarioViewModel @Inject constructor(
     private val actualizarCantidadInventarioUseCase: ActualizarCantidadInventarioUseCase,
     private val actualizarEstadoInventarioUseCase: ActualizarEstadoInventarioUseCase,
     private val inventarioDetalleRepository: InventarioDetalleRepository,
-    private val authSessionUseCase: com.gloria.domain.usecase.AuthSessionUseCase
+    private val authSessionUseCase: com.gloria.domain.usecase.AuthSessionUseCase,
+    private val conteosLogsUseCase: ConteosLogsUseCase,
+    private val actualizarCantidadInventarioSoloCantidadUseCase: ActualizarCantidadInventarioSoloCantidadUseCase,
+    private val actualizarUsuarioCerradoInventarioUseCase: ActualizarUsuarioCerradoInventarioUseCase
 ) : ViewModel() {
     
     private val _uiState = MutableStateFlow(ConteoInventarioState())
@@ -228,7 +240,12 @@ class ConteoInventarioViewModel @Inject constructor(
     /**
      * Marca un artículo como contado con su cantidad
      */
-    fun marcarArticuloContado(articuloId: Int, cantidad: Int) {
+    fun marcarArticuloContado(
+        articuloId: Int,
+        total: Int,
+        cajasRegistradas: Int,
+        unidadesRegistradas: Int
+    ) {
         val nroInventario = _uiState.value.nroInventario
         val claveCompuesta = "${articuloId}_${nroInventario}"
         
@@ -236,7 +253,9 @@ class ConteoInventarioViewModel @Inject constructor(
         Log.d("LogConteo", "Artículo ID: $articuloId")
         Log.d("LogConteo", "Número Inventario: $nroInventario")
         Log.d("LogConteo", "Clave compuesta: $claveCompuesta")
-        Log.d("LogConteo", "Cantidad recibida: $cantidad")
+        Log.d("LogConteo", "Cantidad total acumulada: $total")
+        Log.d("LogConteo", "Cajas registradas: $cajasRegistradas")
+        Log.d("LogConteo", "Unidades registradas: $unidadesRegistradas")
         
         val currentContados = _uiState.value.articulosContados.toMutableSet()
         val currentCantidades = _uiState.value.cantidadesContadas.toMutableMap()
@@ -246,7 +265,7 @@ class ConteoInventarioViewModel @Inject constructor(
         Log.d("LogConteo", "Estado anterior - Cantidades: $currentCantidades")
         
         currentContados.add(articuloId)
-        currentCantidades[claveCompuesta] = cantidad
+        currentCantidades[claveCompuesta] = total
         
         // Mostrar estado nuevo
         Log.d("LogConteo", "Estado nuevo - Artículos contados: $currentContados")
@@ -257,8 +276,64 @@ class ConteoInventarioViewModel @Inject constructor(
             articulosContados = currentContados,
             cantidadesContadas = currentCantidades
         )
+
+        registrarConteoLog(articuloId, cajasRegistradas, unidadesRegistradas)
+
+        val articulo = _uiState.value.articulos.firstOrNull { it.winvdSecu == articuloId }
+
+        // Persistir la cantidad total en la tabla local STKW002INV
+        /*
+        if (articulo != null) {
+            viewModelScope.launch(Dispatchers.IO) {
+                try {
+                    actualizarCantidadInventarioSoloCantidadUseCase(
+                        numeroInventario = nroInventario,
+                        secuencia = articuloId,
+                        codigoArticulo = articulo.winvdArt,
+                        cantidad = total
+                    )
+                } catch (e: Exception) {
+                    Log.e("ConteoInventarioVM", "Error al actualizar cantidad total en STKW002INV", e)
+                }
+            }
+        }
+        */
     }
     
+    fun mostrarDetalleConteo(articulo: ArticuloInventario) {
+        viewModelScope.launch {
+            val logs = withContext(Dispatchers.IO) {
+                conteosLogsUseCase.getByArticulo(articulo.winvd_nro_inv, articulo.winvdSecu)
+            }
+            _uiState.value = _uiState.value.copy(
+                showDetalleConteo = true,
+                detalleConteos = logs,
+                detalleArticulo = articulo
+            )
+        }
+    }
+
+    fun cerrarDetalleConteo() {
+        _uiState.value = _uiState.value.copy(
+            showDetalleConteo = false,
+            detalleConteos = emptyList(),
+            detalleArticulo = null
+        )
+    }
+
+    fun eliminarConteosEstadoN(numeroInventario: Int? = null) {
+        val targetInventario = numeroInventario ?: _uiState.value.nroInventario
+        if (targetInventario <= 0) return
+
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                conteosLogsUseCase.deleteByInventarioWithEstado(targetInventario, estado = "N")
+            } catch (e: Exception) {
+                Log.e("ConteoInventarioVM", "Error al eliminar conteos con estado N", e)
+            }
+        }
+    }
+
     /**
      * Verifica si todos los artículos han sido contados
      */
@@ -347,7 +422,7 @@ class ConteoInventarioViewModel @Inject constructor(
                 withContext(Dispatchers.IO) {
                     // Obtener usuario logueado
                     val usuarioLogueado = authSessionUseCase.getCurrentUser()
-                    val usuarioCerrado = usuarioLogueado?.username ?: "UNKNOWN"
+                    val usuarioCerrado = (usuarioLogueado?.username ?: "UNKNOWN").uppercase(Locale.getDefault())
                     
                     Log.d("LogConteo", "=== DEBUG USUARIO CERRADO ===")
                     Log.d("LogConteo", "Usuario logueado completo: $usuarioLogueado")
@@ -361,6 +436,11 @@ class ConteoInventarioViewModel @Inject constructor(
                     actualizarEstadoInventarioUseCase(
                         numeroInventario = nroInventario,
                         estado = estadoFinal
+                    )
+
+                    actualizarUsuarioCerradoInventarioUseCase(
+                        numeroInventario = nroInventario,
+                        usuarioCerrado = usuarioCerrado
                     )
                     
                     // Luego, actualizar solo las cantidades de los artículos contados
@@ -395,14 +475,23 @@ class ConteoInventarioViewModel @Inject constructor(
                     }
                 }
                 
+                // Actualizar estado de los conteos locales a 'P'
+                withContext(Dispatchers.IO) {
+                    try {
+                        conteosLogsUseCase.actualizarEstadoPorInventario(nroInventario, "P")
+                    } catch (e: Exception) {
+                        Log.e("ConteoInventarioVM", "Error al actualizar estado de conteos locales", e)
+                    }
+                }
+
                 _uiState.value = _uiState.value.copy(
                     isRegistrando = false,
                     errorMessage = null,
                     registroExitoso = true
                 )
-                
+
                 Log.d("LogConteo", "=== REGISTRO COMPLETADO EXITOSAMENTE ===")
-                
+
             } catch (e: Exception) {
                 Log.e("ConteoInventarioVM", "Error al registrar inventario", e)
                 _uiState.value = _uiState.value.copy(
@@ -436,4 +525,68 @@ class ConteoInventarioViewModel @Inject constructor(
             showConfirmRegistro = false
         )
     }
+
+    private fun registrarConteoLog(
+        articuloId: Int,
+        cajasRegistradas: Int,
+        unidadesRegistradas: Int
+    ) {
+        val articulo = _uiState.value.articulos.firstOrNull { it.winvdSecu == articuloId } ?: return
+
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val usuario = authSessionUseCase.getCurrentUser()?.username ?: "UNKNOWN"
+                Log.d("ConteoInventarioVM", "Registrando conteo log -> articuloId: $articuloId, cajas: $cajasRegistradas, unidades: $unidadesRegistradas, usuario: $usuario")
+
+                if (cajasRegistradas == 0 && unidadesRegistradas == 0) {
+                    Log.d("ConteoInventarioVM", "No se registran logs: ambas cantidades son 0")
+                    return@launch
+                }
+
+                var siguienteOrden = conteosLogsUseCase.getNextOrden(
+                    articulo.winvd_nro_inv,
+                    articulo.winvdSecu
+                )
+
+                if (cajasRegistradas != 0) {
+                    val cantidadConvertida = cajasRegistradas * articulo.caja
+                    val conteoLogCajas = ConteosLogs(
+                        id = System.nanoTime(),
+                        orden = siguienteOrden,
+                        winvd_nro_inv = articulo.winvd_nro_inv,
+                        winvd_secu = articulo.winvdSecu,
+                        winvdArt = articulo.winvdArt,
+                        winvdLote = articulo.winvdLote,
+                        usuario = usuario.uppercase(Locale.getDefault()),
+                        estado = "N",
+                        cantidadIngresada = cajasRegistradas,
+                        cantidadConvertida = cantidadConvertida,
+                        tipo = "CAJAS"
+                    )
+                    conteosLogsUseCase.insert(conteoLogCajas)
+                    siguienteOrden += 1
+                }
+
+                if (unidadesRegistradas != 0) {
+                    val conteoLogUnidades = ConteosLogs(
+                        id = System.nanoTime(),
+                        orden = siguienteOrden,
+                        winvd_nro_inv = articulo.winvd_nro_inv,
+                        winvd_secu = articulo.winvdSecu,
+                        winvdArt = articulo.winvdArt,
+                        winvdLote = articulo.winvdLote,
+                        usuario = usuario.uppercase(Locale.getDefault()),
+                        estado = "N",
+                        cantidadIngresada = unidadesRegistradas,
+                        cantidadConvertida = unidadesRegistradas,
+                        tipo = "UNIDAD"
+                    )
+                    conteosLogsUseCase.insert(conteoLogUnidades)
+                }
+            } catch (e: Exception) {
+                Log.e("ConteoInventarioVM", "Error al registrar conteo log", e)
+            }
+        }
+    }
+
 }

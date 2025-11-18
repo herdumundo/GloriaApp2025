@@ -169,7 +169,7 @@ class ExportacionConteosRepository @Inject constructor(
                 val primerDetalle = detalles.first()
                 InventarioPendienteExportar(
                     winvdNroInv = nroInventario,
-                    winveLoginCerradoWeb = primerDetalle.winve_login,
+                    winveLoginCerradoWeb = primerDetalle.WINVE_LOGIN_CERRADO_WEB,
                     winveDep = primerDetalle.winve_dep.toIntOrNull() ?: 0,
                     ardeSuc = primerDetalle.ARDE_SUC,
                     tipoToma = primerDetalle.tipo_toma,

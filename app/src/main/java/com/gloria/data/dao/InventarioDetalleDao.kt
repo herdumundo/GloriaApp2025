@@ -545,6 +545,23 @@ interface InventarioDetalleDao {
         estado: String,
         usuarioCerrado: String
     )
+
+    /**
+     * Actualiza solo la cantidad inventariada de un artículo específico manteniendo el estado
+     */
+    @Query("""
+        UPDATE STKW002INV 
+        SET winvd_cant_inv = :cantidad
+        WHERE winvd_nro_inv = :numeroInventario 
+        AND winvd_secu = :secuencia
+        AND winvd_art = :codigoArticulo
+    """)
+    suspend fun actualizarCantidadInventarioSoloCantidad(
+        numeroInventario: Int,
+        secuencia: Int,
+        codigoArticulo: String,
+        cantidad: Int
+    )
     
     /**
      * Actualiza el estado de todos los artículos de un inventario
@@ -557,6 +574,16 @@ interface InventarioDetalleDao {
     suspend fun actualizarEstadoInventario(
         numeroInventario: Int,
         estado: String
+    )
+
+    @Query("""
+        UPDATE STKW002INV 
+        SET WINVE_LOGIN_CERRADO_WEB = :usuarioCerrado
+        WHERE winvd_nro_inv = :numeroInventario
+    """)
+    suspend fun actualizarUsuarioCerradoPorInventario(
+        numeroInventario: Int,
+        usuarioCerrado: String
     )
     
     /**

@@ -18,7 +18,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.gloria.data.entity.api.AuditoriaUsuarioPendiente
@@ -100,8 +99,11 @@ fun ProcesarConteosPendientesScreen(
                             items(uiState.inventariosPendientes) { inventario ->
                                 InventarioPendienteCard(
                                     inventario = inventario,
-                                    onClick = { 
+                                    onClick = {
                                         viewModel.confirmarConteo(inventario.cabecera.winvdNroInv)
+                                    },
+                                    onDetalleClick = { seleccionado ->
+                                        viewModel.selectInventario(seleccionado)
                                     }
                                 )
                             }
@@ -113,6 +115,7 @@ fun ProcesarConteosPendientesScreen(
         if (uiState.showDetailDialog && uiState.selectedInventario != null) {
             InventarioPendienteDetailDialog(
                 inventario = uiState.selectedInventario!!,
+                logsRemotos = uiState.logsRemotos,
                 onDismiss = { viewModel.closeDetailDialog() }
             )
         }
@@ -146,7 +149,8 @@ fun ProcesarConteosPendientesScreen(
 @Composable
 private fun InventarioPendienteCard(
     inventario: InventarioPendienteSimultaneo,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onDetalleClick: (InventarioPendienteSimultaneo) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
     
@@ -221,9 +225,23 @@ private fun InventarioPendienteCard(
                 Spacer(modifier = Modifier.height(16.dp))
                 
                 // Menús colapsables
-                DetalleArticulosSection(inventario.detalleArticulos)
+                OutlinedButton(
+                    onClick = { onDetalleClick(inventario) },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.List,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Ver detalle de artículos",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
                 Spacer(modifier = Modifier.height(8.dp))
-                AuditoriaUsuariosSection(inventario.auditoriaUsuarios, inventario.detalleArticulos)
+              //  AuditoriaUsuariosSection(inventario.auditoriaUsuarios, inventario.detalleArticulos)
                 
                 Spacer(modifier = Modifier.height(16.dp))
                 
@@ -248,72 +266,76 @@ private fun InventarioPendienteCard(
 @Composable
 private fun InventarioPendienteDetailDialog(
     inventario: InventarioPendienteSimultaneo,
+    logsRemotos: Map<String, List<com.gloria.data.model.ConteosLogPayload>>,
     onDismiss: () -> Unit
 ) {
-    Dialog(onDismissRequest = onDismiss) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface
-            )
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp)
-            ) {
-                // Header
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Detalles del Conteo",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    TextButton(onClick = onDismiss) {
-                        Text("Cerrar")
-                    }
-                }
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                // Menús colapsables
-                DetalleArticulosSection(inventario.detalleArticulos)
-                Spacer(modifier = Modifier.height(8.dp))
-                AuditoriaUsuariosSection(inventario.auditoriaUsuarios, inventario.detalleArticulos)
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Column {
+                Text(
+                    text = "Conteo simultáneo  #${inventario.cabecera.winvdNroInv}",
+                    style = MaterialTheme.typography.titleSmall
+                )
+                Text(
+                    text = "Artículos: ${inventario.detalleArticulos.size} | Usuarios que contaron: ${inventario.cabecera.cantidadUsuariosContaron}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        text = {
+            Column {
+                 DetalleArticulosSection(
+                    detalleArticulos = inventario.detalleArticulos,
+                    logsRemotos = logsRemotos,
+                    initiallyExpanded = true
+                )
+            }
+        },
+        confirmButton = {
+            Button(onClick = onDismiss) {
+                Text("Cerrar")
             }
         }
-    }
+    )
 }
 
 /**
  * Sección colapsable para mostrar el detalle de artículos
  */
 @Composable
-private fun DetalleArticulosSection(detalleArticulos: List<DetalleArticuloPendiente>) {
-    var expanded by remember { mutableStateOf(false) }
+private fun DetalleArticulosSection(
+    detalleArticulos: List<DetalleArticuloPendiente>,
+    logsRemotos: Map<String, List<com.gloria.data.model.ConteosLogPayload>>,
+    initiallyExpanded: Boolean = false
+) {
+    var expanded by remember { mutableStateOf(initiallyExpanded) }
     var filtroArticulo by remember { mutableStateOf("") }
     var filtroLote by remember { mutableStateOf("") }
     var filtroDescripcion by remember { mutableStateOf("") }
     var filtroCantidadMayorCero by remember { mutableStateOf(false) }
     
-    val articulosFiltrados = remember(filtroArticulo, filtroLote, filtroDescripcion, filtroCantidadMayorCero, detalleArticulos) {
+    val articulosFiltrados = remember(
+        filtroArticulo,
+        filtroLote,
+        filtroDescripcion,
+        filtroCantidadMayorCero,
+        detalleArticulos
+    ) {
         detalleArticulos.filter { articulo ->
-            val cumpleArticulo = filtroArticulo.isBlank() || 
+            val cumpleArticulo = filtroArticulo.isBlank() ||
                 articulo.winvdArt.contains(filtroArticulo, ignoreCase = true)
-            val cumpleLote = filtroLote.isBlank() || 
+            val cumpleLote = filtroLote.isBlank() ||
                 articulo.winvdLote.contains(filtroLote, ignoreCase = true)
-            val cumpleDescripcion = filtroDescripcion.isBlank() || 
+            val cumpleDescripcion = filtroDescripcion.isBlank() ||
                 articulo.artDesc.contains(filtroDescripcion, ignoreCase = true)
             val cumpleCantidad = !filtroCantidadMayorCero || articulo.cantidadTotalContada > 0
-            
+
             cumpleArticulo && cumpleLote && cumpleDescripcion && cumpleCantidad
         }
     }
-    
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -321,32 +343,14 @@ private fun DetalleArticulosSection(detalleArticulos: List<DetalleArticuloPendie
         )
     ) {
         Column {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { expanded = !expanded }
-                    .padding(12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Detalle de Artículos (${articulosFiltrados.size}/${detalleArticulos.size})",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium
-                )
-                Icon(
-                    imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    contentDescription = if (expanded) "Contraer" else "Expandir"
-                )
-            }
-            
-            if (expanded) {
+
+
+            AnimatedVisibility(visible = expanded) {
                 Column(
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
                 ) {
-                    // Filtros colapsables
                     var filtrosExpandidos by remember { mutableStateOf(false) }
-                    
+
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(
@@ -377,15 +381,14 @@ private fun DetalleArticulosSection(detalleArticulos: List<DetalleArticuloPendie
                                 )
                             }
                             Icon(
-                                if (filtrosExpandidos) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                imageVector = if (filtrosExpandidos) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
                                 contentDescription = if (filtrosExpandidos) "Contraer" else "Expandir",
                                 modifier = Modifier.size(18.dp),
                                 tint = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                         }
                     }
-                    
-                    // Panel de filtros expandible
+
                     AnimatedVisibility(
                         visible = filtrosExpandidos,
                         enter = expandVertically(),
@@ -400,30 +403,30 @@ private fun DetalleArticulosSection(detalleArticulos: List<DetalleArticuloPendie
                                 value = filtroDescripcion,
                                 onValueChange = { filtroDescripcion = it },
                                 label = { Text("Descripción", style = MaterialTheme.typography.bodySmall) },
-                                placeholder = { Text("Buscar...", style = MaterialTheme.typography.bodySmall) },
+                                placeholder = { Text("Buscar descripción...", style = MaterialTheme.typography.bodySmall) },
                                 trailingIcon = {
                                     if (filtroDescripcion.isNotEmpty()) {
                                         IconButton(
                                             onClick = { filtroDescripcion = "" },
-                                            modifier = Modifier.size(32.dp)
+                                            modifier = Modifier.size(28.dp)
                                         ) {
                                             Icon(
                                                 Icons.Default.Clear,
                                                 contentDescription = "Limpiar",
-                                                modifier = Modifier.size(18.dp)
+                                                modifier = Modifier.size(16.dp)
                                             )
                                         }
                                     }
                                 },
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(50.dp),
+                                    .height(52.dp),
                                 singleLine = true,
                                 textStyle = MaterialTheme.typography.bodySmall
                             )
-                            
+
                             Spacer(modifier = Modifier.height(6.dp))
-                            
+
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -437,23 +440,23 @@ private fun DetalleArticulosSection(detalleArticulos: List<DetalleArticuloPendie
                                         if (filtroArticulo.isNotEmpty()) {
                                             IconButton(
                                                 onClick = { filtroArticulo = "" },
-                                                modifier = Modifier.size(32.dp)
+                                                modifier = Modifier.size(28.dp)
                                             ) {
                                                 Icon(
                                                     Icons.Default.Clear,
                                                     contentDescription = "Limpiar",
-                                                    modifier = Modifier.size(18.dp)
+                                                    modifier = Modifier.size(16.dp)
                                                 )
                                             }
                                         }
                                     },
                                     modifier = Modifier
                                         .weight(1f)
-                                        .height(50.dp),
+                                        .height(52.dp),
                                     singleLine = true,
                                     textStyle = MaterialTheme.typography.bodySmall
                                 )
-                                
+
                                 OutlinedTextField(
                                     value = filtroLote,
                                     onValueChange = { filtroLote = it },
@@ -463,27 +466,26 @@ private fun DetalleArticulosSection(detalleArticulos: List<DetalleArticuloPendie
                                         if (filtroLote.isNotEmpty()) {
                                             IconButton(
                                                 onClick = { filtroLote = "" },
-                                                modifier = Modifier.size(32.dp)
+                                                modifier = Modifier.size(28.dp)
                                             ) {
                                                 Icon(
                                                     Icons.Default.Clear,
                                                     contentDescription = "Limpiar",
-                                                    modifier = Modifier.size(18.dp)
+                                                    modifier = Modifier.size(16.dp)
                                                 )
                                             }
                                         }
                                     },
                                     modifier = Modifier
                                         .weight(1f)
-                                        .height(50.dp),
+                                        .height(52.dp),
                                     singleLine = true,
                                     textStyle = MaterialTheme.typography.bodySmall
                                 )
                             }
-                            
-                            Spacer(modifier = Modifier.height(8.dp))
-                            
-                            // Checkbox para filtrar por cantidad mayor a 0
+
+                            Spacer(modifier = Modifier.height(6.dp))
+
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
                                 colors = CardDefaults.cardColors(
@@ -495,30 +497,29 @@ private fun DetalleArticulosSection(detalleArticulos: List<DetalleArticuloPendie
                                         .fillMaxWidth()
                                         .clickable { filtroCantidadMayorCero = !filtroCantidadMayorCero }
                                         .padding(8.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
                                         Icon(
                                             Icons.Default.Check,
                                             contentDescription = null,
                                             modifier = Modifier.size(18.dp),
-                                            tint = if (filtroCantidadMayorCero) 
-                                                MaterialTheme.colorScheme.primary 
-                                            else 
+                                            tint = if (filtroCantidadMayorCero) {
+                                                MaterialTheme.colorScheme.primary
+                                            } else {
                                                 MaterialTheme.colorScheme.onSurfaceVariant
+                                            }
                                         )
                                         Spacer(modifier = Modifier.width(6.dp))
                                         Column {
                                             Text(
-                                                text = "Solo con cantidad contada",
+                                                text = "Artículos con conteo > 0",
                                                 style = MaterialTheme.typography.bodySmall,
                                                 fontWeight = FontWeight.Medium
                                             )
                                             Text(
-                                                text = "Cantidad > 0",
+                                                text = "${articulosFiltrados.count { it.cantidadTotalContada > 0 }} artículos cumplen",
                                                 style = MaterialTheme.typography.labelSmall,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
@@ -531,9 +532,9 @@ private fun DetalleArticulosSection(detalleArticulos: List<DetalleArticuloPendie
                                     )
                                 }
                             }
-                            
+
                             Spacer(modifier = Modifier.height(4.dp))
-                            
+
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.End
@@ -553,71 +554,104 @@ private fun DetalleArticulosSection(detalleArticulos: List<DetalleArticuloPendie
                                         modifier = Modifier.size(16.dp)
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
-                                    Text(
-                                        "Limpiar filtros",
-                                        style = MaterialTheme.typography.bodySmall
-                                    )
+                                    Text("Limpiar filtros", style = MaterialTheme.typography.bodySmall)
                                 }
                             }
                         }
                     }
-                    
+
                     Spacer(modifier = Modifier.height(8.dp))
-                    
-                    // Lista de artículos filtrados en formato columnas/filas agrupado por artículo
-                    val articulosAgrupados = remember(articulosFiltrados) { articulosFiltrados.groupBy { it.winvdArt } }
+
+                    val articulosAgrupados = remember(articulosFiltrados) {
+                        articulosFiltrados.groupBy { it.winvdArt }
+                    }
+
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(max = 300.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                            .heightIn(max = 420.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        items(articulosAgrupados.entries.toList()) { entry ->
-                            val winvdArt = entry.key
-                            val lista = entry.value
-                            val first = lista.first()
-                            OutlinedCard(
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = CardDefaults.outlinedCardColors(
-                                    containerColor = MaterialTheme.colorScheme.surface
-                                )
-                            ) {
-                                Column(modifier = Modifier.padding(8.dp)) {
-                                    // Título del artículo
-                                    Text(
-                                        text = "$winvdArt - ${first.artDesc}",
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Medium
+                        val hayFiltrosActivos = filtroArticulo.isNotEmpty() ||
+                            filtroLote.isNotEmpty() ||
+                            filtroDescripcion.isNotEmpty() ||
+                            filtroCantidadMayorCero
+
+                        if (articulosFiltrados.isEmpty() && hayFiltrosActivos) {
+                            item {
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceVariant
                                     )
-                                    // Encabezados columnas
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(16.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
                                     ) {
+                                        Icon(
+                                            Icons.Default.Search,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(48.dp),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Spacer(modifier = Modifier.height(8.dp))
                                         Text(
-                                            text = "Lote",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            fontWeight = FontWeight.Medium,
-                                            modifier = Modifier.weight(1f)
+                                            text = "No se encontraron artículos",
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.SemiBold
                                         )
                                         Text(
-                                            text = "Contada",
+                                            text = "Ajusta los filtros aplicados para ver resultados.",
                                             style = MaterialTheme.typography.bodySmall,
-                                            fontWeight = FontWeight.Medium,
-                                            textAlign = TextAlign.End,
-                                            modifier = Modifier.weight(1f)
-                                        )
-                                        Text(
-                                            text = "Vto",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            fontWeight = FontWeight.Medium,
-                                            textAlign = TextAlign.End,
-                                            modifier = Modifier.weight(1f)
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
-                                    Divider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
-                                    // Filas por lote con borde
-                                    lista.forEach { det ->
+                                }
+                            }
+                        } else {
+                            items(articulosAgrupados.entries.toList(), key = { it.key }) { entry ->
+                                val listaDetalles = entry.value.sortedBy { it.winvdSecu }
+                                val first = listaDetalles.first()
+
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 2.dp),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                                    )
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(8.dp)
+                                    ) {
+                                        var detallesArticuloExpandidos by remember { mutableStateOf(false) }
+
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = "${entry.key} - ${first.artDesc}",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    fontWeight = FontWeight.SemiBold
+                                                )
+                                                Text(
+                                                    text = "Familia: ${first.fliaDesc} | Grupo: ${first.grupDesc}",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                            IconButton(onClick = { detallesArticuloExpandidos = !detallesArticuloExpandidos }) {
+                                                Icon(
+                                                    imageVector = if (detallesArticuloExpandidos) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                                    contentDescription = if (detallesArticuloExpandidos) "Colapsar" else "Expandir"
+                                                )
+                                            }
+                                        }
+
                                         OutlinedCard(
                                             modifier = Modifier
                                                 .fillMaxWidth()
@@ -626,29 +660,286 @@ private fun DetalleArticulosSection(detalleArticulos: List<DetalleArticuloPendie
                                                 containerColor = MaterialTheme.colorScheme.surface
                                             )
                                         ) {
-                                            Row(
+                                            Column(modifier = Modifier.padding(8.dp)) {
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                                ) {
+                                                    Text(
+                                                        text = "Ord",
+                                                        fontWeight = FontWeight.Medium,
+                                                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 9.sp),
+                                                        modifier = Modifier.weight(0.6f)
+                                                    )
+                                                    Text(
+                                                        text = "Lote",
+                                                        fontWeight = FontWeight.Medium,
+                                                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 9.sp),
+                                                        modifier = Modifier.weight(1.2f)
+                                                    )
+
+                                                    Text(
+                                                        text = "Conteo",
+                                                        fontWeight = FontWeight.Bold,
+                                                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 9.sp),
+                                                        textAlign = TextAlign.End,
+                                                        modifier = Modifier.weight(1f)
+                                                    )
+                                                    Text(
+                                                        text = "Detalle",
+                                                        fontWeight = FontWeight.Medium,
+                                                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 9.sp),
+                                                        textAlign = TextAlign.End,
+                                                        modifier = Modifier.weight(1f)
+                                                    )
+                                                }
+                                                Divider(
+                                                    thickness = 0.5.dp,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                                )
+
+                                                listaDetalles.forEachIndexed { idx, detalle ->
+                                                    val detalleKey = "${detalle.winvdSecu}_${detalle.winvdArt}_${detalle.winvdLote}"
+                                                    val key = "${detalle.winvdSecu}_${detalle.winvdArt}"
+                                                    val logsLinea = logsRemotos[key].orEmpty().sortedBy { it.orden }
+                                                    key(detalleKey) {
+                                                        var detalleExpandido by remember { mutableStateOf(false) }
+                                                        Column(
+                                                            modifier = Modifier
+                                                                .fillMaxWidth()
+                                                                .padding(vertical = 4.dp)
+                                                        ) {
+                                                            Row(
+                                                                modifier = Modifier.fillMaxWidth(),
+                                                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                                                verticalAlignment = Alignment.CenterVertically
+                                                            ) {
+                                                                Text(
+                                                                    text = detalle.winvdSecu.toString(),
+                                                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 8.sp),
+                                                                    modifier = Modifier.weight(0.6f)
+                                                                )
+                                                                Text(
+                                                                    text = detalle.winvdLote,
+                                                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 8.sp),
+                                                                    modifier = Modifier.weight(1.2f)
+                                                                )
+
+                                                                Text(
+                                                                    text = detalle.cantidadTotalContada.toString(),
+                                                                    color = if (detalle.cantidadTotalContada > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                                                    fontWeight = if (detalle.cantidadTotalContada > 0) FontWeight.SemiBold else FontWeight.Normal,
+                                                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 8.sp),
+                                                                    textAlign = TextAlign.End,
+                                                                    modifier = Modifier.weight(1f)
+                                                                )
+
+                                                                Row(
+                                                                    modifier = Modifier.weight(1f),
+                                                                    horizontalArrangement = Arrangement.End,
+                                                                    verticalAlignment = Alignment.CenterVertically
+                                                                ) {
+
+                                                                    IconButton(
+                                                                        onClick = { detalleExpandido = !detalleExpandido },
+                                                                        modifier = Modifier.size(32.dp)
+                                                                    ) {
+                                                                        Icon(
+                                                                            imageVector = if (detalleExpandido) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                                                            contentDescription = if (detalleExpandido) "Ocultar detalle" else "Ver detalle"
+                                                                        )
+                                                                    }
+                                                                }
+                                                            }
+
+                                                            AnimatedVisibility(visible = detalleExpandido) {
+                                                                Column(
+                                                                    modifier = Modifier
+                                                                        .fillMaxWidth()
+                                                                        .padding(start = 4.dp, top = 4.dp),
+                                                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                                                ) {
+                                                                    
+                                                                    
+                                                                    Spacer(modifier = Modifier.height(8.dp))
+                                                                    
+                                                                    if (logsLinea.isEmpty()) {
+                                                                        Text(
+                                                                            text = "Sin registros remotos.",
+                                                                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 8.sp),
+                                                                            modifier = Modifier
+                                                                                .fillMaxWidth()
+                                                                                .padding(top = 4.dp)
+                                                                        )
+                                                                    } else {
+                                                                        val totalConvertida = logsLinea.sumOf { it.cantidadConvertida }
+                                                                        Column(
+                                                                            modifier = Modifier
+                                                                                .fillMaxWidth()
+                                                                                .padding(top = 6.dp)
+                                                                        ) {
+                                                                            Row(
+                                                                                modifier = Modifier.fillMaxWidth(),
+                                                                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                                                            ) {
+                                                                                Text(
+                                                                                    text = "Ord",
+                                                                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 9.sp),
+                                                                                    fontWeight = FontWeight.SemiBold,
+                                                                                    modifier = Modifier.weight(0.4f)
+                                                                                )
+                                                                                Text(
+                                                                                    text = "Tipo",
+                                                                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 9.sp),
+                                                                                    fontWeight = FontWeight.SemiBold,
+                                                                                    modifier = Modifier.weight(0.7f)
+                                                                                )
+                                                                                Text(
+                                                                                    text = "Usuario",
+                                                                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 9.sp),
+                                                                                    fontWeight = FontWeight.SemiBold,
+                                                                                    modifier = Modifier.weight(1f)
+                                                                                )
+                                                                                Text(
+                                                                                    text = "Conteo",
+                                                                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 9.sp),
+                                                                                    fontWeight = FontWeight.SemiBold,
+                                                                                    textAlign = TextAlign.End,
+                                                                                    modifier = Modifier.weight(0.8f)
+                                                                                )
+                                                                                Text(
+                                                                                    text = "Conv.",
+                                                                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 9.sp),
+                                                                                    fontWeight = FontWeight.SemiBold,
+                                                                                    textAlign = TextAlign.End,
+                                                                                    modifier = Modifier.weight(0.9f)
+                                                                                )
+                                                                            }
+                                                                            logsLinea.forEachIndexed { logIdx, log ->
+                                                                                Row(
+                                                                                    modifier = Modifier
+                                                                                        .fillMaxWidth()
+                                                                                        .padding(vertical = 2.dp),
+                                                                                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                                                                ) {
+                                                                                    Text(
+                                                                                        text = log.orden.toString(),
+                                                                                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 8.sp),
+                                                                                        modifier = Modifier.weight(0.4f)
+                                                                                    )
+                                                                                    Text(
+                                                                                        text = if(log.tipo=="CAJAS") {"Caj"} else {"Uni"},
+                                                                                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 8.sp),
+                                                                                        modifier = Modifier.weight(0.7f)
+                                                                                    )
+                                                                                    Text(
+                                                                                        text = log.usuario.ifBlank { "-" },
+                                                                                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 8.sp),
+                                                                                        modifier = Modifier.weight(1f)
+                                                                                    )
+                                                                                    Text(
+                                                                                        text = log.cantidadIngresada.toString(),
+                                                                                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 8.sp),
+                                                                                        textAlign = TextAlign.End,
+                                                                                        modifier = Modifier.weight(0.8f)
+                                                                                    )
+                                                                                    Text(
+                                                                                        text = log.cantidadConvertida.toString(),
+                                                                                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 8.sp),
+                                                                                        textAlign = TextAlign.End,
+                                                                                        modifier = Modifier.weight(0.9f)
+                                                                                    )
+                                                                                }
+                                                                                if (logIdx < logsLinea.lastIndex) {
+                                                                                    Divider(
+                                                                                        thickness = 0.5.dp,
+                                                                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                                                                                    )
+                                                                                }
+                                                                            }
+                                                                            Divider(
+                                                                                thickness = 0.5.dp,
+                                                                                color = MaterialTheme.colorScheme.error
+                                                                            )
+                                                                            Row(
+                                                                                modifier = Modifier
+                                                                                    .fillMaxWidth()
+                                                                                    .padding(vertical = 2.dp),
+                                                                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                                                            ) {
+                                                                                Text(
+                                                                                    text = "Total",
+                                                                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 9.sp),
+                                                                                    fontWeight = FontWeight.Bold,
+                                                                                    modifier = Modifier.weight(2.1f)
+                                                                                )
+                                                                                Text(
+                                                                                    text = totalConvertida.toString(),
+                                                                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 9.sp),
+                                                                                    fontWeight = FontWeight.Bold,
+                                                                                    textAlign = TextAlign.End,
+                                                                                    modifier = Modifier.weight(0.9f)
+                                                                                )
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                        AnimatedVisibility(visible = detallesArticuloExpandidos) {
+                                            Column(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
-                                                    .padding(horizontal = 8.dp, vertical = 6.dp),
-                                                horizontalArrangement = Arrangement.SpaceBetween
+                                                    .padding(top = 6.dp),
+                                                verticalArrangement = Arrangement.spacedBy(4.dp)
                                             ) {
-                                                Text(
-                                                    text = det.winvdLote,
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    modifier = Modifier.weight(1f)
-                                                )
-                                                Text(
-                                                    text = "${det.cantidadTotalContada}",
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    textAlign = TextAlign.End,
-                                                    modifier = Modifier.weight(1f)
-                                                )
-                                                Text(
-                                                    text = det.winvdFecVto,
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    textAlign = TextAlign.End,
-                                                    modifier = Modifier.weight(1f)
-                                                )
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    horizontalArrangement = Arrangement.SpaceBetween
+                                                ) {
+                                                    Text(
+                                                        text = "Código barra:",
+                                                        fontWeight = FontWeight.Medium,
+                                                        style = MaterialTheme.typography.bodySmall
+                                                    )
+                                                    Text(
+                                                        text = first.codBarra.ifBlank { "-" },
+                                                        style = MaterialTheme.typography.bodySmall
+                                                    )
+                                                }
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    horizontalArrangement = Arrangement.SpaceBetween
+                                                ) {
+                                                    Text(
+                                                        text = "Grupo parcial:",
+                                                        fontWeight = FontWeight.Medium,
+                                                        style = MaterialTheme.typography.bodySmall
+                                                    )
+                                                    Text(
+                                                        text = first.descGrupoParcial.ifBlank { "-" },
+                                                        style = MaterialTheme.typography.bodySmall
+                                                    )
+                                                }
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    horizontalArrangement = Arrangement.SpaceBetween
+                                                ) {
+                                                    Text(
+                                                        text = "Fecha actualización:",
+                                                        fontWeight = FontWeight.Medium,
+                                                        style = MaterialTheme.typography.bodySmall
+                                                    )
+                                                    Text(
+                                                        text = first.fechaActualizacion,
+                                                        style = MaterialTheme.typography.bodySmall
+                                                    )
+                                                }
                                             }
                                         }
                                     }

@@ -16,7 +16,7 @@ interface ConteoPendienteApi {
      * @param token Token de autenticación
      * @return Respuesta con lista de inventarios, cada uno con su cabecera y detalles
      */
-    @GET("api/stkw002inv/by-date-grouped-by-inventory/{fecha}")
+    @GET("api/stkw002inv/informe-verificacion/{fecha}")
     suspend fun getConteosPendientesByDate(
         @Path("fecha") fecha: String,
         @Query("token") token: String

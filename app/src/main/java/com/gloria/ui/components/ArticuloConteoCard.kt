@@ -24,7 +24,6 @@ import android.util.Log
 import androidx.compose.ui.text.style.TextOverflow
 import com.gloria.data.model.ArticuloInventario
 import com.gloria.ui.inventario.viewmodel.EstadoConteo
-import kotlin.math.max
 
 /**
  * Card para mostrar un artículo del inventario con campos de entrada para conteo
@@ -36,8 +35,9 @@ fun ArticuloConteoCard(
     estadoConteo: EstadoConteo,
     onCajasChanged: (Int) -> Unit,
     onUnidadesChanged: (Int) -> Unit,
-    onArticuloContado: (Int, Int) -> Unit = { _, _ -> }, // (articuloId, cantidadTotal)
+    onArticuloContado: (Int, Int, Int, Int) -> Unit = { _, _, _, _ -> }, // (articuloId, totalAcumulado, cajasIngresadas, unidadesIngresadas)
     onEstadoConteoChanged: (EstadoConteo) -> Unit,
+    onDetalleClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     // Usar el estado del ViewModel en lugar de remember local
@@ -69,14 +69,17 @@ fun ArticuloConteoCard(
         (cajas * articulo.caja) + unidades
     }
     
-    // Totales con tope inferior 0 para evitar negativos en UI
-    val totalFinal = max(0, totalAcumulado + totalCalculado)
-    val totalCalculadoClamped = max(0, totalCalculado)
+    val totalPreview = totalAcumulado + totalCalculado
+    val totalDisplay = if (haSidoContado) totalPreview else totalCalculado
 
     val handleContar = {
+        val cajasRegistradas = cajasInput.toIntOrNull() ?: 0
+        val unidadesRegistradas = unidadesInput.toIntOrNull() ?: 0
+        
         ultimaCantidadCajas = cajasInput
         ultimaCantidadUnidades = unidadesInput
-        totalAcumulado = max(0, totalAcumulado + totalCalculado)
+        val nuevoTotalAcumulado = totalAcumulado + totalCalculado
+        totalAcumulado = nuevoTotalAcumulado
         ultimoValorIngresado = totalCalculado
         haSidoContado = true
         Log.d("LogConteo", "=== ENVIANDO CONTEO DESDE CARD ===")
@@ -93,7 +96,7 @@ fun ArticuloConteoCard(
             ultimaCantidadUnidades = ultimaCantidadUnidades
         )
         onEstadoConteoChanged(nuevoEstado)
-        onArticuloContado(articulo.winvdSecu, totalAcumulado)
+        onArticuloContado(articulo.winvdSecu, nuevoTotalAcumulado, cajasRegistradas, unidadesRegistradas)
         cajasInput = "0"
         unidadesInput = "0"
         onCajasChanged(0)
@@ -329,10 +332,10 @@ fun ArticuloConteoCard(
                 // Total o estado
                 Column {
                     Text(
-                        text = if (haSidoContado) "Total: $totalFinal" else "Total: $totalCalculadoClamped",
+                        text = "Total: $totalDisplay",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (haSidoContado) Color(0xFF2E7D32) else Color(0xFF2E7D32)
+                        color = Color(0xFF2E7D32)
                     )
                     
                     // Mostrar stock solo si stockVisible = "Y"
@@ -345,51 +348,73 @@ fun ArticuloConteoCard(
                         )
                         
                         // Mostrar diferencia entre stock y total contado
-                        val totalParaDiferencia = if (haSidoContado) totalFinal else totalCalculadoClamped
+                        val totalParaDiferencia = if (haSidoContado) totalPreview else totalCalculado
                         val diferencia = totalParaDiferencia - articulo.winvdCantAct
                         
-                        if (diferencia != 0) {
-                            val (colorDiferencia, signoDiferencia) = when {
-                                diferencia > 0 -> Pair(Color(0xFF1976D2), "+") // Azul si hay más
-                                else -> Pair(Color(0xFFD32F2F), "") // Rojo si hay menos
+                        when {
+                            diferencia > 0 -> {
+                                Text(
+                                    text = "+$diferencia",
+                                    fontSize = 11.sp,
+                                    color = Color(0xFF1976D2),
+                                    fontWeight = FontWeight.Bold
+                                )
                             }
-                            
-                            Text(
-                                text = "$signoDiferencia$diferencia",
-                                fontSize = 11.sp,
-                                color = colorDiferencia,
-                                fontWeight = FontWeight.Bold
-                            )
-                        } else {
-                            // Diferencia exacta (0)
-                            Text(
-                                text = "✓ Exacto",
-                                fontSize = 10.sp,
-                                color = Color(0xFF2E7D32), // Verde
-                                fontWeight = FontWeight.Bold
-                            )
+                            diferencia < 0 -> {
+                                Text(
+                                    text = "$diferencia",
+                                    fontSize = 11.sp,
+                                    color = Color(0xFFD32F2F),
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            else -> {
+                                Text(
+                                    text = "✓ Exacto",
+                                    fontSize = 10.sp,
+                                    color = Color(0xFF2E7D32),
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
                     }
                 }
                 
-                // Botón Contar
-                Button(
-                    onClick = { handleContar() },
-                    modifier = Modifier
-                        .height(28.dp)
-                        .width(60.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (haSidoContado) Color(0xFF2E7D32) else Color(0xFF830000)
-                    ),
-                    shape = RoundedCornerShape(6.dp),
-                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = if (haSidoContado) "Contar +" else "Contar",
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
+                    OutlinedButton(
+                        onClick = onDetalleClick,
+                        modifier = Modifier.height(28.dp),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                        shape = RoundedCornerShape(6.dp)
+                    ) {
+                        Text(
+                            text = "Detalle",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+
+                    Button(
+                        onClick = { handleContar() },
+                        modifier = Modifier
+                            .height(28.dp)
+                            .width(72.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (haSidoContado) Color(0xFF2E7D32) else Color(0xFF830000)
+                        ),
+                        shape = RoundedCornerShape(6.dp),
+                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
+                    ) {
+                        Text(
+                            text = if (haSidoContado) "Contar +" else "Contar",
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
                 }
             }
         }

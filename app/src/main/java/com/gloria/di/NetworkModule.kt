@@ -12,6 +12,8 @@ import com.gloria.data.repository.InventariosPorSucursalApiRepository
 import com.gloria.data.repository.InventariosPendientesPorUsuarioApiRepository
 import com.gloria.data.repository.ProductosInventarioPorNumeroApiRepository
 import com.gloria.data.repository.CancelarTomaApiRepository
+import com.gloria.data.repository.ConteosLogsApiRepository
+import com.gloria.data.repository.ConteosLogsConsultaRepository
 import com.gloria.data.repository.OracleLoginApiRepository
 import com.gloria.data.repository.UserPermissionsApiRepository
 import com.gloria.data.repository.InventariosPendientesSimultaneosRepository
@@ -26,6 +28,8 @@ import com.gloria.data.api.CancelarTomaApiService
 import com.gloria.data.api.OracleLoginApiService
 import com.gloria.data.api.UserPermissionsApiService
 import com.gloria.data.api.InventariosPendientesSimultaneosApiService
+import com.gloria.data.api.ConteosLogsApiService
+import com.gloria.data.api.ConteosLogsConsultaApiService
  import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -206,6 +210,30 @@ object NetworkModule {
     @Provides
     fun provideCancelarTomaApiRepository(apiService: CancelarTomaApiService): CancelarTomaApiRepository {
         return CancelarTomaApiRepository(apiService)
+    }
+
+    @Singleton
+    @Provides
+    fun provideConteosLogsApiService(@DefaultRetrofit retrofit: Retrofit): ConteosLogsApiService {
+        return retrofit.create(ConteosLogsApiService::class.java)
+    }
+
+    @Singleton
+    @Provides
+    fun provideConteosLogsApiRepository(apiService: ConteosLogsApiService): ConteosLogsApiRepository {
+        return ConteosLogsApiRepository(apiService)
+    }
+
+    @Singleton
+    @Provides
+    fun provideConteosLogsConsultaApiService(@DefaultRetrofit retrofit: Retrofit): ConteosLogsConsultaApiService {
+        return retrofit.create(ConteosLogsConsultaApiService::class.java)
+    }
+
+    @Singleton
+    @Provides
+    fun provideConteosLogsConsultaRepository(apiService: ConteosLogsConsultaApiService): ConteosLogsConsultaRepository {
+        return ConteosLogsConsultaRepository(apiService)
     }
 
 

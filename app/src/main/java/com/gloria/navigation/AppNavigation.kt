@@ -20,6 +20,7 @@ import com.gloria.ui.informe.screen.InformeConteosPendientesScreen
 import com.gloria.ui.auth.viewmodel.AuthViewModel
 import com.gloria.ui.inventario.viewmodel.*
 import com.gloria.ui.exportaciones.viewmodel.ExportacionesViewModel
+import com.gloria.ui.informe.viewmodel.InformeConteosPendientesViewModel
 
 /**
  * Configuración principal de navegación de la aplicación
@@ -136,7 +137,7 @@ fun AppNavigation(
         
         // Informe de Conteos Pendientes
         composable("informe_conteos_pendientes") {
-            val informeViewModel: com.gloria.ui.informe.viewmodel.InformeConteosPendientesViewModel = hiltViewModel()
+            val informeViewModel:  InformeConteosPendientesViewModel   = hiltViewModel()
             InformeConteosPendientesScreen(
                 navController = navController,
                 viewModel = informeViewModel

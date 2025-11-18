@@ -59,6 +59,7 @@ import com.gloria.domain.usecase.inventario.GetInventariosCardsUseCase
 import com.gloria.domain.usecase.auth.GetLoggedUserSyncUseCase
 import com.gloria.domain.usecase.inventario.GetArticulosInventarioUseCase
 import com.gloria.domain.usecase.inventario.ActualizarCantidadInventarioUseCase
+import com.gloria.domain.usecase.inventario.ActualizarCantidadInventarioSoloCantidadUseCase
 import com.gloria.domain.usecase.inventario.ActualizarEstadoInventarioUseCase
 import com.gloria.data.repository.InventarioDetalleRepository
 import com.gloria.data.repository.InventarioSincronizacionRepository
@@ -73,9 +74,13 @@ import com.gloria.data.repository.EnviarConteoRepository
 import com.gloria.data.api.EnviarConteoVerificacionApi
 import com.gloria.domain.usecase.conteopendiente.GetConteosPendientesByDateUseCase
 import com.gloria.data.repository.ConteoPendienteRepository
+import com.gloria.data.repository.ConteosLogsRepository
+import com.gloria.data.repository.ConteosLogsApiRepository
+import com.gloria.data.repository.ConteosLogsConsultaRepository
 import com.gloria.data.api.ConteoPendienteApi
 import com.gloria.data.dao.UserPermissionOracleDao
 import com.gloria.data.dao.UserPermissionDao
+import com.gloria.data.dao.ConteosLogsDao
 import com.gloria.data.repository.ArticuloLoteRepository
 import com.gloria.data.repository.UserPermissionRepository
 import com.gloria.data.repository.InventariosPendientesSimultaneosRepository
@@ -85,8 +90,12 @@ import com.gloria.domain.usecase.auth.RegisterUseCase
 import com.gloria.domain.usecase.permission.LoginWithPermissionSyncUseCase
 import com.gloria.domain.usecase.inventario.GetInventariosPendientesSimultaneosUseCase
 import com.gloria.domain.usecase.inventario.ConfirmarConteoSimultaneoUseCase
+import com.gloria.domain.usecase.inventario.ConteosLogsUseCase
+import com.gloria.domain.usecase.inventario.ActualizarUsuarioCerradoInventarioUseCase
+import com.gloria.domain.usecase.inventario.EnviarConteosLogsUseCase
 import com.gloria.data.repository.ConfirmarConteoSimultaneoRepository
 import com.gloria.di.DefaultRetrofit
+import com.gloria.domain.usecase.inventario.GetConteosLogsRemotosUseCase
 import retrofit2.Retrofit
 import dagger.Module
 import dagger.Provides
@@ -476,6 +485,14 @@ object UseCaseModule {
 
     @Provides
     @Singleton
+    fun provideActualizarCantidadInventarioSoloCantidadUseCase(
+        inventarioDetalleRepository: InventarioDetalleRepository
+    ): ActualizarCantidadInventarioSoloCantidadUseCase {
+        return ActualizarCantidadInventarioSoloCantidadUseCase(inventarioDetalleRepository)
+    }
+
+    @Provides
+    @Singleton
     fun provideActualizarEstadoInventarioUseCase(
         inventarioDetalleRepository: InventarioDetalleRepository
     ): ActualizarEstadoInventarioUseCase {
@@ -484,10 +501,51 @@ object UseCaseModule {
 
     @Provides
     @Singleton
+    fun provideActualizarUsuarioCerradoInventarioUseCase(
+        inventarioDetalleRepository: InventarioDetalleRepository
+    ): ActualizarUsuarioCerradoInventarioUseCase {
+        return ActualizarUsuarioCerradoInventarioUseCase(inventarioDetalleRepository)
+    }
+
+    @Provides
+    @Singleton
+    fun provideConteosLogsUseCase(
+        conteosLogsRepository: ConteosLogsRepository
+    ): ConteosLogsUseCase {
+        return ConteosLogsUseCase(conteosLogsRepository)
+    }
+
+    @Provides
+    @Singleton
+    fun provideGetConteosLogsRemotosUseCase(
+        conteosLogsConsultaRepository: ConteosLogsConsultaRepository
+    ): GetConteosLogsRemotosUseCase {
+        return GetConteosLogsRemotosUseCase(conteosLogsConsultaRepository)
+    }
+
+    @Provides
+    @Singleton
+    fun provideEnviarConteosLogsUseCase(
+        conteosLogsUseCase: ConteosLogsUseCase,
+        conteosLogsApiRepository: ConteosLogsApiRepository
+    ): EnviarConteosLogsUseCase {
+        return EnviarConteosLogsUseCase(conteosLogsUseCase, conteosLogsApiRepository)
+    }
+
+    @Provides
+    @Singleton
     fun provideInventarioDetalleRepository(
         inventarioDetalleDao: InventarioDetalleDao
     ): InventarioDetalleRepository {
         return InventarioDetalleRepository(inventarioDetalleDao)
+    }
+
+    @Provides
+    @Singleton
+    fun provideConteosLogsRepository(
+        conteosLogsDao: ConteosLogsDao
+    ): ConteosLogsRepository {
+        return ConteosLogsRepository(conteosLogsDao)
     }
 
     
